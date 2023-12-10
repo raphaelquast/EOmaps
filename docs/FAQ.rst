@@ -5,153 +5,175 @@
   :local:
   :depth: 1
 
-.. include:: introduction.rst
+
+Need some help to setup python for EOmaps?
+******************************************
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   quickstart_quide
+
+
+Have a look at the :ref:`quickstart_guide` to learn how to setup a python environment that can be
+used to create EOmaps maps!
+
 
 .. _configuring_the_editor:
 
 Configuring the editor (IDE)
 ****************************
 
+EOmaps can be used with whatever editor you like... however, some editors have special settings that can be
+adjusted to improve your mapping experience with **EOmaps**:
+
 .. _config_spyder:
 
-Spyder IDE
-----------
+.. dropdown:: Spyder
 
-To use the whole potential of EOmaps with the awesome `Spyder IDE <https://www.spyder-ide.org>`_  ,
-the plot-settings must be adjusted to ensure that ``matplotlib`` plots remain interactive.
+    .. currentmodule:: eomaps.eomaps
 
-- By default, plots are rendered as static images into the "plots-pane"... to avoid this and create
-  interactive ``matplotlib`` widgets instead, go to the preferences and set the "Graphics backend" to "Automatic" :
+    To use the whole potential of EOmaps with the awesome `Spyder IDE <https://www.spyder-ide.org>`_  ,
+    the plot-settings must be adjusted to ensure that ``matplotlib`` plots are created as interactive Qt widgets.
 
-.. image:: _static/spyder_preferences.png
+    - By default, figures are rendered as static images into the `plots-pane <http://docs.spyder-ide.org/current/panes/plots.html>`_. To avoid this and **create interactive (popup) figures** instead, go to the preferences and set the "Graphics Backend" to "Automatic" :
+
+    .. image:: _static/spyder_preferences.png
+
+    .. raw:: html
+
+       <p/>
+
+    .. note::
+
+      If the gaphics-backend is set to *"Automatic"*, you can still plot static snapshots of a figure to the "plots-pane" with :py:meth:`Maps.snapshot`!
+
 
 .. _config_vscode:
 
-VSCode / VSCodium
------------------
 
-.. currentmodule:: eomaps.eomaps
+.. dropdown:: VSCode / VSCodium
 
-In general, EOmaps works "out of the box" with `VSCode <https://code.visualstudio.com/>`_ or the open-source variant `VSCodium <https://vscodium.com/>`_ (together with the standard `Python <https://marketplace.visualstudio.com/items?itemName=ms-python.python>`_ extension).
+    .. currentmodule:: eomaps.eomaps
 
-However, there are some tipps that might help with your mapping workflow:
+    In general, EOmaps works "out of the box" with `VSCode <https://code.visualstudio.com/>`_ or the open-source variant `VSCodium <https://vscodium.com/>`_ (together with the standard `Python <https://marketplace.visualstudio.com/items?itemName=ms-python.python>`_ extension).
 
-- In a normal python-terminal, the default matplotlib backend will be ``QtAgg`` in a **non-interactive mode**.
-  This means that you must call :py:meth:`Maps.show` at the end of the script to actually show the figure.
-  Once the figure is shown, **the terminal is blocked until the figure is closed**.
+    However, there are some tipps that might help with your mapping workflow:
 
-- To **avoid blocking the terminal** while a figure is running, you can **activate matplotlib's interactive-mode** using
+    - In a normal python-terminal, the default matplotlib backend will be ``QtAgg`` in a **non-interactive mode**.
+      This means that you must call :py:meth:`Maps.show` at the end of the script to actually show the figure.
+      Once the figure is shown, **the terminal is blocked until the figure is closed**.
 
-  .. code-block:: python
+    - To **avoid blocking the terminal** while a figure is running, you can **activate matplotlib's interactive-mode** using
 
-      from eomaps import Maps
-      Maps.config(use_interactive_mode=True)
+      .. code-block:: python
 
-  Once activated, figures are immediately shown as soon as a new :py:class:`Maps` object is created and the terminal is **not blocked** (e.g. you can continue to execute commands that update the figure).
+          from eomaps import Maps
+          Maps.config(use_interactive_mode=True)
 
-.. note::
+      Once activated, figures are immediately shown as soon as a new :py:class:`Maps` object is created and the terminal is **not blocked** (e.g. you can continue to execute commands that update the figure).
 
-   If you run a whole script using the **interactive mode**, the script will run until the end and then usually terminate the associated kernel... and in turn also closing the figure! If you want to keep the figure open, either make sure that the terminal is kept alive by entering debug-mode, or avoid activating the interactive mode and block the terminal with `m.show()`.
+    .. note::
 
-Interactive IPython (e.g. Jupyter)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       If you run a whole script using the **interactive mode**, the script will run until the end and then usually terminate the associated kernel... and in turn also closing the figure! If you want to keep the figure open, either make sure that the terminal is kept alive by entering debug-mode, or avoid activating the interactive mode and block the terminal with `m.show()`.
 
-If you enjoy interactive coding in a Jupyter-Notebook style, make sure to have a look at the nice `Jupyter <https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter>`_ extension!
+    Interactive IPython (e.g. Jupyter)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It allows you to work with an interactive IPython terminal and execute code-blocks (separated by the ``# %%`` indicator).
+    If you enjoy interactive coding in a Jupyter-Notebook style, make sure to have a look at the nice `Jupyter <https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter>`_ extension!
 
-- With IPython, the default behavior is to create static (inline) figures (same as with Jupyter Notebooks)!
-  To print a snapshot of the current state of a figure to the IPython terminal, call :py:meth:`Maps.show` or :py:meth:`Maps.snapshot`.
+    It allows you to work with an interactive IPython terminal and execute code-blocks (separated by the ``# %%`` indicator).
 
-- Same as with Jupyter Notebooks, you can use *"magic"* commands to set the used matpltolib backend.
+    - With IPython, the default behavior is to create static (inline) figures (same as with Jupyter Notebooks)!
+      To print a snapshot of the current state of a figure to the IPython terminal, call :py:meth:`Maps.show` or :py:meth:`Maps.snapshot`.
 
-  - For interactive (popup) figures, switch to the default Qt backend using ``%matplotlib qt``
-  - For interactive (inline) figures, you'll need to install `ipympl <https://github.com/matplotlib/ipympl>`_ and then activate the ``widget`` with ``%matplotlib widget``.
+    - Same as with Jupyter Notebooks, you can use *"magic"* commands to set the used matpltolib backend.
 
-  - For more details, see the associated section for :ref:`config_jupyter_notebook`
+      - For interactive (popup) figures, switch to the default Qt backend using ``%matplotlib qt``
+      - For interactive (inline) figures, you'll need to install `ipympl <https://github.com/matplotlib/ipympl>`_ and then activate the ``widget`` with ``%matplotlib widget``.
+
+      - For more details, see the associated section for :ref:`config_jupyter_notebook`
 
 
 .. _config_pycharm:
 
-PyCharm IDE
------------
+.. dropdown:: PyCharm
 
-The `PyCharm IDE <https://www.jetbrains.com/pycharm/>`_  automatically registers its own matplotlib backend
-which (for some unknown reason) freezes on interactive plots.
+    The `PyCharm IDE <https://www.jetbrains.com/pycharm/>`_  automatically registers its own matplotlib backend
+    which (for some unknown reason) freezes on interactive plots.
 
-To my knowledge there are 2 possibilities to force ``pycharm`` to use the original ``matplotlib`` backends:
+    To my knowledge there are 2 possibilities to force ``pycharm`` to use the original ``matplotlib`` backends:
 
-- | 🚲 The "manual" way:
-  | Add the following lines to the start of each script:
-  | (for more info and alternative backends see `matplotlib docs <https://matplotlib.org/stable/users/explain/backends.html>`_)
+    - | 🚲 The "manual" way:
+      | Add the following lines to the start of each script:
+      | (for more info and alternative backends see `matplotlib docs <https://matplotlib.org/stable/users/explain/backends.html>`_)
 
-  .. code-block:: python
+      .. code-block:: python
 
-    import matplotlib
-    matplotlib.use("Qt5Agg")
+        import matplotlib
+        matplotlib.use("Qt5Agg")
 
-- | 🚗 The "automatic" way:
-  | Go to the preferences and add the aforementioned lines to the *"Starting script"*
-  | (to ensure that the ``matplotlib`` backend is always set prior to running a script)
+    - | 🚗 The "automatic" way:
+      | Go to the preferences and add the aforementioned lines to the *"Starting script"*
+      | (to ensure that the ``matplotlib`` backend is always set prior to running a script)
 
-  .. image:: _static/pycharm_preferences.png
+      .. image:: _static/pycharm_preferences.png
 
-In addition, if you use a **commercial version** of PyCharm, make sure to **disable** *"Show plots in tool window"*
-in the **Python Scientific** preferences since it forces plots to be rendered as static images.
+    In addition, if you use a **commercial version** of PyCharm, make sure to **disable** *"Show plots in tool window"*
+    in the **Python Scientific** preferences since it forces plots to be rendered as static images.
 
-.. image:: _static/pycharm_preferences_2.png
+    .. image:: _static/pycharm_preferences_2.png
+
 
 .. _config_jupyter_notebook:
 
-Jupyter Notebooks
------------------
+.. dropdown:: Jupyter Notebooks
 
-To get the most out of EOmaps in Jupyter Notebooks, use `jupyter lab <https://jupyterlab.readthedocs.io/en/stable/>`_  together with the `ipympl <https://github.com/matplotlib/ipympl>`_ (``widget``) backend.
+    To get the most out of EOmaps in Jupyter Notebooks, use `jupyter lab <https://jupyterlab.readthedocs.io/en/stable/>`_  together with the `ipympl <https://github.com/matplotlib/ipympl>`_ (``widget``) backend.
 
-- To install, use ``conda install -c conda-forge ipympl``
+    - To install, use ``conda install -c conda-forge ipympl``
 
-Once it's installed, use the command ``%matplotlib widget`` at the start of the code to activate the backend.
+    Once it's installed, use the command ``%matplotlib widget`` at the start of the code to activate the backend.
 
-Using the Companion Widget
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-To use the :ref:`companion_widget` in backends other than ``Qt`` the Qt event-loop must be integrated.
-This can be done with the ``%gui qt`` command.
+    Using the Companion Widget
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    To use the :ref:`companion_widget` in backends other than ``Qt`` the Qt event-loop must be integrated.
+    This can be done with the ``%gui qt`` command.
 
-.. code-block:: python
+    .. code-block:: python
 
-  %matplotlib widget
-  %gui qt
+      %matplotlib widget
+      %gui qt
 
-  from eomaps import Maps
-  m = Maps()
-  m.add_feature.preset("coastline", "ocean")
+      from eomaps import Maps
+      m = Maps()
+      m.add_feature.preset("coastline", "ocean")
 
+    Alternative backends:
+    ~~~~~~~~~~~~~~~~~~~~~
+    For classical notebooks, there's also the ``nbagg`` backend provided by matplotlib
 
-Alternative backends:
-~~~~~~~~~~~~~~~~~~~~~
-For classical notebooks, there's also the ``nbagg`` backend provided by matplotlib
+    - To use it, simply execute the magic ``%matplotlib notebook`` before starting to plot.
 
-- To use it, simply execute the magic ``%matplotlib notebook`` before starting to plot.
+    And you can also use the magic ``%matplotlib qt`` to use the default ``qt5agg`` backend.
 
-And you can also use the magic ``%matplotlib qt`` to use the default ``qt5agg`` backend.
+    - This way the plots will NOT be embedded in the notebook, they show up as popups.
 
-- This way the plots will NOT be embedded in the notebook, they show up as popups.
+    .. note::
 
+      It is possible to plot **static snapshots** of the current state of a map to a Jupyter Notebook
+      irrespective of the used backend by using `m.snapshot()`, e.g.:
 
-.. note::
+      .. code-block:: python
 
-  It is possible to plot **static snapshots** of the current state of a map to a Jupyter Notebook
-  irrespective of the used backend by using `m.snapshot()`, e.g.:
-
-  .. code-block:: python
-
-    m = Maps()
-    m.add_feature.preset.coastline()
-    m.snapshot()
+        m = Maps()
+        m.add_feature.preset.coastline()
+        m.snapshot()
 
 
-Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/interactive.html#jupyter-notebooks-jupyterlab>`_
-for more info!
+    Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/interactive.html#jupyter-notebooks-jupyterlab>`_
+    for more info!
 
 Record interactive maps to create animations
 ********************************************
@@ -164,162 +186,159 @@ All animated gifs in this documentation have been created with this awesome piec
 Important changes between major versions
 ****************************************
 
-⚙ From EOmaps v3.x to v4.x
----------------------------
+.. dropdown:: ⚙ From EOmaps v3.x to v4.x
 
-Changes between **EOmaps v3.x** and **EOmaps v4.0**:
+    Changes between **EOmaps v3.x** and **EOmaps v4.0**:
 
-- the following properties and functions have been removed:
+    - the following properties and functions have been removed:
 
-  - ❌ ``m.plot_specs.``
-  - ❌ ``m.set_plot_specs()``
-  - | arguments are now directly passed to relevant functions:
-    | ``m.plot_map()``, ``m.add_colorbar()`` and ``m.set_data()``
+      - ❌ ``m.plot_specs.``
+      - ❌ ``m.set_plot_specs()``
+      - | arguments are now directly passed to relevant functions:
+        | ``m.plot_map()``, ``m.add_colorbar()`` and ``m.set_data()``
 
-- 🔶 ``m.set_shape.voroni_diagram()`` is renamed to ``m.set_shape.voronoi_diagram()``
-- | 🔷 custom callbacks are no longer bound to the Maps-object
-  | the call-signature of custom callbacks has changed to:
-  | ``def cb(self, *args, **kwargs)`` >> ``def cb(*args, **kwargs)``
+    - 🔶 ``m.set_shape.voroni_diagram()`` is renamed to ``m.set_shape.voronoi_diagram()``
+    - | 🔷 custom callbacks are no longer bound to the Maps-object
+      | the call-signature of custom callbacks has changed to:
+      | ``def cb(self, *args, **kwargs)`` >> ``def cb(*args, **kwargs)``
 
-Porting a script from v3.x to v4.x is quick and easy and involves the following steps:
+    Porting a script from v3.x to v4.x is quick and easy and involves the following steps:
 
-1. Search your script for all occurrences of the words ``.plot_specs`` and ``.set_plot_specs(``,
-   move the affected arguments to the correct functions (and remove the calls once you're done):
+    1. Search your script for all occurrences of the words ``.plot_specs`` and ``.set_plot_specs(``,
+       move the affected arguments to the correct functions (and remove the calls once you're done):
 
-    - | ``vmin``, ``vmax`` ``alpha`` and ``cmap`` are now set in
-      | ``m.plot_map(vmin=..., vmax=..., alpha=..., cmap=...)``
-    - | ``histbins``, ``label``, ``tick_precision`` and ``density`` are now set in
-      | ``m.add_colorbar(histbins=..., label=..., tick_precision=..., density=...)``
-    - | ``cpos`` and ``cpos_radius`` are now (optionally) set in
-      | ``m.set_data(data, x, y, cpos=..., cpos_radius=...)``
+        - | ``vmin``, ``vmax`` ``alpha`` and ``cmap`` are now set in
+          | ``m.plot_map(vmin=..., vmax=..., alpha=..., cmap=...)``
+        - | ``histbins``, ``label``, ``tick_precision`` and ``density`` are now set in
+          | ``m.add_colorbar(histbins=..., label=..., tick_precision=..., density=...)``
+        - | ``cpos`` and ``cpos_radius`` are now (optionally) set in
+          | ``m.set_data(data, x, y, cpos=..., cpos_radius=...)``
 
-2. Search your script for all occurrences of the words ``xcoord`` and ``ycoord`` and replace them with ``x`` and ``y``
+    2. Search your script for all occurrences of the words ``xcoord`` and ``ycoord`` and replace them with ``x`` and ``y``
 
-3. **ONLY** if you used **voronoi diagrams**:
+    3. **ONLY** if you used **voronoi diagrams**:
 
-  - search in your script for all occurrences of the word ``voroni_diagram`` and replace it with ``voronoi_diagram``
+      - search in your script for all occurrences of the word ``voroni_diagram`` and replace it with ``voronoi_diagram``
 
-4. **ONLY** if you used **custom callback functions**:
+    4. **ONLY** if you used **custom callback functions**:
 
-  - the first argument of custom callbacks is no longer identified as the ``Maps`` object.
-  - if you really need access to the ``Maps`` object within the callback, pass it as an explicit argument!
-
-
-**EOmaps v3.x:**
-
-.. code-block:: python
-
-  m = Maps()
-  m.set_data(data=..., xcoord=..., ycoord=...)
-  m.set_plot_specs(vmin=1, vmax=20, cmap="viridis", histbins=100, cpos="ul", cpos_radius=1)
-  m.set_shape.voroni_diagram()
-  m.add_colorbar()
-  m.plot_map()
-
-  # ---------------------------- custom callback signature:
-  def custom_cb(m, asdf=1):
-      print(asdf)
-
-  m.cb.click.attach(custom_cb)
+      - the first argument of custom callbacks is no longer identified as the ``Maps`` object.
+      - if you really need access to the ``Maps`` object within the callback, pass it as an explicit argument!
 
 
-**EOmaps v4.x:**
+    **EOmaps v3.x:**
 
-.. code-block:: python
+    .. code-block:: python
 
-  m = Maps()
-  m.set_data(data=..., x=..., y=..., cpos="ul", cpos_radius=1)
-  m.plot_map(vmin=1, vmax=20, cmap="viridis")
-  m.set_shape.voronoi_diagram()
-  m.add_colorbar(histbins=100)
+      m = Maps()
+      m.set_data(data=..., xcoord=..., ycoord=...)
+      m.set_plot_specs(vmin=1, vmax=20, cmap="viridis", histbins=100, cpos="ul", cpos_radius=1)
+      m.set_shape.voroni_diagram()
+      m.add_colorbar()
+      m.plot_map()
 
-  # ---------------------------- custom callback signature:
-  def custom_cb(**kwargs, asdf=None):
-      print(asdf)
+      # ---------------------------- custom callback signature:
+      def custom_cb(m, asdf=1):
+          print(asdf)
 
-  m.cb.click.attach(custom_cb, asdf=1)
-
-
-Note: if you really need access to the maps-object within custom callbacks,
-simply provide it as an explicit argument!
-
-.. code-block:: python
-
-  def custom_cb(**kwargs, m=None, asdf=None):
-      ...
-
-  m.cb.click.attach(custom_cb, m=m, asdf=1)
+      m.cb.click.attach(custom_cb)
 
 
-⚙ From EOmaps v5.x to v6.x
----------------------------
+    **EOmaps v4.x:**
 
-General changes in behavior
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    .. code-block:: python
 
-- | 🔶 Starting with EOmaps v6.0 multiple calls to ``m.plot_map()``
-  | **on the same Maps-object completely remove (and replace)** the previous dataset!
-  | (use a new Maps-object on the same layer for datasets that should be visible at the same time!)
-- | 🔶 WebMap services are no longer re-fetched by default when exporting images with ``m.savefig()``
-  | To force a re-fetch of WebMap services prior to saving the image at the desired dpi, use ``m.savefig(refetch_wms=True)``
-  | (see ``m.refetch_wms_on_size_change()`` for more details)
-- | 🔷 ``m.add_gdf`` now uses only valid geometries
-  | (to revert to the old behavior, use: ``m.add_gdf(..., only_valid=False)``)
-- 🔷 the order at which multi-layers are combined now determines the stacking of the artists
+      m = Maps()
+      m.set_data(data=..., x=..., y=..., cpos="ul", cpos_radius=1)
+      m.plot_map(vmin=1, vmax=20, cmap="viridis")
+      m.set_shape.voronoi_diagram()
+      m.add_colorbar(histbins=100)
 
-  - ``m.show_layer("A|B")`` plots all artists of the layer ``"A"`` **on top of** the layer ``"B"``
-  - the ordering of artists inside a layer is determined by their ``zorder``  (e.g. ``m.plot_map(zorder=123)``)
+      # ---------------------------- custom callback signature:
+      def custom_cb(**kwargs, asdf=None):
+          print(asdf)
 
-Removed (previously depreciated) functionalities
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- ❌ the ``m.figure`` accessor has been removed!
-
-  - Use ``m.ax``, ``m.f``, ``m.colorbar.ax_cb``, ``m.colorbar.ax_cb_plot`` instead
-
-- ❌ kwargs for ``m.plot_map(...)``
-
-  - ``"coastlines"`` use ``m.add_feature.preset.coastline()`` instead
-
-- ❌ kwargs for ``m.set_data(...)``
-
-   - ``"in_crs"`` use ``"crs"`` instead
-   - ``"xcoord"`` use ``"x"`` instead
-   - ``"ycoord"`` use ``"y"`` instead
-
-- ❌ kwargs for ``Maps(...)``
-
-  - ``"parent"`` ... no longer needed
-  - ``"gs_ax"`` use ``"ax"`` instead
-
-- ❌ kwargs for ``m.new_inset_maps(...)``
-
-  - ``"edgecolor"`` and ``"facecolor"`` use ``boundary=dict(ec=..., fc=...)`` instead
-
-- ❌ kwargs for ``m.add_colorbar(...)``
-
-  - ``"histbins"`` use ``"hist_bins"`` instead
-  - ``"histogram_size"`` use ``"hist_size"`` instead
-  - ``"density"`` use ``"hist_kwargs=dict(density=...)"`` instead
-  - ``"top", "bottom", "left", "right"`` use ``margin=dict(top=..., bottom=..., left=..., right=...)`` instead
-  - ``"add_extend_arrows"``
-
-- ❌ ``m.indicate_masked_points()`` has been removed, use ``m.plot_map(indicate_masked_points=True)`` instead
-- ❌ ``m.shape.get_transformer`` is now a private (e.g. ``m.shape._get_transformer``)
-- ❌ ``m.shape.radius_estimation_range`` is now a private (e.g. ``m.shape._radius_estimation_range``)
+      m.cb.click.attach(custom_cb, asdf=1)
 
 
-⚙ From EOmaps v6.x to v7.x
----------------------------
+    Note: if you really need access to the maps-object within custom callbacks,
+    simply provide it as an explicit argument!
 
-- ⚠️ A lot of internal functions and classes have been re-named to better follow PEP8 naming conventions.
-  While this should not interfere with the public API, more extensive customizations might need to be
-  adjusted with respect to the new names.
+    .. code-block:: python
 
-  If you encounter any problems, feel free to open an `issue <https://github.com/raphaelquast/EOmaps/issues>`_ , and I'll see what I can do!
+      def custom_cb(**kwargs, m=None, asdf=None):
+          ...
 
-  - For example: the module `_shapes.py` is now called `shapes.py` and the class `shapes` is now called `Shapes`
+      m.cb.click.attach(custom_cb, m=m, asdf=1)
 
-- ⚠️ The use of ``m.set_data_specs(...)`` is depreciated. Use ``m.set_data(...)`` instead!
 
-- Figure export routines have been completely re-worked (but should result in the exact same output as in v6.x)
+.. dropdown:: ⚙ From EOmaps v5.x to v6.x
+
+    General changes in behavior
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    - | 🔶 Starting with EOmaps v6.0 multiple calls to ``m.plot_map()``
+      | **on the same Maps-object completely remove (and replace)** the previous dataset!
+      | (use a new Maps-object on the same layer for datasets that should be visible at the same time!)
+    - | 🔶 WebMap services are no longer re-fetched by default when exporting images with ``m.savefig()``
+      | To force a re-fetch of WebMap services prior to saving the image at the desired dpi, use ``m.savefig(refetch_wms=True)``
+      | (see ``m.refetch_wms_on_size_change()`` for more details)
+    - | 🔷 ``m.add_gdf`` now uses only valid geometries
+      | (to revert to the old behavior, use: ``m.add_gdf(..., only_valid=False)``)
+    - 🔷 the order at which multi-layers are combined now determines the stacking of the artists
+
+      - ``m.show_layer("A|B")`` plots all artists of the layer ``"A"`` **on top of** the layer ``"B"``
+      - the ordering of artists inside a layer is determined by their ``zorder``  (e.g. ``m.plot_map(zorder=123)``)
+
+    Removed (previously depreciated) functionalities
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    - ❌ the ``m.figure`` accessor has been removed!
+
+      - Use ``m.ax``, ``m.f``, ``m.colorbar.ax_cb``, ``m.colorbar.ax_cb_plot`` instead
+
+    - ❌ kwargs for ``m.plot_map(...)``
+
+      - ``"coastlines"`` use ``m.add_feature.preset.coastline()`` instead
+
+    - ❌ kwargs for ``m.set_data(...)``
+
+       - ``"in_crs"`` use ``"crs"`` instead
+       - ``"xcoord"`` use ``"x"`` instead
+       - ``"ycoord"`` use ``"y"`` instead
+
+    - ❌ kwargs for ``Maps(...)``
+
+      - ``"parent"`` ... no longer needed
+      - ``"gs_ax"`` use ``"ax"`` instead
+
+    - ❌ kwargs for ``m.new_inset_maps(...)``
+
+      - ``"edgecolor"`` and ``"facecolor"`` use ``boundary=dict(ec=..., fc=...)`` instead
+
+    - ❌ kwargs for ``m.add_colorbar(...)``
+
+      - ``"histbins"`` use ``"hist_bins"`` instead
+      - ``"histogram_size"`` use ``"hist_size"`` instead
+      - ``"density"`` use ``"hist_kwargs=dict(density=...)"`` instead
+      - ``"top", "bottom", "left", "right"`` use ``margin=dict(top=..., bottom=..., left=..., right=...)`` instead
+      - ``"add_extend_arrows"``
+
+    - ❌ ``m.indicate_masked_points()`` has been removed, use ``m.plot_map(indicate_masked_points=True)`` instead
+    - ❌ ``m.shape.get_transformer`` is now a private (e.g. ``m.shape._get_transformer``)
+    - ❌ ``m.shape.radius_estimation_range`` is now a private (e.g. ``m.shape._radius_estimation_range``)
+
+
+.. dropdown:: ⚙ From EOmaps v6.x to v7.x
+
+    - ⚠️ A lot of internal functions and classes have been re-named to better follow PEP8 naming conventions.
+      While this should not interfere with the public API, more extensive customizations might need to be
+      adjusted with respect to the new names.
+
+      If you encounter any problems, feel free to open an `issue <https://github.com/raphaelquast/EOmaps/issues>`_ , and I'll see what I can do!
+
+      - For example: the module `_shapes.py` is now called `shapes.py` and the class `shapes` is now called `Shapes`
+
+    - ⚠️ The use of ``m.set_data_specs(...)`` is depreciated. Use ``m.set_data(...)`` instead!
+
+    - Figure export routines have been completely re-worked (but should result in the exact same output as in v6.x)

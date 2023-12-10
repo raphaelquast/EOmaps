@@ -74,7 +74,6 @@ nb_execution_timeout = 120
 # handle compiler warnings for duplicate labels due to documents
 # included via the  ..include:: directive
 exclude_patterns = [
-    "introduction.rst",
     "build",
     "jupyter_execute/*",
     ".jupyter_cache/*",
