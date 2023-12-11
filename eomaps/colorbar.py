@@ -264,8 +264,6 @@ class ColorBar:
         self._init_extend = extend
         self._extend_frac = extend_frac
 
-        self._parent_cb = self._identify_parent_cb()
-
         if inherit_position is None:
             if not self._m.colorbar:
                 inherit_position = True
@@ -273,6 +271,8 @@ class ColorBar:
                 inherit_position = False
 
         self._inherit_position = inherit_position
+
+        self._parent_cb = self._identify_parent_cb()
 
         if hist_size is None:
             self._hist_size = 0
@@ -551,7 +551,7 @@ class ColorBar:
         # the same plot-axis.
         # If yes, use the position of this colorbar to creat a new one
 
-        if self._m.colorbar is not None:
+        if self._m.colorbar is not None and not self._inherit_position:
             parent_cb = None  # self._m.colorbar
         else:
             # check if self is actually just another layer of an existing Maps object
