@@ -527,3 +527,11 @@ class MapsGrid:
     @wraps(Maps.edit_layout)
     def edit_layout(self, *args, **kwargs):
         return self.parent.edit_layout(*args, **kwargs)
+
+    @wraps(Maps.show)
+    def show(self, *args, **kwargs):
+        return self.parent.show(*args, **kwargs)
+
+    @wraps(Maps.snapshot)
+    def snapshot(self, *args, **kwargs):
+        return self.parent.snapshot(*args, **kwargs)
