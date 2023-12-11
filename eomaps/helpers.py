@@ -2727,11 +2727,7 @@ class BlitManager:
         # don't do this! it is causing infinite loops
         # cv.flush_events()
 
-        if (
-            blit
-            and not getattr(self._m, "_snapshotting", False)
-            and BlitManager._snapshot_on_update is True
-        ):
+        if blit and BlitManager._snapshot_on_update is True:
             self._m.snapshot(clear=clear_snapshot)
 
     def blit_artists(self, artists, bg="active", blit=True):

@@ -3342,6 +3342,12 @@ class Maps(metaclass=_MapsMeta):
         self.BM.bg_layer = name
         self.BM.update()
 
+        # plot a snapshot to jupyter notebook cell if inline backend is used
+        if not self.BM._snapshot_on_update and plt.get_backend() in [
+            "module://matplotlib_inline.backend_inline"
+        ]:
+            self.snapshot(clear=clear)
+
     def show(self, clear=True):
         """
         Show the map (only required for non-interactive matplotlib backends).
@@ -3411,6 +3417,11 @@ class Maps(metaclass=_MapsMeta):
         >>> m.snapshot("base", ("ocean", .5), transparent=True)
 
         """
+        if getattr(self, "_snapshotting", False):
+            # this is necessary to avoid recursions with show_layer
+            # in jupyter-notebook inline backend
+            return
+
         try:
             self._snapshotting = True
 
