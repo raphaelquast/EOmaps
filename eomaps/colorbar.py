@@ -916,7 +916,9 @@ class ColorBar:
         horizontal = self._orientation == "horizontal"
         n_cmap = plt.cm.ScalarMappable(cmap=self._cmap, norm=self._norm)
 
-        self.cb = plt.colorbar(
+        # avoid using "plt.colorbar" since it might not properly recognize
+        # the associated figure (e.g. plt.gcf() might point somewhere else)!
+        self.cb = self._m.f.colorbar(
             n_cmap,
             cax=self.ax_cb,
             extend=self._extend,
