@@ -220,6 +220,11 @@ class ColorBar:
             The default is None.
         ylabel : str, optional
             The label used for the y-axis of the colorbar. The default is None
+        layer : str
+            The layer at which the colorbar will be drawn.
+            NOTE: In most cases you should NOT need to adjust the layer!
+            The layer is automatically assigned to the layer at which the
+            data was plotted and Colorbars are only visible on the assigned layer!
         kwargs :
             All additional kwargs are passed to the creation of the colorbar
             (e.g. `plt.colorbar()`)
@@ -248,6 +253,10 @@ class ColorBar:
 
         """
         self._m = m
+
+        # allow overriding the layer on which to draw the colorbar
+        self._layer = kwargs.pop("layer", self._m.layer)
+
         self._pos = pos
         self._margin = margin
         self._orientation = orientation
@@ -315,6 +324,10 @@ class ColorBar:
         self.set_labels(label)
         if ylabel is not None:
             self.ax_cb_plot.set_ylabel(ylabel)
+
+    @property
+    def layer(self):
+        return self._layer
 
     def set_visible(self, vis):
         """
@@ -420,7 +433,7 @@ class ColorBar:
 
         if not self._dynamic_shade_indicator:
             # no need to redraw the background for dynamically updated artists
-            self._m.redraw(self._m.layer)
+            self._m.redraw(self.layer)
         else:
             self._m.BM.update()
 
@@ -530,7 +543,7 @@ class ColorBar:
 
         self.set_labels(**self._label_kwargs)
         # tag layer for refetch
-        self._m.redraw(self._m.layer)
+        self._m.redraw(self.layer)
 
     def _identify_parent_cb(self):
         parent_cb = None
@@ -745,12 +758,12 @@ class ColorBar:
             a.set_navigate(False)
             if a is not None:
                 if self._dynamic_shade_indicator is True:
-                    self._m.BM.add_artist(a, self._m.layer)
+                    self._m.BM.add_artist(a, self.layer)
                 else:
-                    self._m.BM.add_bg_artist(a, self._m.layer)
+                    self._m.BM.add_bg_artist(a, self.layer)
 
         # we need to re-draw since the background axis size has changed!
-        self._m.BM._refetch_layer(self._m.layer)
+        self._m.BM._refetch_layer(self.layer)
         self._m.BM._refetch_layer("__SPINES__")
         self._m.redraw("__SPINES__")
 
@@ -819,7 +832,7 @@ class ColorBar:
             try:
                 z_data = self._coll.get_ds_data().values
             except:
-                self._m.redraw(self._m.layer)
+                self._m.redraw(self.layer)
                 z_data = self._coll.get_ds_data().values
 
             if "count" in aggname:
@@ -861,7 +874,7 @@ class ColorBar:
 
                 self._m.BM.on_layer(
                     lambda *args, **kwargs: self._redraw_colorbar,
-                    layer=self._m.layer,
+                    layer=self.layer,
                     persistent=True,
                 )
 
@@ -870,7 +883,7 @@ class ColorBar:
                 # TODO colorbar not properly updated on layer change after zoom?
                 self._m.BM.on_layer(
                     self._redraw_colorbar,
-                    layer=self._m.layer,
+                    layer=self.layer,
                     persistent=True,
                     m=self._m,
                 )
@@ -1127,7 +1140,7 @@ class ColorBar:
 
     def _redraw_colorbar(self, *args, **kwargs):
         # only re-draw if the corresponding layer is visible
-        if self._m.layer not in self._m.BM.bg_layer.split("|"):
+        if self.layer not in self._m.BM.bg_layer.split("|"):
             return
 
         self._set_data()
@@ -1292,7 +1305,7 @@ class ColorBar:
                 left=False, top=False, labelleft=False, labeltop=False, which="both"
             )
 
-        self._m.BM._refetch_layer(self._m.layer)
+        self._m.BM._refetch_layer(self.layer)
 
     def remove(self):
         """
@@ -1328,7 +1341,7 @@ class ColorBar:
         elif what == "histogram":
             self.ax_cb_plot.tick_params(**kwargs)
 
-        self._m.redraw(self._m.layer)
+        self._m.redraw(self.layer)
 
     tick_params.__doc__ = (
         "Set the appearance of the colorbar (or histogram) ticks.\n\n"
@@ -1549,4 +1562,4 @@ class ColorBar:
         for level, label in zip(used_levels, label_names):
             self.ax_cb_plot.annotate(xy=(level, y), text=label, **label_kwargs)
 
-        self._m.redraw(self._m.layer)
+        self._m.redraw(self.layer)
