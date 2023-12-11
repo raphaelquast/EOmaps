@@ -496,6 +496,9 @@ class ColorBar:
                 _TransformedBoundsLocator(cbpos, self._ax.transAxes)
             )
 
+            # re-fetch ALL layers (since axes-positions have changed!)
+            self._m.BM._refetch_layer("all")
+
         if self._hist_size > 0.0001:
             self.ax_cb_plot.set_visible(True)
 
