@@ -89,7 +89,7 @@ However, for some editors there are special settings that can be adjusted to imp
       - For interactive (popup) figures, switch to the default Qt backend using ``%matplotlib qt``
       - For interactive (inline) figures, you'll need to install `ipympl <https://github.com/matplotlib/ipympl>`_ and then activate the ``widget`` with ``%matplotlib widget``.
 
-      - For more details, see the associated section for :ref:`config_jupyter_notebook`
+      - For more details, see details on Jupyter Notebooks below!
 
 .. dropdown:: PyCharm
 
