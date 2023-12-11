@@ -1293,9 +1293,8 @@ class KeypressCallbacks:
         """
         Toggle displaying a layer on top of the currently visible layers.
 
-        - If the layer is not part of the currently visible layers, it will be
-          added on top.
-        - If the layer is part of the currently visible layers, it will be removed.
+        This callback is useful to quickly show/hide a data-layer on top
+        of a basemap by pressing a key on the keyboard.
 
         Parameters
         ----------
