@@ -1064,6 +1064,26 @@ class ColorBar:
                 maxval,
             ]
 
+            args = dict(
+                edgecolor=self._hist_kwargs.get(
+                    "edgecolor", self._hist_kwargs.get("ec", None)
+                ),
+                linewidth=self._hist_kwargs.get(
+                    "linewidth", self._hist_kwargs.get("lw", None)
+                ),
+                linestyle=self._hist_kwargs.get(
+                    "linestyle", self._hist_kwargs.get("ls", None)
+                ),
+                alpha=self._hist_kwargs.get("alpha", None),
+                hatch=self._hist_kwargs.get("hatch", None),
+            )
+            # drop all unset values to avoi overriding defaults
+            args = {key: val for key, val in args.items() if val is not None}
+            # handle facecolors explicitly
+            facecolor = self._hist_kwargs.get(
+                "facecolor", self._hist_kwargs.get("fc", None)
+            )
+
             if len(splitbins) > 2:
                 patch.remove()
                 # add in-between patches
@@ -1073,19 +1093,35 @@ class ColorBar:
                             (b0, 0),
                             (b1 - b0),
                             height,
-                            facecolor=self._cmap(self._norm((b0 + b1) / 2)),
+                            facecolor=(
+                                facecolor
+                                if facecolor
+                                else self._cmap(self._norm((b0 + b1) / 2))
+                            ),
+                            **args,
                         )
                     else:
                         pi = mpl.patches.Rectangle(
                             (0, b0),
                             width,
                             (b1 - b0),
-                            facecolor=self._cmap(self._norm((b0 + b1) / 2)),
+                            facecolor=(
+                                facecolor
+                                if facecolor
+                                else self._cmap(self._norm((b0 + b1) / 2))
+                            ),
+                            **args,
                         )
 
                     self.ax_cb_plot.add_patch(pi)
             else:
-                patch.set_facecolor(self._cmap(self._norm((minval + maxval) / 2)))
+                patch.set_facecolor(
+                    facecolor
+                    if facecolor
+                    else self._cmap(self._norm((minval + maxval) / 2))
+                )
+                for key, val in args.items():
+                    getattr(patch, f"set_{key}")(self._hist_kwargs[key])
 
         # setup appearance of histogram
         if horizontal:
