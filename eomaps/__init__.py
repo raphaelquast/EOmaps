@@ -1,3 +1,9 @@
+from .helpers import register_modules as _register_modules
+
+# address numpy runtime warning concerning binary incompatibility when
+# reading NetCDF files (see https://github.com/pydata/xarray/issues/7259)
+_register_modules("netCDF4", raise_exception=False)
+
 from .eomaps import Maps
 from .mapsgrid import MapsGrid
 from ._version import __version__
