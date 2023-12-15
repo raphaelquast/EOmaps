@@ -272,7 +272,10 @@ class ColorBar:
 
         self._inherit_position = inherit_position
 
-        self._parent_cb = self._identify_parent_cb()
+        if isinstance(self._inherit_position, ColorBar):
+            self._parent_cb = self._inherit_position
+        else:
+            self._parent_cb = self._identify_parent_cb()
 
         if hist_size is None:
             self._hist_size = 0
