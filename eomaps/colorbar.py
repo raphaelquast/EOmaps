@@ -1069,7 +1069,7 @@ class ColorBar:
                     "edgecolor", self._hist_kwargs.get("ec", None)
                 ),
                 linewidth=self._hist_kwargs.get(
-                    "linewidth", self._hist_kwargs.get("lw", None)
+                    "linewidth", self._hist_kwargs.get("lw", 0)
                 ),
                 linestyle=self._hist_kwargs.get(
                     "linestyle", self._hist_kwargs.get("ls", None)
@@ -1121,7 +1121,7 @@ class ColorBar:
                     else self._cmap(self._norm((minval + maxval) / 2))
                 )
                 for key, val in args.items():
-                    getattr(patch, f"set_{key}")(self._hist_kwargs[key])
+                    getattr(patch, f"set_{key}")(val)
 
         # setup appearance of histogram
         if horizontal:
