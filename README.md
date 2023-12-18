@@ -134,6 +134,14 @@ Interested in contributing to EOmaps? Awesome!
 
 ----
 
+## ☕ Support
+
+The development of EOmaps is supported by:
+
+<a href="https://www.tuwien.at/en/mg/geo/rs"><img height=30 align=left src="https://github.com/raphaelquast/EOmaps/assets/22773387/1ad88e68-eb16-4549-8159-8b4a6db8ab28"> TU Wien Department of Geodesy and Geoinformation - Research Area Remote Sensing</a>
+
+<br/>
+
 ## 🌼 Thanks to
 
 - [Jakob Quast](https://quastquest.jimdofree.com/) for designing the nice logo!
