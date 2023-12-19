@@ -3513,6 +3513,9 @@ class Maps(metaclass=_MapsMeta):
     @wraps(plt.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
+        # get the currently visible layer (to restore it after saving is done)
+        initial_layer = self.BM.bg_layer
+
         if plt.get_backend() == "agg":
             # make sure that a draw-event was triggered when using the agg backend
             # (to avoid export-issues with some shapes)
@@ -3533,7 +3536,6 @@ class Maps(metaclass=_MapsMeta):
             # add the figure background patch as the bottom layer
             transparent = kwargs.get("transparent", False)
             if transparent is False:
-                initial_layer = self.BM.bg_layer
                 showlayer_name = self.BM._get_showlayer_name(initial_layer)
                 layer_with_bg = "|".join(["__BG__", showlayer_name])
                 self.show_layer(layer_with_bg)
@@ -3637,7 +3639,7 @@ class Maps(metaclass=_MapsMeta):
             # trigger a redraw of all savelayers to make sure unmanaged artists
             # and ordinary matplotlib axes are properly drawn
             self.redraw(*savelayers)
-            # flush events prior to savefig to avoi dissues with pending draw events
+            # flush events prior to savefig to avoid issues with pending draw events
             # that cause wrong positioning of grid-labels and missing artists!
             self.f.canvas.flush_events()
             self.f._mpl_orig_savefig(*args, **kwargs)
@@ -3645,16 +3647,13 @@ class Maps(metaclass=_MapsMeta):
         if redraw is True:
             # reset the shading-axis-size to the used figure dpi
             self._update_shade_axis_size()
+
+            # restore the previous layer if background was added on save
+            if transparent is False:
+                self.show_layer(initial_layer)
+
             # redraw after the save to ensure that backgrounds are correctly cached
             self.redraw()
-
-        # restore the previous layer
-        elif transparent is False:
-            self.BM._refetch_layer("__SPINES__")
-            self.BM._refetch_layer("__BG__")
-            self.BM._refetch_layer(layer_with_bg)
-            self.BM.on_draw(None)
-            self.show_layer(initial_layer)
 
     def fetch_layers(self, layers=None):
         """
