@@ -46,6 +46,7 @@ jobs:
         # do this to ensure proper activation of conda environment
         shell: bash -l {0}
         run: |
+          pip install -e .[all]
           python -m pytest --cov=eomaps --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
