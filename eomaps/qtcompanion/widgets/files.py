@@ -181,6 +181,7 @@ class ShapeSelector(QtWidgets.QFrame):
         mask_radius=(float,),
         flat=(str_to_bool,),
         aggregator=(str,),
+        maxsize=(int,),
     )
 
     def __init__(self, *args, m=None, default_shape="shade_raster", **kwargs):

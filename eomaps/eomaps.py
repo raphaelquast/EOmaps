@@ -105,20 +105,6 @@ def _handle_backends():
                 "To change, use Maps.config(use_interactive_mode=True/False)."
             )
 
-    # check if we are in an ipython console using the inline-backend.
-    # If yes, put a snapshot of the map into the active cell on each update
-    if BlitManager._snapshot_on_update is None:
-        try:
-            __IPYTHON__
-        except NameError:
-            BlitManager._snapshot_on_update = False
-        else:
-            active_backend = plt.get_backend()
-            # print a snapshot to the active ipython cell in case the
-            # inline-backend is used
-            if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                BlitManager._snapshot_on_update = True
-
 
 # hardcoded list of available mapclassify-classifiers
 # (to avoid importing it on startup)
@@ -3356,6 +3342,12 @@ class Maps(metaclass=_MapsMeta):
         self.BM.bg_layer = name
         self.BM.update()
 
+        # plot a snapshot to jupyter notebook cell if inline backend is used
+        if not self.BM._snapshot_on_update and plt.get_backend() in [
+            "module://matplotlib_inline.backend_inline"
+        ]:
+            self.snapshot(clear=clear)
+
     def show(self, clear=True):
         """
         Show the map (only required for non-interactive matplotlib backends).
@@ -3386,7 +3378,7 @@ class Maps(metaclass=_MapsMeta):
             # print a snapshot to the active ipython cell in case the
             # inline-backend is used
             if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                self.BM.update(clear_snapshot=clear)
+                self.snapshot(clear=clear)
             else:
                 plt.show()
 
@@ -3425,6 +3417,11 @@ class Maps(metaclass=_MapsMeta):
         >>> m.snapshot("base", ("ocean", .5), transparent=True)
 
         """
+        if getattr(self, "_snapshotting", False):
+            # this is necessary to avoid recursions with show_layer
+            # in jupyter-notebook inline backend
+            return
+
         try:
             self._snapshotting = True
 
@@ -3516,6 +3513,9 @@ class Maps(metaclass=_MapsMeta):
     @wraps(plt.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
+        # get the currently visible layer (to restore it after saving is done)
+        initial_layer = self.BM.bg_layer
+
         if plt.get_backend() == "agg":
             # make sure that a draw-event was triggered when using the agg backend
             # (to avoid export-issues with some shapes)
@@ -3536,7 +3536,6 @@ class Maps(metaclass=_MapsMeta):
             # add the figure background patch as the bottom layer
             transparent = kwargs.get("transparent", False)
             if transparent is False:
-                initial_layer = self.BM.bg_layer
                 showlayer_name = self.BM._get_showlayer_name(initial_layer)
                 layer_with_bg = "|".join(["__BG__", showlayer_name])
                 self.show_layer(layer_with_bg)
@@ -3640,7 +3639,7 @@ class Maps(metaclass=_MapsMeta):
             # trigger a redraw of all savelayers to make sure unmanaged artists
             # and ordinary matplotlib axes are properly drawn
             self.redraw(*savelayers)
-            # flush events prior to savefig to avoi dissues with pending draw events
+            # flush events prior to savefig to avoid issues with pending draw events
             # that cause wrong positioning of grid-labels and missing artists!
             self.f.canvas.flush_events()
             self.f._mpl_orig_savefig(*args, **kwargs)
@@ -3648,16 +3647,13 @@ class Maps(metaclass=_MapsMeta):
         if redraw is True:
             # reset the shading-axis-size to the used figure dpi
             self._update_shade_axis_size()
+
+            # restore the previous layer if background was added on save
+            if transparent is False:
+                self.show_layer(initial_layer)
+
             # redraw after the save to ensure that backgrounds are correctly cached
             self.redraw()
-
-        # restore the previous layer
-        elif transparent is False:
-            self.BM._refetch_layer("__SPINES__")
-            self.BM._refetch_layer("__BG__")
-            self.BM._refetch_layer(layer_with_bg)
-            self.BM.on_draw(None)
-            self.show_layer(initial_layer)
 
     def fetch_layers(self, layers=None):
         """
@@ -5705,5 +5701,5 @@ class Maps(metaclass=_MapsMeta):
                 self.BM._before_fetch_bg_actions.append(cb)
                 self.ax._EOmaps_rounded_spine_attached = True
 
-            self.redraw("__SPINES__")
+        self.redraw("__SPINES__")
         self.redraw("__BG__")

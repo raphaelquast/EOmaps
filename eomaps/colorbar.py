@@ -496,6 +496,9 @@ class ColorBar:
                 _TransformedBoundsLocator(cbpos, self._ax.transAxes)
             )
 
+            # re-fetch ALL layers (since axes-positions have changed!)
+            self._m.BM._refetch_layer("all")
+
         if self._hist_size > 0.0001:
             self.ax_cb_plot.set_visible(True)
 
@@ -889,7 +892,14 @@ class ColorBar:
         self._set_extend(z_data)
 
         if self._out_of_range_vals == "mask":
-            z_data = z_data[(z_data >= self._vmin) & (z_data <= self._vmax)]
+            data_range_mask = (z_data >= self._vmin) & (z_data <= self._vmax)
+            z_data = z_data[data_range_mask]
+
+            # make sure that histogram weights are masked accordingly if provided
+            if "weights" in self._hist_kwargs:
+                self._hist_kwargs["weights"] = self._hist_kwargs["weights"][
+                    data_range_mask
+                ]
 
         # make sure the norm clips with respect to vmin/vmax
         # (only clip if either vmin or vmax is not None)
@@ -916,7 +926,9 @@ class ColorBar:
         horizontal = self._orientation == "horizontal"
         n_cmap = plt.cm.ScalarMappable(cmap=self._cmap, norm=self._norm)
 
-        self.cb = plt.colorbar(
+        # avoid using "plt.colorbar" since it might not properly recognize
+        # the associated figure (e.g. plt.gcf() might point somewhere else)!
+        self.cb = self._m.f.colorbar(
             n_cmap,
             cax=self.ax_cb,
             extend=self._extend,
