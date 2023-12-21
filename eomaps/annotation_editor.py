@@ -615,7 +615,7 @@ class AnnotationEditor(_EditorBase):
         use_ids : bool, optional
             If True, ID values are used to identify the annotation-positions.
             (NOTE: this can cause problems because the Maps-object must have
-             the correct data assigned to identify the annotation!)
+            the correct data assigned to identify the annotation!)
             If False, always use the current position of the annotation
             as input-argument for the returned code.
 
