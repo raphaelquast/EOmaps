@@ -2121,8 +2121,18 @@ class BlitManager:
             if renderer:
                 for art in allartists:
                     if art not in self._hidden_artists:
-                        art.draw(renderer)
-                        art.stale = False
+                        try:
+                            art.draw(renderer)
+                            art.stale = False
+                        except Exception:
+                            if _log.getEffectiveLevel() <= logging.DEBUG:
+                                _log.error(
+                                    "Unable to draw artist:"
+                                    f"{art} ("
+                                    f"figure={getattr(art, 'figure', '??')}, "
+                                    f"axes={getattr(art, 'axes', '??')})"
+                                )
+
                 self._bg_layers[layer] = renderer.copy_from_bbox(bbox)
 
     def fetch_bg(self, layer=None, bbox=None):
