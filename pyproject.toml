@@ -63,6 +63,8 @@ gui = [
     "qtpy"
     ]
 
+[project.scripts]
+eomaps = "eomaps.scripts.open:cli"
 
 [project.urls]
 Documentation = "https://eomaps.readthedocs.io/"
