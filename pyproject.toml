@@ -7,7 +7,7 @@ include = ["eomaps"]
 
 [project]
 name = "eomaps"
-version = "7.4"
+version = "8.0"
 description = "A library to create interactive maps of geographical datasets."
 requires-python = ">=3.8"
 
