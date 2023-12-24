@@ -1,8 +1,8 @@
 
 .. _scalebar:
 
-📏 Scalebars
-------------
+|iconScalebar| Scalebars
+------------------------
 
 .. currentmodule:: eomaps.eomaps
 

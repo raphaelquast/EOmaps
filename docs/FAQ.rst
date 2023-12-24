@@ -1,5 +1,6 @@
-👀 FAQ
-=======
+
+|iconFaq| FAQ
+=============
 
 .. contents:: Contents:
   :local:

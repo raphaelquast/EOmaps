@@ -1,6 +1,6 @@
 
-📦 Reading data
-----------------
+|iconReading| Reading data
+--------------------------
 
 .. currentmodule:: eomaps.eomaps
 

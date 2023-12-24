@@ -1,8 +1,8 @@
 .. _installation:
 
 
-🐛 Installation
-================
+|iconInstall| Installation
+==========================
 
 .. contents:: Contents:
     :local:
@@ -11,7 +11,7 @@
 Recommended way (via ``conda`` and ``mamba``)
 ---------------------------------------------
 
-EOmaps is available via the ``conda-forge`` channel and can be installed via:
+EOmaps is  available via the ``conda-forge`` channel and can be installed via:
 
   .. code-block:: console
 

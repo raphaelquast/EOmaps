@@ -1,8 +1,8 @@
 
 .. _ne_features:
 
-🌵 NaturalEarth features
-------------------------
+|iconNaturalearth| NaturalEarth features
+----------------------------------------
 
 .. currentmodule:: eomaps.eomaps
 

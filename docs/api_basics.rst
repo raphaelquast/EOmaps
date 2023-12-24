@@ -1,7 +1,7 @@
 .. _basics:
 
-🌱 Basics
----------
+|iconBasics| Basics
+-------------------
 
 .. contents:: Contents
     :depth: 1

@@ -1,7 +1,7 @@
 .. _visualize_data:
 
-🔴 Data Visualization
-----------------------
+|iconDatavisualization| Data Visualization
+--------------------------------------
 
 .. contents:: Contents:
     :depth: 1

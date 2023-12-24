@@ -1,8 +1,8 @@
 
 .. _vector_data:
 
-💠 Vector Data
----------------
+|iconVector| Vector Data
+------------------------
 
 .. currentmodule:: eomaps.eomaps
 

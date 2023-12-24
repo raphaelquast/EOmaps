@@ -1,7 +1,7 @@
 
 
-🔸 Miscellaneous
-----------------
+|iconMiscellaneous| Miscellaneous
+---------------------------------
 Some additional functions and properties that might come in handy:
 
 .. currentmodule:: eomaps.eomaps

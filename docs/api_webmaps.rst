@@ -1,8 +1,8 @@
 
 .. _webmap_layers:
 
-🛰 WebMap layers
-----------------
+|iconWebmaplayers| WebMap layers
+--------------------------------
 
 .. contents:: Contents:
     :local:
