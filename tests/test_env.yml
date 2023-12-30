@@ -11,7 +11,7 @@ dependencies:
   - descartes
   - mapclassify
   - pyproj
-  - cartopy
+  - cartopy =0.22.0
   # --------------for data-shading
   - datashader
   # --------------for GeoTIFF and NetCDF files
