@@ -849,7 +849,7 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
     |     cbB.tick_params(labelcolor="darkblue", labelsize=9)         |                                          |
     |                                                                 |                                          |
     |     m.subplots_adjust(bottom=0.1)                               |                                          |
-    |     mA.show()                                                   |                                          |
+    |     m.show_layer(mA.layer)                                      |                                          |
     +-----------------------------------------------------------------+------------------------------------------+
 
 .. autosummary::
