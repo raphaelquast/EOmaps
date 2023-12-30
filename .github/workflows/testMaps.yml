@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         # set operating systems to test
-        os: [ubuntu-latest]
+        os: [windows-latest]
         # set python versions to test
         python-version: ["3.9", "3.10", "3.11"]
 
