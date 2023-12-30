@@ -9,7 +9,7 @@ dependencies:
   - pandas
   - geopandas
   - matplotlib >=3.4
-  - cartopy >=0.20.0
+  - cartopy >=0.22.0
   - descartes
   - mapclassify
   - pyproj
