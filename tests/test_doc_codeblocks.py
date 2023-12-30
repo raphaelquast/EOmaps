@@ -58,7 +58,7 @@ class _TestSequenceMeta(type):
                 source_code = node.astext()
                 name = node.attributes["names"][0]
 
-                test_name = f"test_{i}"
+                test_name = f"test_{p.stem}_{i}"
                 tests[test_name] = gen_test(i, name, source_code)
 
         os.chdir(cwd)
