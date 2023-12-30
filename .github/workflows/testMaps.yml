@@ -27,7 +27,7 @@ jobs:
           environment-file: tests/test_env.yml
           init-shell: >-
             bash
-          cache-environment: true
+          cache-environment: false
           post-cleanup: 'all'
           create-args: >-
             python=${{ matrix.python-version }}
