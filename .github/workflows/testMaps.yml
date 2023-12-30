@@ -20,30 +20,19 @@ jobs:
       # checkout repository
       - uses: actions/checkout@v3
       # install miniconda environment
-      - uses: conda-incubator/setup-miniconda@v2
+
+      - uses: mamba-org/setup-micromamba@v1
         with:
+          micromamba-version: '1.3.1-0'
           environment-file: tests/test_env.yml
-
-          # use mamba to speed up installation
-          #mamba-version: "*"
-          #channels: conda-forge
-          #channel-priority: true
-
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-
-          activate-environment: eomaps
-
-          show-channel-urls: true
-          use-only-tar-bz2: true
-
-          python-version: ${{ matrix.python-version }}
-
-          auto-activate-base: false
-          auto-update-conda: true
-      # run pytest
-      - name: test Maps
-        # do this to ensure proper activation of conda environment
+          init-shell: >-
+            bash
+            powershell
+          cache-environment: true
+          post-cleanup: 'all'
+          create-args: >-
+            python=${{ matrix.python-version }}
+      - name: Test Maps
         shell: bash -l {0}
         run: |
           pip install -e .[all]
