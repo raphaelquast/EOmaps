@@ -31,7 +31,8 @@ class TestDocNotebooks:
             nb = nbformat.read(f, as_version=4)
             # parse all code-cells from notebook
             code_cells = [i["source"] for i in nb["cells"] if i["cell_type"] == "code"]
-            code = ""
+            # make sure plt.ion() is called before each test!
+            code = "import matplotlib.pyplot as plt\n" "plt.ion()\n" "\n"
 
             for c in code_cells:
                 for l in c.split("\n"):
