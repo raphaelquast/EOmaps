@@ -3,17 +3,14 @@ channels:
   - conda-forge
 
 dependencies:
-  - rtree
   - numpy
   - scipy
   - pandas
   - geopandas
   - matplotlib >=3.4
-  - cartopy >=0.22.0
   - descartes
   - mapclassify
   - pyproj
-  - pyepsg
   # --------------for data-shading
   - datashader
   # --------------for GeoTIFF and NetCDF files
@@ -34,3 +31,6 @@ dependencies:
   - docutils
   - jupyter
   - nbformat
+  - pip
+  - pip:
+    - cartopy=0.22.0
