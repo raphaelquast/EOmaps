@@ -27,7 +27,6 @@ jobs:
           environment-file: tests/test_env.yml
           init-shell: >-
             bash
-            powershell
           cache-environment: true
           post-cleanup: 'all'
           create-args: >-
