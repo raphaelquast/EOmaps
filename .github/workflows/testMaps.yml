@@ -11,9 +11,9 @@ jobs:
     strategy:
       matrix:
         # set operating systems to test
-        os: [windows-latest]
+        os: [ubuntu-latest]
         # set python versions to test
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     name: test_Maps ${{ matrix.os }}  ${{ matrix.python-version }}
     steps:
@@ -26,7 +26,7 @@ jobs:
           environment-file: tests/test_env.yml
           init-shell: >-
             bash
-          cache-environment: false
+          cache-environment: true
           post-cleanup: 'all'
           create-args: >-
             python=${{ matrix.python-version }}
