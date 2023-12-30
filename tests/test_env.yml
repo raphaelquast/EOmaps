@@ -33,4 +33,4 @@ dependencies:
   - nbformat
   - pip
   - pip:
-    - cartopy==0.22.0
+    - cartopy
