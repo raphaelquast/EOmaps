@@ -1316,7 +1316,7 @@ class KeypressCallbacks:
         If the visible layer changes **while the overlay-layer is active**,
         triggering the callback again might not properly remove the previous overlay!
         (e.g. the overlay is only removed if the top-layer corresponds exactly to
-         the overlay-layer specifications)
+        the overlay-layer specifications)
 
         Examples
         --------

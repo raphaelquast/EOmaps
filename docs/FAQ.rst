@@ -279,8 +279,7 @@ Important changes between major versions
 
 .. dropdown:: ⚙ From EOmaps v5.x to v6.x
 
-    General changes in behavior
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    **General changes in behavior**
 
     - | 🔶 Starting with EOmaps v6.0 multiple calls to ``m.plot_map()``
       | **on the same Maps-object completely remove (and replace)** the previous dataset!
@@ -295,8 +294,7 @@ Important changes between major versions
       - ``m.show_layer("A|B")`` plots all artists of the layer ``"A"`` **on top of** the layer ``"B"``
       - the ordering of artists inside a layer is determined by their ``zorder``  (e.g. ``m.plot_map(zorder=123)``)
 
-    Removed (previously depreciated) functionalities
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    **Removed (previously depreciated) functionalities**
 
     - ❌ the ``m.figure`` accessor has been removed!
 

@@ -88,9 +88,9 @@ EOmaps provides many useful tools to customize your maps.
     :width: 100%
     :widths: 50 50
 
-    * - |  :doc:`api_inset_maps`
+    * - |  :doc:`notebooks/inset_maps`
         |  Create zoomed-in views on specific regions of a map.
-      - |  :doc:`api_naturalearth_features`
+      - |  :doc:`notebooks/naturalearth_features`
         |  Add basic map features (coastlines, ocean-coloring etc. ) to the map.
 
     * - |  :doc:`api_webmaps`
