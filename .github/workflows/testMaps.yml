@@ -13,40 +13,28 @@ jobs:
         # set operating systems to test
         os: [ubuntu-latest]
         # set python versions to test
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     name: test_Maps ${{ matrix.os }}  ${{ matrix.python-version }}
     steps:
       # checkout repository
       - uses: actions/checkout@v3
       # install miniconda environment
-      - uses: conda-incubator/setup-miniconda@v2
+
+      - uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: tests/test_env.yml
-
-          # use mamba to speed up installation
-          #mamba-version: "*"
-          #channels: conda-forge
-          #channel-priority: true
-
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-
-          activate-environment: eomaps
-
-          show-channel-urls: true
-          use-only-tar-bz2: true
-
-          python-version: ${{ matrix.python-version }}
-
-          auto-activate-base: false
-          auto-update-conda: true
-      # run pytest
-      - name: test Maps
-        # do this to ensure proper activation of conda environment
+          init-shell: >-
+            bash
+          cache-environment: true
+          post-cleanup: 'all'
+          create-args: >-
+            python=${{ matrix.python-version }}
+      - name: Test Maps
         shell: bash -l {0}
         run: |
-          python -m pytest --cov=eomaps --cov-report=xml
+          pip install -e .[all]
+          python -m pytest -v --cov=eomaps --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

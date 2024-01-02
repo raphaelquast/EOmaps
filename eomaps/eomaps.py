@@ -13,6 +13,7 @@ import weakref
 import gc
 from textwrap import fill
 from contextlib import contextmanager, ExitStack
+import importlib.metadata
 
 import numpy as np
 
@@ -71,7 +72,7 @@ from .annotation_editor import AnnotationEditor
 
 from ._data_manager import DataManager
 
-from ._version import __version__
+__version__ = importlib.metadata.version("eomaps")
 
 
 def _handle_backends():

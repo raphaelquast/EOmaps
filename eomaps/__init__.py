@@ -1,3 +1,4 @@
+import importlib.metadata
 from .helpers import register_modules as _register_modules
 
 # address numpy runtime warning concerning binary incompatibility when
@@ -6,8 +7,8 @@ _register_modules("netCDF4", raise_exception=False)
 
 from .eomaps import Maps
 from .mapsgrid import MapsGrid
-from ._version import __version__
 
+__version__ = importlib.metadata.version("eomaps")
 __author__ = "Raphael Quast"
 
 # Follow conventions used by cartopy to setup cache directory
