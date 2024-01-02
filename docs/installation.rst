@@ -8,6 +8,7 @@
     :local:
     :depth: 1
 
+
 Recommended way (via ``conda`` and ``mamba``)
 ---------------------------------------------
 
@@ -17,27 +18,35 @@ EOmaps is available via the ``conda-forge`` channel and can be installed via:
 
     conda install -c conda-forge eomaps
 
-This should make sure all required dependencies are correctly installed.
+
+This will install all required and optional dependencies.
+
 
 .. admonition:: Greatly speed up the installation!
 
-  Since the dependencies of EOmaps can be demanding to solve for the classic ``conda`` solver, it is **highly recommended**
-  that you use `mamba <https://github.com/mamba-org/mamba>`_ to install EOmaps!
+    Since the dependencies of EOmaps can be demanding to solve for the classic ``conda`` solver, it is **highly recommended**
+    that you use `mamba <https://github.com/mamba-org/mamba>`_ to install EOmaps!
 
-  To install ``mamba``, simply use:
+    ``mamba`` is a reimplementation of the conda package manager in C++, capable of solving environments a lot faster.
 
-  .. code-block:: console
+    The best way to get started is to use `miniforge <https://github.com/conda-forge/miniforge>`_.
 
-    conda install -c conda-forge mamba
+    However, you can also install ``mamba`` into an existing ``conda`` environment with:
 
-  Once ``mamba`` is installed, you just need to replace the term ``conda`` with ``mamba`` and you're good to go!
+    .. code-block:: console
 
-  .. code-block:: console
+        conda install -c conda-forge mamba
 
-    mamba install -c conda-forge eomaps
 
-  Alternatively you can also configure ``conda`` to use the ``libmamba`` solver by default.
-  (More info here: `A Faster Solver for Conda: Libmamba <https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community>`_  )
+    Once ``mamba`` is installed, you just need to replace the term ``conda`` with ``mamba`` and you're good to go!
+
+    .. code-block:: console
+
+        mamba install -c conda-forge eomaps
+
+
+    Alternatively you can also configure ``conda`` to use the ``libmamba`` solver by default.
+    (More info here: `A Faster Solver for Conda: Libmamba <https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community>`_  )
 
 
 A quick tutorial on how to **get started from scratch** is available here: :ref:`quickstart_guide`
@@ -45,18 +54,40 @@ A quick tutorial on how to **get started from scratch** is available here: :ref:
 More details on how to **configure your favorite IDE** to work with EOmaps can be found in the FAQ section
 :ref:`configuring_the_editor`.
 
+
+
 Alternative way (via ``pip``)
 -----------------------------
-EOmaps is also available on ``pip`` and can be installed via
+
+EOmaps is also available on ``pip``.
+
+To install EOmaps with a **minimal set of dependencies**, use:
 
   .. code-block:: console
 
     pip install eomaps
 
 
-However, it is **not guaranteed that all dependencies are correctly resolved** and some manual
-tweaking of the environment might be required to ensure that all packages work as expected.
-Especially dependencies on C/C++ libraries such as ``geos`` or ``pyproj`` have to be configured
-carefully to set up everying correctly. If you are not sure what you're doing, use ``conda + mamba``!
+Optional features (WebMap services, CompanionWidget, etc.) require additional dependencies.
+You can install them by installing ``eomaps`` with the required dependency-groups.
 
-A list of all required dependencies can be found in :ref:`setup_a_dev_env`
+To get all features of EOmaps, you can use one of:
+
+.. code-block:: console
+
+    pip install eomaps[all]       # ALL optional dependencies
+    pip install eomaps[all_nogui] # All optional dependencies (except ``Qt`` GUI framework)
+
+
+In addition, you can also select only specific dependency-groups to activate only selected features:
+
+.. code-block:: console
+
+    pip install eomaps[wms]       # dependencies required for WebMap services
+    pip install eomaps[gui]       # dependencies for ``Qt`` GUI framework and the CompanionWidget
+    pip install eomaps[io]        # add support for ``pandas``, ``xarray``, ``geopandas`` and ``rioxarray``
+    pip install eomaps[shade]     # add capabilities to visualize extremely large datasets (via ``datashader``)
+    pip install eomaps[classify]  # add support for ``mapclassify`` to classify datasets
+
+
+A list of all associated packages can be found in :ref:`setup_a_dev_env` or in the ``pyproject.toml`` file.
