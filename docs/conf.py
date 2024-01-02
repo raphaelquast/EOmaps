@@ -68,7 +68,7 @@ myst_render_markdown_format = "myst"  # to parse markdown output with MyST parse
 myst_enable_extensions = ["dollarmath", "colon_fence"]
 myst_title_to_header = True
 
-nb_execution_mode = "cache"
+nb_execution_mode = "off"
 nb_execution_timeout = 120
 
 # handle compiler warnings for duplicate labels due to documents
