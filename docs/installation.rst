@@ -24,7 +24,7 @@ This will install all required and optional dependencies.
 
 .. admonition:: Greatly speed up the installation!
 
-    Since the dependencies of EOmaps can be demanding to solve for the classic ``conda`` solver, it is **highly recommended**
+    Since the dependencies of EOmaps can be demanding to solve for ``conda``, it is **highly recommended**
     that you use `mamba <https://github.com/mamba-org/mamba>`_ to install EOmaps!
 
     ``mamba`` is a reimplementation of the conda package manager in C++, capable of solving environments a lot faster.
@@ -68,8 +68,11 @@ To install EOmaps with a **minimal set of dependencies**, use:
     pip install eomaps
 
 
-Optional features (WebMap services, CompanionWidget, etc.) require additional dependencies.
-You can install them by installing ``eomaps`` with the required dependency-groups.
+Optional dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+Some features (:ref:`webmap_layers`, :ref:`companion_widget`, etc.) require additional dependencies.
+To use them you have to install the required dependency-groups:
 
 To get all features of EOmaps, you can use one of:
 
@@ -79,7 +82,7 @@ To get all features of EOmaps, you can use one of:
     pip install eomaps[all_nogui] # All optional dependencies (except ``Qt`` GUI framework)
 
 
-In addition, you can also select only specific dependency-groups to activate only selected features:
+In addition, you can use the following dependency-groups to activate only selected features:
 
 .. code-block:: console
 
@@ -89,5 +92,7 @@ In addition, you can also select only specific dependency-groups to activate onl
     pip install eomaps[shade]     # add capabilities to visualize extremely large datasets (via ``datashader``)
     pip install eomaps[classify]  # add support for ``mapclassify`` to classify datasets
 
+
+(It is also possible to combine dependency-groups, e.g.: ``pip install eomaps[wms, gui]``)
 
 A list of all associated packages can be found in :ref:`setup_a_dev_env` or in the ``pyproject.toml`` file.
