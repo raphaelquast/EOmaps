@@ -66,7 +66,7 @@ from .projections import Equi7Grid_projection  # import to supercharge cartopy.c
 from .reader import read_file, from_file, new_layer_from_file
 from .grid import GridFactory
 
-from .utilities import utilities
+from .utilities import Utilities
 from .draw import ShapeDrawer
 from .annotation_editor import AnnotationEditor
 
@@ -666,11 +666,11 @@ class Maps(metaclass=_MapsMeta):
         return self._cb
 
     @property
-    @wraps(utilities)
+    @wraps(Utilities)
     def util(self):
         """Add utilities to the map."""
         if self.parent._util is None:
-            self.parent._util = utilities(self.parent)
+            self.parent._util = Utilities(self.parent)
         return self.parent._util
 
     @property

@@ -231,7 +231,7 @@ class LayerSelector(SelectorButtons):
 
         See Also
         --------
-        utilities.layer_slider : A slider widget to switch between layers.
+        Utilities.layer_slider : A slider widget to switch between layers.
         Maps.show_layer: Set the currently visible layer.
 
         """
@@ -573,7 +573,7 @@ class LayerSlider(Slider):
         self._m.BM.update()
 
 
-class utilities:
+class Utilities:
     """
     A collection of utility tools that can be added to EOmaps plots.
 
