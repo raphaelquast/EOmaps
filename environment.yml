@@ -3,7 +3,7 @@ channels:
   - conda-forge
 
 dependencies:
-  - python = 3.10
+  - python = 3.11
   - numpy
   - scipy
   - pandas
@@ -13,7 +13,6 @@ dependencies:
   - descartes
   - mapclassify
   - pyproj
-  - pyepsg
   # --------------for data-shading
   - datashader
   # --------------for GeoTIFF and NetCDF files
@@ -23,7 +22,6 @@ dependencies:
   # --------------for WebMaps
   - owslib
   - requests
-  - xmltodict
   - cairosvg
   # --------------to support multiple Qt versions
   - qtpy
@@ -31,9 +29,6 @@ dependencies:
   - coveralls
   - pytest
   - pytest-cov
-  # --------------for version control
-  - git
-  - pre-commit
   # --------------for building the docs
   - sphinx-copybutton
   - sphinx
