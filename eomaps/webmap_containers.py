@@ -2291,27 +2291,6 @@ class WebMapContainer(object):
 
     @property
     @lru_cache()
-    def DLR_basemaps(self):
-        class _DepreciatedWebServiceCollection(_WebServiceCollection):
-            def __init__(self, *args, **kwargs):
-                print(
-                    "EOmaps: The WebMap service 'DLR_basemaps' is depreciated and will "
-                    "be removed in the next minor version!\n"
-                    "Use `m.add_wms.DLR.basemaps...` instead!",
-                )
-                super().__init__(*args, **kwargs)
-
-        WMS = _DepreciatedWebServiceCollection(
-            m=self._m,
-            service_type="wms",
-            url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
-        )
-
-        WMS.__doc__ = type(self).DLR.__doc__
-        return WMS
-
-    @property
-    @lru_cache()
     def ESRI_ArcGIS(self):
         """
         Interface to the ERSI ArcGIS REST Services Directory
