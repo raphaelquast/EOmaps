@@ -1393,23 +1393,6 @@ class Maps(metaclass=_MapsMeta):
         if parameter is not None:
             self.data_specs.parameter = parameter
 
-    @wraps(set_data)
-    def set_data_specs(self, *args, **kwargs):
-        from warnings import warn
-
-        warn(
-            "EOmaps: `m.set_data_specs(...)` is depreciated and will raise  an "
-            "error in future versions! Use `m.set_data(...)` instead!",
-            FutureWarning,
-            stacklevel=2,
-        )
-        self.set_data(*args, **kwargs)
-
-    set_data_specs.__doc__ = (
-        "WARNING: `m.set_data_specs(...)` is depreciated! "
-        "Use `m.set_data(...)` instead!\n\n"
-    ) + set_data_specs.__doc__
-
     @property
     def set_classify(self):
         """

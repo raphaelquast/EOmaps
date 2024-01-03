@@ -359,3 +359,5 @@ Important changes between major versions
       Have a look at the :ref:`installation` instructions for more details!
 
     - ``setup.py`` and ``_version.py`` have been removed in favor of using a ``pyproject.toml`` file
+
+    - deprecated method ``m.set_data_specs(...)`` is now removed. Use ``m.set_data(...)`` instead!

@@ -33,7 +33,7 @@ Basic data visualization
 There are 3 basic steps required to visualize your data:
 
 1. Initialize a Maps-object with ``m = Maps()``
-2. Set the data and its specifications via ``m.set_data`` (or ``m.set_data_specs``)
+2. Set the data and its specifications via ``m.set_data``
 3. Call ``m.plot_map()`` to generate the map!
 
 |toggleStart|
