@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 
 from . import Maps
-from .helpers import _deprecated
 from .grid import _intersect, _get_intersect
 
 
@@ -214,10 +213,6 @@ class InsetMaps(Maps):
     def plot_map(self, *args, **kwargs):
         set_extent = kwargs.pop("set_extent", False)
         super().plot_map(*args, **kwargs, set_extent=set_extent)
-
-    @_deprecated("Use `add_extent_indicator` instead!")
-    def indicate_inset_extent(self, *args, **kwargs):
-        return self.add_extent_indicator(*args, **kwargs)
 
     # a convenience-method to add a boundary-polygon to a map
     def add_extent_indicator(self, m=None, n=100, **kwargs):
