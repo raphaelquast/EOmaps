@@ -9,6 +9,9 @@ include = ["eomaps"]
 name = "eomaps"
 version = "8.0"
 description = "A library to create interactive maps of geographical datasets."
+readme = "README.md"
+license = {file = "LICENSE"}
+
 requires-python = ">=3.8"
 
 authors = [
@@ -21,6 +24,10 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Operating System :: OS Independent",
+    "Framework :: Matplotlib",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Visualization",
 ]
 
 dependencies = [
