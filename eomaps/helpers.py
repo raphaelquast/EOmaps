@@ -582,7 +582,8 @@ class LayoutEditor:
                 "0 - 9:  Snap-grid spacing\n"
                 "SHIFT:  Multi-select\n"
                 "P:      Print to console\n"
-                "ESCAPE (or ALT + L): Exit\n"
+                "ESCAPE: Exit\n"
+                "R:      Refetch images\n"
                 "\n"
                 "ARROW-KEYS:   Move\n"
                 "SCROLL (+/-): Resize\n"
@@ -832,7 +833,6 @@ class LayoutEditor:
                 self._info_text_hidden = not vis
 
         eventax = event.inaxes
-
         if eventax not in self.axes:
             # if no axes is clicked "unpick" previously picked axes
             if len(self._ax_picked) + len(self._cb_picked) == 0:
@@ -852,6 +852,9 @@ class LayoutEditor:
             self.fetch_current_background()
             self.blit_artists()
             return
+
+        if eventax.name == "eomaps_ax_image":
+            eventax = eventax.eomaps_parent_ax
 
         if self._shift_pressed:
             if eventax in self.maxes:
@@ -917,6 +920,9 @@ class LayoutEditor:
         with ExitStack() as stack:
             for ax in self._ax_picked:
                 stack.enter_context(ax._cm_set(visible=False))
+                ax_image = getattr(ax, "eomaps_ax_image", None)
+                if ax_image:
+                    stack.enter_context(ax_image._cm_set(visible=False))
 
             for cb in self._cb_picked:
                 stack.enter_context(cb.ax_cb._cm_set(visible=False))
@@ -943,6 +949,8 @@ class LayoutEditor:
         for ax in self._ax_picked:
             bbox = self._get_move_with_key_bbox(ax, event.key)
             ax.set_position(bbox)
+            if hasattr(ax, "eomaps_ax_image"):
+                ax.eomaps_ax_image.set_position(bbox)
 
         for cb in self._cb_picked:
             bbox = self._get_move_with_key_bbox(cb._ax, event.key)
@@ -968,6 +976,8 @@ class LayoutEditor:
 
             bbox = self._get_move_bbox(ax, event.x, event.y)
             ax.set_position(bbox)
+            if hasattr(ax, "eomaps_ax_image"):
+                ax.eomaps_ax_image.set_position(bbox)
 
         for cb in self._cb_picked:
             if cb is None:
@@ -989,6 +999,8 @@ class LayoutEditor:
             return
 
         artists = [*self._ax_picked]
+        artists += [ax for ax in self.f.axes if ax.name == "eomaps_ax_image"]
+
         for cb in self._cb_picked:
             artists.append(cb.ax_cb)
             artists.append(cb.ax_cb_plot)
@@ -1013,6 +1025,8 @@ class LayoutEditor:
                 resize_bbox = self._get_resize_bbox(ax, event.step)
                 if resize_bbox is not None:
                     ax.set_position(resize_bbox)
+                    if hasattr(ax, "eomaps_ax_image"):
+                        ax.eomaps_ax_image.set_position(resize_bbox)
 
         for cb in self._cb_picked:
             if cb is None:
@@ -1032,6 +1046,12 @@ class LayoutEditor:
         # self._color_axes()
         self.blit_artists()
 
+    def print_layout(self):
+        s = "\nlayout = {\n    "
+        s += "\n    ".join(f'"{key}": {val},' for key, val in self.get_layout().items())
+        s += "\n}\n"
+        print(s)
+
     def cb_key_press(self, event):
         # release shift key on every keypress
         self._shift_pressed = False
@@ -1045,12 +1065,7 @@ class LayoutEditor:
             self._undo_draggable()
             return
         elif (event.key.lower() == "p") and (self.modifier_pressed):
-            s = "\nlayout = {\n    "
-            s += "\n    ".join(
-                f'"{key}": {val},' for key, val in self.get_layout().items()
-            )
-            s += "\n}\n"
-            print(s)
+            self.print_layout()
         elif (event.key.lower() == "q") and (self.modifier_pressed):
             print(
                 "\n##########################\n\n"
@@ -1068,6 +1083,7 @@ class LayoutEditor:
                 "Use the keys 1-9 to adjust the spacing of the 'snap grid' (Note that "
                 "the grid-spacing also determines the step-size for size- and "
                 "position-changes!) Press 0 to disable grid-snapping.\n\n"
+                "Press 'r' to refetch axes-images."
                 f"To exit, press 'escape' or '{self.modifier}'\n"
                 "\n##########################\n\n"
             )
@@ -1090,7 +1106,8 @@ class LayoutEditor:
             self._scale_direction = "vertical"
         elif event.key in ("control", "ctrl", "ctrl++", "ctrl+-"):
             self._scale_direction = "set_hist_size"
-
+        elif event.key == "r":
+            self.refetch_axes_images()
         elif event.key == "shift":
             self._shift_pressed = True
 
@@ -1132,29 +1149,18 @@ class LayoutEditor:
 
         return snap
 
-    def _make_draggable(self, filepath=None):
-        # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
-        # use a try-except block to avoid issues with ipympl in jupyter notebooks
-        # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
-        try:
-            toolbar = getattr(self.m.BM.canvas, "toolbar", None)
-            if toolbar is not None:
-                for key in ["pan", "zoom"]:
-                    val = toolbar._actions.get(key, None)
-                    if val is not None and val.isCheckable() and val.isChecked():
-                        val.trigger()
-        except AttributeError:
-            pass
+    def _apply_modifications(self):
+        for ax in self.axes:
+            from matplotlib.transforms import Bbox
 
-        self._filepath = filepath
-        self.modifier_pressed = True
-        _log.info(
-            "EOmaps: Layout Editor activated! (press 'esc' to exit " "and 'q' for info)"
-        )
+            bbox = Bbox.from_bounds(*(round(i) for i in ax.bbox.bounds))
+            ax._eomaps_img_buffer = ax.figure.canvas.copy_from_bbox(bbox)
 
-        self._history.clear()
-        self._history_undone.clear()
-        self._add_to_history()
+        for ax in self.axes:
+            from matplotlib.transforms import Bbox
+
+            bbox = Bbox.from_bounds(*(round(i) for i in ax.bbox.bounds))
+            ax._eomaps_img_buffer = ax.figure.canvas.copy_from_bbox(bbox)
 
         self._revert_props = []
         for ax in self.f.axes:
@@ -1234,16 +1240,57 @@ class LayoutEditor:
             if cb._m.layer != self.m.BM.bg_layer:
                 cb.set_visible(False)
 
-        # only re-draw if info-text is None
-        if getattr(self, "_info_text", None) is None:
-            self._info_text = self.add_info_text()
-
         self._color_axes()
-        self._attach_callbacks()
 
-        self.m._emit_signal("layoutEditorActivated")
+        def add_image_axes(ax):
+            axi = self.m.f.add_axes(ax.get_position())
+            axi.set_axis_off()
+            axi.imshow(ax._eomaps_img_buffer, zorder=-100, alpha=0.75)
+            axi.patch.set_alpha(0.5)
 
-        self.m.redraw()
+            axi.name = "eomaps_ax_image"
+            axi.eomaps_parent_ax = ax
+
+            ax.eomaps_ax_image = axi
+
+        for ax in self.axes:
+            add_image_axes(ax)
+
+    def _make_draggable(self, filepath=None):
+        self.modifier_pressed = True
+        with self.m.BM._cx_toggle_draw(True):
+            # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
+            # use a try-except block to avoid issues with ipympl in jupyter notebooks
+            # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
+            try:
+                toolbar = getattr(self.m.BM.canvas, "toolbar", None)
+                if toolbar is not None:
+                    for key in ["pan", "zoom"]:
+                        val = toolbar._actions.get(key, None)
+                        if val is not None and val.isCheckable() and val.isChecked():
+                            val.trigger()
+            except AttributeError:
+                pass
+
+            self._filepath = filepath
+            _log.info(
+                "EOmaps: Layout Editor activated! (press 'esc' to exit "
+                "and 'q' for info)"
+            )
+
+            self._history.clear()
+            self._history_undone.clear()
+            self._add_to_history()
+
+            # only re-draw if info-text is None
+            if getattr(self, "_info_text", None) is None:
+                self._info_text = self.add_info_text()
+
+            self._apply_modifications()
+            self._attach_callbacks()
+
+            self.m._emit_signal("layoutEditorActivated")
+            self.m.redraw()
 
     def _add_revert_props(self, child, *args):
         for prop in args:
@@ -1255,7 +1302,26 @@ class LayoutEditor:
                     )
                 )
 
+    def refetch_axes_images(self):
+        # remember visibility of info-textbox
+        if self._info_text and self._info_text.get_visible() is False:
+            info_txt_hidden = True
+        else:
+            info_txt_hidden = False
+
+        self.m.redraw()
+        self._undo_draggable()
+        self.m.f.canvas.draw()
+        self._make_draggable()
+
+        # hide info-text in case it was hidden before
+        if self._info_text and info_txt_hidden:
+            self._info_text.set_visible(False)
+            self._info_text_hidden = True
+
     def _undo_draggable(self):
+        self.modifier_pressed = False
+
         if getattr(self, "_info_text", None) not in (None, False):
             self._info_text.remove()
             # set to None to avoid crating the info-text again
@@ -1295,14 +1361,23 @@ class LayoutEditor:
                 )
 
         self._reset_callbacks()
+        self._undo_modifications()
+
+        self.m._emit_signal("layoutEditorDeactivated")
+
+        self.m.redraw()
+
+    def _undo_modifications(self):
+        for ax in self.axes:
+            if ax.name == "eomaps_ax_image":
+                ax.remove()
+
         # revert all changes to artists
         for p in self._revert_props:
             if isinstance(p, tuple):
                 p[0](p[1])
             else:
                 p()
-
-        self.modifier_pressed = False
 
         # show all colorbars that are on the visible layer
         active_layers = self.m.BM._get_layers_alphas()[0]
@@ -1319,10 +1394,6 @@ class LayoutEditor:
         # remove snap-grid (if it's still visible)
         self._remove_snap_grid()
 
-        self.m._emit_signal("layoutEditorDeactivated")
-
-        self.m.redraw()
-
     def _reset_callbacks(self):
         # disconnect all callbacks of the layout-editor
         while len(self.cids) > 0:
@@ -1331,7 +1402,6 @@ class LayoutEditor:
 
     def _attach_callbacks(self):
         # make sure all previously set callbacks are reset
-        self._reset_callbacks()
 
         events = (
             ("scroll_event", self.cb_scroll),
@@ -1383,7 +1453,9 @@ class LayoutEditor:
             self._snap_grid_artist.remove()
             del self._snap_grid_artist
 
-    def get_layout(self, filepath=None, override=False, precision=5):
+    def get_layout(
+        self, filepath=None, override=False, precision=5, include_extents=True
+    ):
         """
         Get the positions of all axes within the current plot.
 
@@ -1418,6 +1490,12 @@ class LayoutEditor:
             The precision of the returned floating-point numbers.
             If None, all available digits are returned
             The default is 5
+        include_extents : bool
+            If True, the returned layout will also include the current
+            extent of all maps in the figure.
+            If False, only the location of the axes and the figure-size is
+            returned.
+            The default is True.
         Returns
         -------
         layout : dict or None
@@ -1445,6 +1523,15 @@ class LayoutEditor:
 
             label = ax.get_label()
             name = f"{i}_{label}"
+            # check if it's a maps-object axis, if yes, try to get the extent
+            if include_extents:
+                try:
+                    # try to get extent if axis is associated with a Maps object
+                    m = next((m for m in self.ms if m.ax is ax))
+                    layout[f"{name}_extent"] = m.get_extent()
+                except StopIteration:
+                    pass
+
             if precision is not None:
                 layout[name] = np.round(ax.get_position().bounds, precision).tolist()
             else:
@@ -1491,7 +1578,6 @@ class LayoutEditor:
 
             If a string or a pathlib.Path object is provided, it will be used to
             read a previously dumped layout (e.g. with `m.get_layout(filepath)`)
-
         """
         if isinstance(layout, (str, Path)):
             with open(layout, "r") as file:
@@ -1499,12 +1585,17 @@ class LayoutEditor:
 
         # check if all relevant axes are specified in the layout
         valid_keys = set(self.get_layout())
-        if valid_keys != set(layout):
-            _log.warning(
+        active_keys = set(layout)
+
+        missing_keys = [
+            i for i in (valid_keys - active_keys) if not i.endswith("extent")
+        ]
+        if len(missing_keys) > 0:
+            warnings.warn(
                 "EOmaps: The the layout does not match the expected structure! "
                 "Layout might not be properly restored. "
                 "Invalid or missing keys:\n"
-                f"{sorted(valid_keys.symmetric_difference(set(layout)))}\n"
+                f"{sorted(missing_keys)}\n"
             )
 
         # set the figsize
@@ -1515,7 +1606,6 @@ class LayoutEditor:
         axes = [
             a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
         ]
-
         # identify relevant colorbars
         colorbars = [getattr(m, "colorbar", None) for m in self.ms]
         cbaxes = [getattr(cb, "_ax", None) for cb in colorbars]
@@ -1524,11 +1614,23 @@ class LayoutEditor:
         for key in valid_keys.intersection(set(layout)):
             if key == "figsize":
                 continue
+
             val = layout[key]
 
             i = int(key[: key.find("_")])
             if key.endswith("_histogram_size"):
                 cbs[i].set_hist_size(val)
+            elif key.endswith("_extent"):
+                try:
+                    # try to find an associated Maps object for the axis
+                    m = next((m for m in self.ms if m.ax is axes[i]))
+                    m.set_extent(val)
+                except Exception:
+                    _log.warning(
+                        "EOmaps: Unable to set the plot-extent"
+                        f" for {axes[i].get_label()}",
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    )
             else:
                 axes[i].set_position(val)
 
@@ -1729,6 +1831,15 @@ class BlitManager:
             # clear the list of pending webmaps once the layer has been activated
             if layer in self._pending_webmaps:
                 self._pending_webmaps.pop(layer)
+
+    @contextmanager
+    def _cx_toggle_draw(self, val):
+        # a contextmanager to temporarily enable/disable calling on_draw
+        try:
+            self._disable_draw = val
+            yield
+        finally:
+            self._disable_draw = ~val
 
     @contextmanager
     def _without_artists(self, artists=None, layer=None):
