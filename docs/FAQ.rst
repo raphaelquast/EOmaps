@@ -360,4 +360,9 @@ Important changes between major versions
 
     - ``setup.py`` and ``_version.py`` have been removed in favor of using a ``pyproject.toml`` file
 
-    - deprecated method ``m.set_data_specs(...)`` is now removed. Use ``m.set_data(...)`` instead!
+
+    The following (previously deprecated) methods are now **removed**:
+
+    - `m.set_data_specs` -> use ``m.set_data`` instead
+    - `m.add_wms.DLR_basemaps...` -> use ``m.add_wms.DLR.basemap...`` instead
+    - `m_inset.indicate_inset_extent` -> use ``m_inset.add_extent_indicator`` instead
