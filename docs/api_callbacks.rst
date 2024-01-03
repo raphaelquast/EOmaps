@@ -83,7 +83,7 @@ The ``< EVENT CATEGORY >`` hereby specifies the event that will trigger the call
     |     m.set_data(data=x+y**2, x=x, y=y, crs=4326)                                   |                                                  |
     |     m.plot_map()                                                                  |                                                  |
     |                                                                                   |                                                  |
-    |     m2 = m.new_layer(copy_data_specs=True, layer="second_layer")                  |                                                  |
+    |     m2 = m.new_layer(inherit_data=True, layer="second_layer")                     |                                                  |
     |     m2.plot_map(cmap="tab10")                                                     |                                                  |
     |                                                                                   |                                                  |
     |     # get an annotation if you RIGHT-click anywhere on the map                    |                                                  |
