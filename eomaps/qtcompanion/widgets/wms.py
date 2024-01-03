@@ -870,7 +870,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             self.window().statusBar().showMessage(
                 f"Adding WebMap service:   {wmsname} - {wmslayer}   . . ."
             )
-            # trigger an immediate repaint of the statusbar to show the messge
+            # trigger an immediate repaint of the statusbar to show the message
             # before fetching the service
             self.window().statusBar().repaint()
 

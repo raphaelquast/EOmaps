@@ -423,7 +423,7 @@ class Shapes(object):
             if not self._m._data_manager._current_data:
                 return self.radius
 
-            # check if mutiple individual x-y radius was provided
+            # check if multiple individual x-y radius was provided
             q1 = isinstance(self.radius, tuple) and isinstance(
                 self.radius[0], np.ndarray
             )

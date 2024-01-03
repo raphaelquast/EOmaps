@@ -52,7 +52,7 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
     - use the ``scroll-wheel`` to adjust the auto-scale of the scalebar (hold down ``shift`` for larger steps)
     - use ``control`` + ``scroll-wheel`` to adjust the size of the labels
 
-    - press ``delte`` to remove the scalebar from the plot
+    - press ``delete`` to remove the scalebar from the plot
     - press ``+``  or ``-`` to rotate the scalebar
     - press ``up/down/left/right`` to increase the size of the frame
     - press ``alt + up/down/left/right``: decrease the size of the frame

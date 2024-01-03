@@ -187,7 +187,7 @@ class DraggableAnnotation(DraggableBase):
                 return
 
             # don't allow moving the annotation anchor outside the axis bounds
-            # (otherwhise it would disappear if "annotation_clip=True")
+            # (otherwise it would disappear if "annotation_clip=True")
             ann.xy = ann.axes.transData.inverted().transform(
                 (
                     np.clip(self.x + dx, self._ax_bbox.x0 + 1, self._ax_bbox.x1 - 1),

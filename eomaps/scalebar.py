@@ -197,7 +197,7 @@ class ScaleBar:
         self._scale_factor_base = 1000
         # multipliers for changing the label size
         self._size_factor_base = 50
-        # inverval for adjusting the text-offset
+        # interval for adjusting the text-offset
         self._cb_offset_interval = 0.05
         # interval for rotating the scalebar
         self._cb_rotate_interval = 1
@@ -1027,7 +1027,7 @@ class ScaleBar:
     def _get_patch_verts(self, pts, lon, lat, ang, d):
         offsets = self._patch_offsets
 
-        # top bottom left right referrs to a horizontally oriented colorbar!
+        # top bottom left right refers to a horizontally oriented colorbar!
         ot = d * offsets[0]
         ob = self._maxw + d * (self._label_props["offset"] + offsets[1])
         o_l = d * offsets[2]

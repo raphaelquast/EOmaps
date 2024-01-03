@@ -93,7 +93,7 @@ for buffer in np.linspace(1, 5, 10):
         fc=(1, 0, 0, 0.1),
         ec="r",
         buffer=buffer * 5,
-        n=100,  # use 100 points to represet the ellipses
+        n=100,  # use 100 points to represent the ellipses
     )
 m.add_marker(
     ID=mark_id, shape="rectangles", radius="pixel", fc="g", ec="y", buffer=3, alpha=0.5

@@ -332,7 +332,7 @@ class Maps(metaclass=_MapsMeta):
 
     CRS = ccrs
 
-    # the keybord shortcut to activate the companion-widget
+    # the keyboard shortcut to activate the companion-widget
     _companion_widget_key = "w"
     # max. number of layers to show all layers as tabs in the widget
     # (otherwise only recently active layers are shown as tabs)
@@ -2514,10 +2514,10 @@ class Maps(metaclass=_MapsMeta):
         Returns
         -------
         out_d_int : list
-            Only relevant for `connect="geod"`! (An empty ist is returned otherwise.)
+            Only relevant for `connect="geod"`! (An empty list is returned otherwise.)
             A list of the subdivision distances of the line-segments (in meters).
         out_d_tot : list
-            Only relevant for `connect="geod"` (An empty ist is returned otherwise.)
+            Only relevant for `connect="geod"` (An empty list is returned otherwise.)
             A list of total distances of the line-segments (in meters).
 
         """
@@ -2809,7 +2809,7 @@ class Maps(metaclass=_MapsMeta):
 
         """
         # just a wrapper to make sure that previously set extents are not
-        # resetted when plotting data!
+        # reset when plotting data!
 
         # ( e.g. once .set_extent is called .plot_map does NOT set the extent!)
         if crs is not None:
@@ -3576,7 +3576,7 @@ class Maps(metaclass=_MapsMeta):
                     for a in cb._axes:
                         stack.enter_context(a._cm_set(animated=False))
 
-                # set if data should be rasterized on vektor export
+                # set if data should be rasterized on vector export
                 if m.coll is not None:
                     stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
 
@@ -4848,7 +4848,7 @@ class Maps(metaclass=_MapsMeta):
 
     def _get_coll(self, props, **kwargs):
         # handle selection of explicitly provided facecolors
-        # (e.g. for rgb composits)
+        # (e.g. for rgb composites)
 
         # allow only one of the synonyms "color", "fc" and "facecolor"
         if (

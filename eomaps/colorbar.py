@@ -102,7 +102,7 @@ class ColorBar:
         pos : float or 4-tuple, optional
 
             - float: fraction of the axis size that is used to create the colorbar.
-              The axes of the Maps-object will be shrinked accordingly to make space
+              The axes of the Maps-object will be shrunk accordingly to make space
               for the colorbar.
             - 4-tuple (x0, y0, width, height):
               Absolute position of the colorbar in relative figure-units (0-1).

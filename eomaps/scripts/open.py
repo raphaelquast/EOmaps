@@ -18,7 +18,7 @@ def _identify_crs(crs):
     if crs == "web":
         crs = "google_mercator"
 
-    # if crs can be idenified as integer, return it
+    # if crs can be identified as integer, return it
     try:
         return int(crs)
     except ValueError:

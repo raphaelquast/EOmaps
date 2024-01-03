@@ -40,7 +40,7 @@ It is built on top of [matplotlib](https://matplotlib.org/) and [cartopy](https:
 - Use [🛸 Callbacks](https://eomaps.readthedocs.io/en/latest/api_callbacks.html) to interact with the figure
 - Interactively re-arrange multiple maps in a figure with the [🏗️ LayoutEditor](https://eomaps.readthedocs.io/en/latest/api_layout_editor.html)
 - [🗺 Export](https://eomaps.readthedocs.io/en/latest/api_basics.html#image-export-jpeg-png-svg-etc) publication ready high resolution images (png, jpeg, tiff, ...)  
-or export figures as vektor graphics (svg, eps, pdf ...)
+or export figures as vector graphics (svg, eps, pdf ...)
 - . . . and much more!  
 
 Checkout the [🌱 Basics](https://eomaps.readthedocs.io/en/latest/api_basics.html) in the documentation to get started!

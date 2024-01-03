@@ -894,7 +894,7 @@ class DataManager:
         # (qs = [<2d mask>, <1d x mask>, <1d y mask>]
         qs = self._get_q()
 
-        # estimate slices (and optional blocksize if requred) for 2D data
+        # estimate slices (and optional blocksize if required) for 2D data
         if len(self.z_data.shape) == 2 and all(i is not None for i in qs[1:]):
             slices, blocksize = self._estimate_slice_blocksize(*qs[1:])
         else:

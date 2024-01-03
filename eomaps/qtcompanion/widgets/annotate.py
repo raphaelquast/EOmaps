@@ -169,7 +169,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
 
         self.text_inp.textChanged.connect(self.update_selected_text)
         self.text_inp.setPlaceholderText(
-            "Enter annotation text (or edit text of existing annoation)\n\n"
+            "Enter annotation text (or edit text of existing annotation)\n\n"
             "Press < SHIFT + ENTER > and click on the map to draw the annotation!"
         )
         self.text_inp.setSizePolicy(

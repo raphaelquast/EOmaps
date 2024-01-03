@@ -2,8 +2,8 @@
 Test all Jupyter Notebook code-cells from the docs.
 
 NOTE:
-All cod cells of a notebook are concatenated as if they have been writtin as a
-singe pyhton-script that is executed in one go!
+All code cells of a notebook are concatenated as if they have been written as a
+single pyhton-script that is executed in one go!
 
 This is done to avoid issues with cells that are not "standalone"
 (e.g. that require previous cells to be executed)

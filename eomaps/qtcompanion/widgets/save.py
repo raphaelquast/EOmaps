@@ -98,12 +98,12 @@ class RasterizeCheckBox(QtWidgets.QCheckBox):
         if self.window().showhelp is True:
             QtWidgets.QToolTip.showText(
                 e.globalPos(),
-                "<h3>Rasterize datasets on vektor export</h3>"
-                "Toggle if data is rasterized (True) or treated as vektor (False) "
-                "when exporting the figure to vektor-formats (svg, pdf, eps)."
+                "<h3>Rasterize datasets on vector export</h3>"
+                "Toggle if data is rasterized (True) or treated as vector (False) "
+                "when exporting the figure to vector-formats (svg, pdf, eps)."
                 "<p>"
                 "If checked, datasets will appear as rasterized images in the exported "
-                "vektor file (to avoid creating very large files for big datasets)."
+                "vector file (to avoid creating very large files for big datasets)."
                 "<p>"
                 "<b>NOTE:</b> The current value is also used for clipboard-export!"
                 " (<code>ctrl+c</code>)",
@@ -157,8 +157,8 @@ class SaveFileWidget(QtWidgets.QFrame):
 
         # transparent
         self.transp_cb = TransparentCheckBox()
-        transp_label = QtWidgets.QLabel("Tranparent\nBackground")
-        width = transp_label.fontMetrics().boundingRect("Tranparent").width()
+        transp_label = QtWidgets.QLabel("Transparent\nBackground")
+        width = transp_label.fontMetrics().boundingRect("Transparent").width()
         transp_label.setFixedWidth(width + 5)
         self.transp_cb.stateChanged.connect(self.update_clipboard_kwargs)
 
@@ -314,7 +314,7 @@ class SaveFileWidget(QtWidgets.QFrame):
 
     @Slot()
     def set_export_props(self, *args, **kwargs):
-        # callback that is triggerd on Maps.set_clipboard_kwargs
+        # callback that is triggered on Maps.set_clipboard_kwargs
 
         clipboard_kwargs = self.m.__class__._clipboard_kwargs
 

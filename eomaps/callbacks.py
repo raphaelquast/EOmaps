@@ -810,7 +810,7 @@ class _ClickCallbacks(object):
         of the currently visible layer if you click on the map.
 
         You can show a rectangular or circular area of the "peek-layer" centered at
-        the mouse-position or swipe beween layers (e.g. from left/right/top or bottom).
+        the mouse-position or swipe between layers (e.g. from left/right/top or bottom).
 
 
         Parameters

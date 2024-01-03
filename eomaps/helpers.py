@@ -1133,7 +1133,7 @@ class LayoutEditor:
         return snap
 
     def _make_draggable(self, filepath=None):
-        # Uncheck avtive pan/zoom actions of the matplotlib toolbar.
+        # Uncheck active pan/zoom actions of the matplotlib toolbar.
         # use a try-except block to avoid issues with ipympl in jupyter notebooks
         # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
         try:
@@ -1225,7 +1225,7 @@ class LayoutEditor:
                     child.set_alpha(0.75)  # for overlapping axes
 
                 else:
-                    # make all other childs invisible (to avoid drawing them)
+                    # make all other children invisible (to avoid drawing them)
                     child.set_visible(False)
                     child.set_animated(True)
 
@@ -1421,7 +1421,7 @@ class LayoutEditor:
         Returns
         -------
         layout : dict or None
-            A dict of the positons of all axes, e.g.: {1:(x0, y0, width height), ...}
+            A dict of the positions of all axes, e.g.: {1:(x0, y0, width height), ...}
         """
         figsize = [*self.f.get_size_inches()]
 
@@ -1598,7 +1598,7 @@ class BlitManager:
         self._mpl_backend_force_full = False
         self._mpl_backend_blit_fix = False
 
-        # True = persistant, False = execute only once
+        # True = persistent, False = execute only once
         self._on_layer_change = {True: list(), False: list()}
         self._on_layer_activation = {True: dict(), False: dict()}
 
@@ -1626,7 +1626,7 @@ class BlitManager:
         # in this case the normal draw-routines are used (see m.savefig) so there is
         # no need to trigger updates (also `canvas.get_renderer` is undefined for
         # pdf/svg exports since those canvas do not expose the renderer)
-        # ... this is required to support vektor format outputs!
+        # ... this is required to support vector format outputs!
         if self.canvas.is_saving():
             return None
 

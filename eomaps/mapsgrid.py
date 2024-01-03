@@ -314,7 +314,7 @@ class MapsGrid:
         Parameters
         ----------
         ax_init : set
-            The GridSpec speciffications for the axis.
+            The GridSpec specifications for the axis.
             use `ax_inits = (<row>, <col>)` to get an axis in a given grid-cell
             use `slice(<start>, <stop>)` for `<row>` or `<col>` to get an axis
             that spans over multiple rows/columns.

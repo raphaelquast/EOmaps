@@ -122,7 +122,7 @@ class GridLines:
             - If `int` or `float`, the provided number is used as grid-spacing.
             - If a `list` or `numpy.array` is provided, it is used to draw gridlines
               at the provided coordinates.
-            - If a `tuple` of lengh 2 is provided, it represents separate assignments of
+            - If a `2-tuple` is provided, it represents separate assignments of
               the aforementioned types for longitude/latitude , e.g.: `(d_lon, d_lat)`.
             - If `None`, gridlines are automatically determined based on the "auto_n"
               parameter.

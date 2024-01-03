@@ -19,7 +19,7 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
     While a compass is picked (and the LEFT mouse button is pressed), the following
     additional interactions are available:
 
-    - press ``delte`` on the keyboard: remove the compass from the plot
+    - press ``delete`` on the keyboard: remove the compass from the plot
     - rotate the ``mouse wheel``: scale the size of the compass
 
 .. autosummary::

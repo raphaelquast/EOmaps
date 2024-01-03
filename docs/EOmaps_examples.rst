@@ -100,7 +100,7 @@ Callbacks - turn your maps into interactive widgets
 -  **Callback functions** can easily be attached to the plot to turn it
    into an interactive plot-widget!
 
-   - | there’s a nice list of (customizeable) pre-defined callbacks accessible via:
+   - | there’s a nice list of (customizable) pre-defined callbacks accessible via:
      | ``m.cb.click``, ``m.cb.pick``, ``m.cb.keypress`` and ``m.cb.dynamic``
 
       -  use ``annotate`` (and ``clear_annotations``) to create text-annotations
@@ -169,7 +169,7 @@ The data displayed in the above gif is taken from:
 
 .. _ex_7:
 
-Vektor data - interactive geometries
+Vector data - interactive geometries
 -------------------------------------
 
 EOmaps can be used to assign callbacks to vektor-data (e.g. ``geopandas.GeoDataFrames``).

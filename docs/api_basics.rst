@@ -506,7 +506,7 @@ To set the absolute position of the map, provide a list of 4 floats representing
 Using already existing figures / axes
 *************************************
 
-It is also possible to insert an EOmaps map into an existing figure or re-use an existing axes.
+It is also possible to insert an EOmaps map into an existing figure or reuse an existing axes.
 
   - To put a map on an existing figure, provide the figure-instance via ``m = Maps(f= <the figure instance>)``
   - To use an existing axes, provide the axes-instance via ``m = Maps(ax= <the axes instance>)``

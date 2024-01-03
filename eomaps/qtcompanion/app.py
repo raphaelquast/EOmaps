@@ -183,7 +183,7 @@ class MenuWindow(AlwaysOnTopWindow):
         # self.resize(int(sh.width() * 1.35), sh.height())
 
         # clear the colormaps-dropdown pixmap cache if the colormaps have changed
-        # (the Signal is emmited by Maps-objects if a new colormap is registered)
+        # (the Signal is emitted by Maps-objects if a new colormap is registered)
         self.m._connect_signal("cmapsChanged", self.clear_pixmap_cache)
 
     def show(self):

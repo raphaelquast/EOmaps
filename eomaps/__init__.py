@@ -24,7 +24,7 @@ _data_dir = os.path.join(os.environ.get("XDG_DATA_HOME", _writable_dir), "eomaps
 
 
 # -----------------------------------------------------------------------------------
-# The following loggin config is adapted from matplotlibs way of dealing with logging
+# The following login config is adapted from matplotlibs way of dealing with logging
 # (see https://github.com/matplotlib/matplotlib/blob/main/lib/matplotlib/__init__.py)
 
 import logging

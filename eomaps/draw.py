@@ -610,7 +610,7 @@ class ShapeDrawer:
 
     def polygon(self, smooth=False, draw_on_drag=True, **kwargs):
         """
-        Draw arbitarary polygons
+        Draw arbitrary polygons
 
         - RIGHT click to add points
           (or drag while holding RIGHT mouse button)

@@ -449,7 +449,7 @@ class WebMapContainer(object):
 
             - default: standard OSM layer
             - default_german: standard OSM layer in german
-            - CyclOSM: a bycicle oriented style
+            - CyclOSM: a bicycle oriented style
             - OEPNV_public_transport: a layer indicating global public transportation
             - OpenRiverboatMap: a style to navigate waterways
             - OpenTopoMap: SRTM + OSM for nice topography
@@ -1254,7 +1254,7 @@ class WebMapContainer(object):
                 Technology (https://heigit.org)
 
 
-                For more details, plese visit:
+                For more details, please visit:
                 https://osmlanduse.org
                 """
             WMS._EOmaps_source_code = (
@@ -1294,7 +1294,7 @@ class WebMapContainer(object):
 
         check: https://discomap.eea.europa.eu/
 
-        EEA standard re-use policy: Unless otherwise indicated, reuse of
+        EEA standard reuse policy: Unless otherwise indicated, reuse of
         content on the EEA website for commercial or non-commercial
         purposes is permitted free of charge, provided that the source is
         acknowledged.
@@ -1336,7 +1336,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1369,7 +1369,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1402,7 +1402,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1435,7 +1435,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1468,7 +1468,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1501,7 +1501,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1534,7 +1534,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1567,7 +1567,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1600,7 +1600,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
