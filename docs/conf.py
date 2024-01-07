@@ -93,10 +93,10 @@ html_static_path = ["_static"]
 html_theme = "sphinx_rtd_theme"
 
 
-autosummary_generate = [
-    str(i) for i in Path("api").iterdir() if i.is_file() and i.suffix == ".rst"
-]
-
+# autosummary_generate = [
+#     str(i) for i in Path("api").iterdir() if i.is_file() and i.suffix == ".rst"
+# ]
+autosummary_generate = True
 autodoc_default_options = {
     "member-order": "alphabetical",
 }
