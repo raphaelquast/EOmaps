@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from .shapes import Shapes
 from .eomaps import Maps
 
-from .ne_features import NaturalEarth_features
+from .ne_features import NaturalEarthFeatures
 
 try:
     from .webmap_containers import WebMapContainer
@@ -421,7 +421,7 @@ class MapsGrid:
     @property
     @wraps(Maps.add_feature)
     def add_feature(self):
-        x = NaturalEarth_features(self)
+        x = NaturalEarthFeatures(self)
         return x
 
     @wraps(Maps.add_gdf)

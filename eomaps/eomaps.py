@@ -57,7 +57,7 @@ except ImportError as ex:
     _cx_refetch_wms_on_size_change = None
     WebMapContainer = None
 
-from .ne_features import NaturalEarth_features
+from .ne_features import NaturalEarthFeatures
 
 from .cb_container import CallbackContainer, GeoDataFramePicker
 from .scalebar import ScaleBar
@@ -344,6 +344,9 @@ class Maps(metaclass=_MapsMeta):
     # arguments passed to m.savefig when using "ctrl+c" to export figure to clipboard
     _clipboard_kwargs = dict()
 
+    # to make namespace accessible for sphinx
+    add_feature = NaturalEarthFeatures
+
     def __init__(
         self,
         crs=None,
@@ -501,6 +504,8 @@ class Maps(metaclass=_MapsMeta):
 
             if Maps._always_on_top:
                 self._set_always_on_top(True)
+
+        self.add_feature = self.add_feature(weakref.proxy(self))
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -1711,15 +1716,6 @@ class Maps(metaclass=_MapsMeta):
     @wraps(AnnotationEditor.__call__)
     def edit_annotations(self, b=True, **kwargs):
         self._edit_annotations(b, **kwargs)
-
-    @property
-    @wraps(NaturalEarth_features)
-    def add_feature(self):
-        """Add features from NaturalEarth."""
-        # lazily initialize NaturalEarth features
-        if not hasattr(self, "_add_feature"):
-            self._add_feature = NaturalEarth_features(self)
-        return self._add_feature
 
     @contextmanager
     def _disable_autoscale(self, set_extent):
