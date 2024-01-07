@@ -241,4 +241,4 @@ Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabil
    :maxdepth: 1
    :caption: API Reference
 
-   reference
+   api/reference

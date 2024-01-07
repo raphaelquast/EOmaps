@@ -1,15 +1,67 @@
 # Configuration file for the Sphinx documentation builder.
 import sys, os
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath(".." + os.sep + ".."))
+sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 sys.path.insert(0, os.path.abspath(".."))
+
+from eomaps import Maps
+
+
+def make_feature_toctree_file():
+    preset = (f for f in dir(Maps.add_feature.preset) if not f.startswith("_"))
+    physical = (f for f in dir(Maps.add_feature.physical) if not f.startswith("_"))
+    cultural = (f for f in dir(Maps.add_feature.cultural) if not f.startswith("_"))
+    shapes = (f for f in dir(Maps.set_shape) if not f.startswith("_"))
+    draw = (f for f in dir(Maps.draw) if not f.startswith("_"))
+    wms = (f for f in dir(Maps.add_wms) if not f.startswith("_"))
+
+    s = (
+        ":orphan:\n"
+        ".. currentmodule:: eomaps\n"
+        ".. autosummary::\n"
+        "    :toctree: generated\n"
+        "    :nosignatures:\n"
+        "    :template: obj_with_attributes_no_toc.rst\n\n"
+        + "\n".join(
+            [
+                "\n".join([f"    Maps.add_feature.preset.{f}" for f in preset]),
+                "\n".join([f"    Maps.add_feature.physical.{f}" for f in physical]),
+                "\n".join(
+                    [f"    Maps.add_feature.physical.{f}.get_gdf" for f in physical]
+                ),
+                "\n".join([f"    Maps.add_feature.cultural.{f}" for f in cultural]),
+                "\n".join(
+                    [f"    Maps.add_feature.cultural.{f}.get_gdf" for f in cultural]
+                ),
+                "\n".join([f"    Maps.set_shape.{f}" for f in shapes]),
+                "\n".join([f"    Maps.draw.{f}" for f in draw]),
+                "\n".join([f"    Maps.add_wms.{f}" for f in wms]),
+            ]
+        )
+    )
+
+    with open(Path("api") / "autodoc_props.rst", "w") as file:
+        file.write(s)
+
+
+make_feature_toctree_file()
 
 
 def setup(app):
     app.add_css_file("custom_css.css")
 
+    # need to assign the names here, otherwise autodoc won't document these classes,
+    # and will instead just say 'alias of ...'
+    # see https://stackoverflow.com/a/58982001/9703451
+    Maps.add_feature.__name__ = "add_feature"
+    Maps.add_feature.preset.__name__ = "preset"
+    Maps.add_feature.cultural.__name__ = "cultural"
+    Maps.add_feature.physical.__name__ = "physical"
+    Maps.set_shape.__name__ = "set_shape"
+    Maps.draw.__name__ = "draw"
+    Maps.add_wms.__name__ = "add_wms"
 
-from eomaps import Maps  # to run __init__.py
 
 # -- Project information
 
@@ -41,11 +93,13 @@ html_static_path = ["_static"]
 html_theme = "sphinx_rtd_theme"
 
 
-autosummary_generate = ["reference.rst"]
-# autodoc_default_options = {
-#     "member-order": "groupwise",
-#     "inherited-members": True,
-# }
+autosummary_generate = [
+    str(i) for i in Path("api").iterdir() if i.is_file() and i.suffix == ".rst"
+]
+
+autodoc_default_options = {
+    "member-order": "alphabetical",
+}
 
 # Napoleon settings
 napoleon_numpy_docstring = True
