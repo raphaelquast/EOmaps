@@ -2289,6 +2289,8 @@ class WebMapContainer(object):
         WMS.__doc__ = self._DLR.__doc__
         return WMS
 
+    DLR.__doc__ = _DLR.__doc__
+
     @property
     @lru_cache()
     def ESRI_ArcGIS(self):
