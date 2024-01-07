@@ -345,7 +345,12 @@ class Maps(metaclass=_MapsMeta):
     _clipboard_kwargs = dict()
 
     # to make namespace accessible for sphinx
+    set_shape = Shapes
+    draw = ShapeDrawer
     add_feature = NaturalEarthFeatures
+
+    if WebMapContainer is not None:
+        add_wms = WebMapContainer
 
     def __init__(
         self,
@@ -457,11 +462,13 @@ class Maps(metaclass=_MapsMeta):
         self._cb = CallbackContainer(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(ax=ax, plot_crs=crs, **kwargs)
+
         if WebMapContainer is not None:
-            self._wms_container = WebMapContainer(weakref.proxy(self))
+            self.add_wms = self.add_wms(weakref.proxy(self))
+
         self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
-        self._shapes = Shapes(weakref.proxy(self))
+        self.set_shape = self.set_shape(weakref.proxy(self))
         self._shape = None
 
         # the radius is estimated when plot_map is called
@@ -506,6 +513,7 @@ class Maps(metaclass=_MapsMeta):
                 self._set_always_on_top(True)
 
         self.add_feature = self.add_feature(weakref.proxy(self))
+        self.draw = self.draw(weakref.proxy(self))
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -677,12 +685,6 @@ class Maps(metaclass=_MapsMeta):
         if self.parent._util is None:
             self.parent._util = Utilities(self.parent)
         return self.parent._util
-
-    @property
-    @wraps(ShapeDrawer)
-    def draw(self):
-        """Draw simple shapes on the map."""
-        return self._shape_drawer
 
     @property
     def BM(self):
@@ -1241,12 +1243,6 @@ class Maps(metaclass=_MapsMeta):
                         cw.show()
         except Exception:
             pass
-
-    @property
-    @wraps(Shapes)
-    def set_shape(self):
-        """Set the plot-shape."""
-        return self._shapes
 
     def set_data(
         self,
@@ -2396,14 +2392,6 @@ class Maps(metaclass=_MapsMeta):
         s._add_scalebar(pos=pos, azim=rotation, pickable=pickable)
 
         return s
-
-    if WebMapContainer is not None:
-
-        @property
-        @wraps(WebMapContainer)
-        def add_wms(self):
-            """Accessor to attach WebMap services to the map."""
-            return self._wms_container
 
     def add_line(
         self,
