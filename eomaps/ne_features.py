@@ -459,6 +459,7 @@ _Physical._setup("physical")
 class _Cultural(_Category):
     _category = "cultural"
 
+
 _Cultural._setup("cultural")
 
 

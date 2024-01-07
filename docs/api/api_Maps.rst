@@ -69,7 +69,7 @@ New Maps and Layers
 Map Features
 ------------
 
-.. autosummary::        
+.. autosummary::
     :toctree: generated
     :template: obj_with_attributes_no_toc.rst
 
