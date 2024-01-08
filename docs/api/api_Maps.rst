@@ -1,10 +1,10 @@
 The :py:class:`Maps` object
 ===========================
 
-.. currentmodule:: eomaps
+.. currentmodule:: eomaps.eomaps
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: custom-class-template.rst
 
     Maps
@@ -14,13 +14,13 @@ Class Methods
 -------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.config
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.from_file.GeoTIFF
@@ -31,7 +31,7 @@ General Properties
 ------------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :nosignatures:
     :template: obj_with_attributes_no_toc.rst
 
@@ -41,7 +41,7 @@ General Properties
     Maps.crs_plot
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :nosignatures:
     :template: obj_with_attributes_no_toc.rst
 
@@ -52,14 +52,14 @@ New Maps and Layers
 -------------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.new_layer
     Maps.new_layer_from_file
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.new_map
@@ -70,14 +70,14 @@ Map Features
 ------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.add_feature
     Maps.add_wms
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.add_gdf
@@ -90,7 +90,7 @@ Map Features
 
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.add_compass
@@ -103,7 +103,7 @@ Data visualization
 ------------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.set_data
@@ -112,14 +112,14 @@ Data visualization
     Maps.set_classify_specs
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.inherit_data
     Maps.inherit_classification
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.plot_map
@@ -131,7 +131,7 @@ Layer management
 ----------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.show_layer
@@ -143,7 +143,7 @@ Figure Layout and Export
 ------------------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.set_frame
@@ -151,7 +151,7 @@ Figure Layout and Export
     Maps.snapshot
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.subplots_adjust
@@ -164,7 +164,7 @@ Map Extent
 ----------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.set_extent
@@ -177,7 +177,7 @@ Interactive Editing
 -------------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.edit_annotations
@@ -188,7 +188,7 @@ Miscellaneous
 -------------
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.fetch_companion_wms_layers
@@ -197,7 +197,7 @@ Miscellaneous
     Maps.get_crs
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.read_file.GeoTIFF
@@ -205,7 +205,7 @@ Miscellaneous
     Maps.read_file.CSV
 
 .. autosummary::
-    :toctree: generated
+    :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
 
     Maps.show

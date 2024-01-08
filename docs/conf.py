@@ -15,14 +15,24 @@ def make_feature_toctree_file():
     shapes = (f for f in dir(Maps.set_shape) if not f.startswith("_"))
     draw = (f for f in dir(Maps.draw) if not f.startswith("_"))
     wms = (f for f in dir(Maps.add_wms) if not f.startswith("_"))
+    files = (f for f in dir(Maps.from_file) if not f.startswith("_"))
+    read_files = (f for f in dir(Maps.read_file) if not f.startswith("_"))
 
     s = (
         ":orphan:\n"
-        ".. currentmodule:: eomaps\n"
+        ".. currentmodule:: eomaps.eomaps\n"
         ".. autosummary::\n"
         "    :toctree: generated\n"
         "    :nosignatures:\n"
         "    :template: obj_with_attributes_no_toc.rst\n\n"
+        "    Maps.add_wms\n"
+        "    Maps.set_shape\n"
+        "    Maps.config\n"
+        "    Maps.draw\n"
+        "    Maps.add_feature\n"
+        "    Maps.add_feature.preset\n"
+        "    Maps.add_feature.physical\n"
+        "    Maps.add_feature.cultural\n"
         + "\n".join(
             [
                 "\n".join([f"    Maps.add_feature.preset.{f}" for f in preset]),
@@ -37,11 +47,13 @@ def make_feature_toctree_file():
                 "\n".join([f"    Maps.set_shape.{f}" for f in shapes]),
                 "\n".join([f"    Maps.draw.{f}" for f in draw]),
                 "\n".join([f"    Maps.add_wms.{f}" for f in wms]),
+                "\n".join([f"    Maps.from_file.{f}" for f in files]),
+                "\n".join([f"    Maps.read_file.{f}" for f in read_files]),
             ]
         )
     )
 
-    with open(Path("api") / "autodoc_props.rst", "w") as file:
+    with open("autodoc_additional_props.rst", "w") as file:
         file.write(s)
 
 
@@ -93,10 +105,8 @@ html_static_path = ["_static"]
 html_theme = "sphinx_rtd_theme"
 
 
-# autosummary_generate = [
-#     str(i) for i in Path("api").iterdir() if i.is_file() and i.suffix == ".rst"
-# ]
-autosummary_generate = True
+autosummary_generate = ["full_reference.rst", "autodoc_additional_props.rst"]
+
 autodoc_default_options = {
     "member-order": "alphabetical",
 }
