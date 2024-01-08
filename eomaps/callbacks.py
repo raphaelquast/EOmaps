@@ -1222,19 +1222,8 @@ class MoveCallbacks(_ClickCallbacks):
         "peek_layer",
     ]
 
-    def _decorate(self, f):
-        def inner(*args, **kwargs):
-            f(*args, **kwargs)
-            self.m.BM.update()
-
-        return inner
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        for cb in self._cb_list:
-            if cb not in ["print_to_console"]:
-                setattr(self, cb, self._decorate(getattr(super(), cb)))
 
 
 class KeypressCallbacks:

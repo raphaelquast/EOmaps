@@ -1152,15 +1152,13 @@ class MoveContainer(ClickContainer):
 
     # this is just a copy of ClickContainer to manage motion-sensitive callbacks
 
-    def __init__(self, button_down=False, update_on_trigger=True, *args, **kwargs):
+    def __init__(self, button_down=False, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
         self._cid_motion_event = None
 
         self._button_down = button_down
-
-        self._update_on_trigger = update_on_trigger
 
     def _init_cbs(self):
         if self._m.parent is self._m:
@@ -1203,12 +1201,12 @@ class MoveContainer(ClickContainer):
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
-                update = False
+                call_update = False
                 for obj in self._objs:
-                    # check if there is a reason to update
-                    if update is False:
+                    # check if there is a reason to update (e.g. an attached callback)
+                    if call_update is False:
                         if len(obj.get.attached_callbacks) > 0:
-                            update = True
+                            call_update = True
 
                     # clear temporary artists before executing new callbacks to avoid
                     # having old artists around when callbacks are triggered again
@@ -1221,7 +1219,7 @@ class MoveContainer(ClickContainer):
 
                 # only update if a callback is attached
                 # (to avoid lag in webagg backed due to slow updates)
-                if self._update_on_trigger and update:
+                if call_update:
                     if self._button_down:
                         if event.button:
                             self._m.parent.BM.update(clear=self._method)
@@ -1995,7 +1993,6 @@ class CallbackContainer:
             method="_click_move",
             parent_container=self._click,
             button_down=True,
-            update_on_trigger=True,  # automatically trigger updates for click+move!
         )
 
         self._move = MoveContainer(
@@ -2004,7 +2001,6 @@ class CallbackContainer:
             method="move",
             button_down=False,
             default_button=None,
-            update_on_trigger=False,  # dont trigger updates for move!
         )
 
         self._pick = PickContainer(
