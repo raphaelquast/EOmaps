@@ -1960,6 +1960,11 @@ class CallbackContainer:
 
     """
 
+    pick = PickContainer
+    click = ClickContainer
+    move = MoveContainer
+    keypress = KeypressContainer
+
     def __init__(self, m):
         self._m = m
 
@@ -1972,7 +1977,7 @@ class CallbackContainer:
             "_always_active",
         }
 
-        self._click = ClickContainer(
+        self.click = self.click(
             m=self._m,
             cb_cls=ClickCallbacks,
             method="click",
@@ -1995,7 +2000,7 @@ class CallbackContainer:
             button_down=True,
         )
 
-        self._move = MoveContainer(
+        self.move = self.move(
             m=self._m,
             cb_cls=MoveCallbacks,
             method="move",
@@ -2003,13 +2008,13 @@ class CallbackContainer:
             default_button=None,
         )
 
-        self._pick = PickContainer(
+        self.pick = self.pick(
             m=self._m,
             cb_cls=PickCallbacks,
             method="pick",
         )
 
-        self._keypress = KeypressContainer(
+        self.keypress = self.keypress(
             m=self._m,
             cb_cls=KeypressCallbacks,
             method="keypress",
@@ -2037,30 +2042,6 @@ class CallbackContainer:
             If True, callbacks will be executed.
         """
         self._m.parent._execute_callbacks = val
-
-    @property
-    @wraps(ClickContainer)
-    def click(self):
-        """Attach click callbacks."""
-        return self._click
-
-    @property
-    @wraps(MoveContainer)
-    def move(self):
-        """Attach move callbacks."""
-        return self._move
-
-    @property
-    @wraps(PickContainer)
-    def pick(self):
-        """Attach pick callbacks."""
-        return self._pick
-
-    @property
-    @wraps(KeypressContainer)
-    def keypress(self):
-        """Attach keypress callbacks."""
-        return self._keypress
 
     def add_picker(self, name, artist, picker):
         """

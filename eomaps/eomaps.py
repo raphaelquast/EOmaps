@@ -348,6 +348,7 @@ class Maps(metaclass=_MapsMeta):
     set_shape = Shapes
     draw = ShapeDrawer
     add_feature = NaturalEarthFeatures
+    cb = CallbackContainer
 
     if WebMapContainer is not None:
         add_wms = WebMapContainer
@@ -459,7 +460,7 @@ class Maps(metaclass=_MapsMeta):
 
         self._layout_editor = None
 
-        self._cb = CallbackContainer(weakref.proxy(self))  # accessor for the callbacks
+        self.cb = self.cb(weakref.proxy(self))  # accessor for the callbacks
 
         self._init_figure(ax=ax, plot_crs=crs, **kwargs)
 
@@ -671,12 +672,6 @@ class Maps(metaclass=_MapsMeta):
             self._set_default_shape()
 
         return self._shape
-
-    @property
-    @wraps(CallbackContainer)
-    def cb(self):
-        """Accessor to attach callbacks to the map."""
-        return self._cb
 
     @property
     @wraps(Utilities)
