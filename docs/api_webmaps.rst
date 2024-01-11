@@ -74,7 +74,7 @@ Pre-defined WebMap services
 
 **Global:**
 
-.. currentmodule:: eomaps.webmap_containers.WebMapContainer
+.. currentmodule:: eomaps.eomaps.Maps.add_wms
 
 .. autosummary::
     :nosignatures:
@@ -124,7 +124,7 @@ Pre-defined WebMap services
 Using custom WebMap services
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: eomaps.webmap_containers.WebMapContainer
+.. currentmodule:: eomaps.eomaps.Maps.add_wms
 
 It is also possible to use custom WMS/WMTS/XYZ services.
 (see docstring of :py:meth:`get_service` for more details and examples)

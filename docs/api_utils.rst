@@ -31,7 +31,7 @@ By default, the widgets will show all available layers (except the "all" layer) 
 - To exclude certain layers from the widget, use ``exclude_layers=[...layer-names to exclude...]``
 - To remove a previously created widget ``s`` from the map, simply use ``s.remove()``
 
-.. currentmodule:: eomaps.utilities.Utilities
+.. currentmodule:: eomaps.eomaps.Maps.util
 
 .. autosummary::
     :nosignatures:
