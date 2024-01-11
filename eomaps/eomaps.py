@@ -348,6 +348,7 @@ class Maps(metaclass=_MapsMeta):
     set_shape = Shapes
     draw = ShapeDrawer
     add_feature = NaturalEarthFeatures
+    util = Utilities
     cb = CallbackContainer
 
     if WebMapContainer is not None:
@@ -516,6 +517,11 @@ class Maps(metaclass=_MapsMeta):
         self.add_feature = self.add_feature(weakref.proxy(self))
         self.draw = self.draw(weakref.proxy(self))
 
+        if self.parent == self:
+            self.util = Utilities(self)
+        else:
+            self.util = self.parent.util
+
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
         if spine not in self.BM._bg_artists.get("__SPINES__", []):
@@ -672,14 +678,6 @@ class Maps(metaclass=_MapsMeta):
             self._set_default_shape()
 
         return self._shape
-
-    @property
-    @wraps(Utilities)
-    def util(self):
-        """Add utilities to the map."""
-        if self.parent._util is None:
-            self.parent._util = Utilities(self.parent)
-        return self.parent._util
 
     @property
     def BM(self):
