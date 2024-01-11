@@ -16,19 +16,16 @@ jobs:
       # Sets up python3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.7
+          python-version: 3.11
 
       - name: Upgrade pip, install setuptools, wheel and twine
         run: |
-          # Upgrade pip
-          python -m pip install --upgrade pip
-          # Install build dependencies
+          python -m pip install --upgrade pip build
           python -m pip install setuptools wheel twine
 
-      # Upload to TestPyPI
       - name: Build and Upload to PyPI
         run: |
-          python setup.py sdist bdist_wheel
+          python -m build
           python -m twine upload dist/*
         env:
           TWINE_USERNAME: __token__
