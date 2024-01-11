@@ -5,6 +5,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["eomaps"]
 
+[tool.setuptools.package-data]
+mypkg = ["NE_features.json", "logo.png"]
+
 [project]
 name = "eomaps"
 version = "8.0"
