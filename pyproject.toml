@@ -6,7 +6,8 @@ build-backend = "setuptools.build_meta"
 include = ["eomaps"]
 
 [tool.setuptools.package-data]
-mypkg = ["NE_features.json", "logo.png"]
+eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
+
 
 [project]
 name = "eomaps"
