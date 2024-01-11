@@ -1977,7 +1977,7 @@ class CallbackContainer:
             "_always_active",
         }
 
-        self.click = self.click(
+        self.click = ClickContainer(
             m=self._m,
             cb_cls=ClickCallbacks,
             method="click",
@@ -1996,11 +1996,11 @@ class CallbackContainer:
             m=self._m,
             cb_cls=ClickCallbacks,
             method="_click_move",
-            parent_container=self._click,
+            parent_container=self.click,
             button_down=True,
         )
 
-        self.move = self.move(
+        self.move = MoveContainer(
             m=self._m,
             cb_cls=MoveCallbacks,
             method="move",
@@ -2008,13 +2008,13 @@ class CallbackContainer:
             default_button=None,
         )
 
-        self.pick = self.pick(
+        self.pick = PickContainer(
             m=self._m,
             cb_cls=PickCallbacks,
             method="pick",
         )
 
-        self.keypress = self.keypress(
+        self.keypress = KeypressContainer(
             m=self._m,
             cb_cls=KeypressCallbacks,
             method="keypress",
