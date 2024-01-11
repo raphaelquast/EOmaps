@@ -1,14 +1,15 @@
-The :py:class:`Maps` object
-===========================
+:orphan:
+
+..
+  NOTE: this file is copied to ../generated/eomaps.eomaps.Maps.rst before the docs are generated (see conf.py)
+  to serve as the auto-generated file for Maps-objects!
+
+:py:class:`Maps`
+================
 
 .. currentmodule:: eomaps.eomaps
 
-.. autosummary::
-    :toctree: ../generated
-    :template: custom-class-template.rst
-
-    Maps
-
+.. autoclass:: Maps
 
 Class Methods
 -------------
@@ -16,24 +17,24 @@ Class Methods
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.config
 
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
-    Maps.from_file.GeoTIFF
-    Maps.from_file.NetCDF
-    Maps.from_file.CSV
+    Maps.from_file
 
-General Properties
-------------------
+Properties
+----------
 
 .. autosummary::
     :toctree: ../generated
-    :nosignatures:
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.f
     Maps.ax
@@ -42,18 +43,29 @@ General Properties
 
 .. autosummary::
     :toctree: ../generated
-    :nosignatures:
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.data
     Maps.colorbar
 
-New Maps and Layers
--------------------
+
+
+Layers and Maps
+---------------
 
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
+
+    Maps.new_map
+    Maps.new_inset_map
+
+.. autosummary::
+    :toctree: ../generated
+    :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.new_layer
     Maps.new_layer_from_file
@@ -61,9 +73,11 @@ New Maps and Layers
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
-    Maps.new_map
-    Maps.new_inset_map
+    Maps.show_layer
+    Maps.fetch_layers
+    Maps.on_layer_activation
 
 
 Map Features
@@ -72,6 +86,7 @@ Map Features
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.add_feature
     Maps.add_wms
@@ -79,6 +94,7 @@ Map Features
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.add_gdf
     Maps.add_annotation
@@ -92,11 +108,21 @@ Map Features
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.add_compass
     Maps.add_gridlines
     Maps.add_scalebar
 
+Callbacks
+---------
+
+.. autosummary::
+    :toctree: ../generated
+    :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
+
+    Maps.cb
 
 
 Data visualization
@@ -105,6 +131,7 @@ Data visualization
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.set_data
     Maps.set_shape
@@ -114,6 +141,7 @@ Data visualization
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.inherit_data
     Maps.inherit_classification
@@ -121,43 +149,11 @@ Data visualization
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.plot_map
     Maps.add_colorbar
     Maps.make_dataset_pickable
-
-
-Layer management
-----------------
-
-.. autosummary::
-    :toctree: ../generated
-    :template: obj_with_attributes_no_toc.rst
-
-    Maps.show_layer
-    Maps.fetch_layers
-    Maps.on_layer_activation
-
-
-Figure Layout and Export
-------------------------
-
-.. autosummary::
-    :toctree: ../generated
-    :template: obj_with_attributes_no_toc.rst
-
-    Maps.set_frame
-    Maps.savefig
-    Maps.snapshot
-
-.. autosummary::
-    :toctree: ../generated
-    :template: obj_with_attributes_no_toc.rst
-
-    Maps.subplots_adjust
-    Maps.edit_layout
-    Maps.get_layout
-    Maps.apply_layout
 
 
 Map Extent
@@ -166,6 +162,7 @@ Map Extent
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.set_extent
     Maps.get_extent
@@ -173,15 +170,46 @@ Map Extent
     Maps.join_limits
 
 
-Interactive Editing
--------------------
+Layout and Export
+-----------------
 
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
-    Maps.edit_annotations
+    Maps.savefig
+    Maps.snapshot
+
+.. autosummary::
+    :toctree: ../generated
+    :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
+
+    Maps.set_frame
+    Maps.subplots_adjust
+
+.. autosummary::
+    :toctree: ../generated
+    :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
+
+    Maps.edit_layout
+    Maps.get_layout
+    Maps.apply_layout
+
+
+Utilities
+---------
+
+.. autosummary::
+    :toctree: ../generated
+    :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
+
+    Maps.util
     Maps.draw
+    Maps.edit_annotations
 
 
 Miscellaneous
@@ -190,6 +218,7 @@ Miscellaneous
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.fetch_companion_wms_layers
     Maps.refetch_wms_on_size_change
@@ -199,6 +228,7 @@ Miscellaneous
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.read_file.GeoTIFF
     Maps.read_file.NetCDF
@@ -207,6 +237,7 @@ Miscellaneous
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
 
     Maps.show
     Maps.redraw

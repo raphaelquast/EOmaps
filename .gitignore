@@ -8,7 +8,7 @@ docs/_build
 docs/debug.log
 docs/.vscode
 docs/generated
-docs/autodoc_additional_props.rst
+docs/api/autodoc_additional_props.rst
 
 docs/_tables
 docs/_static/example_gifs_very_old
