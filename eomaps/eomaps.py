@@ -315,13 +315,12 @@ class Maps(metaclass=_MapsMeta):
     >>>     m.add_feature.preset.coastline()
     >>>     m.savefig(...)
 
-    Attributes
-    ----------
-    CRS : Accessor for available projections (Supercharged version of cartopy.crs)
+    Note
+    ----
 
-    CLASSIFIERS : Accessor for available classifiers (provided by mapclassify)
+    You can access possible crs via the `CRS` accessor (alias of `cartopy.crs`):
 
-    _companion_widget_key : Keyboard shortcut assigned to show/hide the companion-widget
+    >>> m = Maps(crs=Maps.CRS.Orthographic())
 
     """
 
