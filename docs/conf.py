@@ -1,5 +1,7 @@
 # Configuration file for the Sphinx documentation builder.
 import sys, os
+from docutils.nodes import reference
+
 from eomaps import Maps
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
@@ -11,12 +13,31 @@ from gen_autodoc_file import make_feature_toctree_file
 make_feature_toctree_file()
 
 
+def mpl_rc_role_subst(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    """
+    A custom role to avoid 'undefined role' warnings when processing inherited
+    docstrings from matplotlib that use the 'rc' role.
+
+    Each :rc: role is just turned into a link to the matplotlib rcparams file where you
+    can find the actual default value.
+    """
+
+    node = reference(
+        "",
+        f"matpltolib rcParams['{text}']",
+        refuri=r"https://matplotlib.org/stable/users/explain/customizing.html#matplotlibrc-sample",
+    )
+    return [node], []
+
+
 def setup(app):
+    # add rc role to avoid undefined role warnings from inherited docstrings.
+    app.add_role("rc", mpl_rc_role_subst)
 
     app.add_css_file("custom_css.css")
 
-    # need to assign the names here, otherwise autodoc won't document these classes,
-    # and will instead just say 'alias of ...'
+    # By default, autodoc will print 'alias of ...' for aliases.
+    # This can be avoided by explicitly setting the __name__ property.
     # see https://stackoverflow.com/a/58982001/9703451
     Maps.add_feature.__name__ = "add_feature"
     Maps.add_feature.preset.__name__ = "preset"
@@ -46,11 +67,18 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "sphinx_rtd_theme",
     "myst_nb",
     "sphinx_design",
 ]
+
+
+# add mapping for matplotlib-docs to resolve warning about undefined labels
+# in inherited docstrings
+intersphinx_mapping = {"mpl": ("https://matplotlib.org/stable", None)}
+
 
 # -- Options for EPUB output
 epub_show_urls = "footnote"
