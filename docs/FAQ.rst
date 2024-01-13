@@ -349,14 +349,18 @@ Important changes between major versions
 
 .. dropdown:: ⚙ From EOmaps v7.x to v8.x
 
+    - ❗ Starting with `v8.x` eomaps is licensed under a "BSD 3 clause" license!
+
     - ⚠️ Some functions and classes have been re-named to better follow PEP8 naming conventions.
       While this should not interfere with the public API, more extensive customizations might need to be
       adjusted with respect to the new names.
 
-      If you encounter any problems, feel free to open an `issue <https://github.com/raphaelquast/EOmaps/issues>`_ , and I'll see what I can do!
+      - If you encounter any problems, feel free to open an `issue <https://github.com/raphaelquast/EOmaps/issues>`_ , and I'll see what I can do!
 
-    - ⚠️ ``pip`` install has been updated to implement optional dependency groups
-      Have a look at the :ref:`installation` instructions for more details!
+    - ⚠️ ``pip`` install has been updated to implement optional dependency groups.
+
+        - ❗ ``pip install eomaps`` now only installs minimal dependencies required for eomaps
+        - Have a look at the :ref:`installation` instructions for more details!
 
     - ``setup.py`` and ``_version.py`` have been removed in favor of using a ``pyproject.toml`` file
 
