@@ -1094,9 +1094,9 @@ class Maps(metaclass=_MapsMeta):
 
         Returns
         -------
-        m : eomaps.Maps
-            A eomaps.Maps-object of the inset-map.
-            (use it just like any other Maps-object)
+        m : eomaps.inset_maps.InsetMaps
+            A InsetMaps-object of the inset-map.
+            (you can use it just like any other Maps-object!)
 
         See Also
         --------
