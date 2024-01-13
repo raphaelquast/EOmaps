@@ -204,7 +204,7 @@ Information is provided WITHOUT WARRANTY FOR CORRECTNESS!
 Since v8.0, the source-code of EOmaps is licensed under a `BSD 3-clause license <https://choosealicense.com/licenses/bsd-3-clause/>`_.
 
 However, it must be notet that EOmaps has a number of required and optional dependencies whose licenses must be taken into account when packaging
-and redistributing works that build on top of EOmaps. While most dependencies are either **BSD** or **MIT** licensed, there are some dependencies 
+and redistributing works that build on top of EOmaps. While most dependencies are either **BSD** or **MIT** licensed, there are some dependencies
 that might require additional considerations.
 
 Most notably (start of 2024), the **required dependency** `cartopy <https://github.com/SciTools/cartopy>`_ is licensed under **LGPLv3+** (however they are in the process of `re-licensing to BSD-3-clause <https://github.com/SciTools/cartopy/pull/2285>`_) and the **optional** `Qt <https://www.qt.io/licensing>`_ GUI framework is available via commertial and open-source (**LGPLv3+**) licenses and the used python-bindings (`PyQt5 <https://github.com/pyqt/python-qt5>`_) are licensed under **GPL v3**.
