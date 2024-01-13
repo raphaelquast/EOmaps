@@ -3,19 +3,32 @@ from operator import attrgetter
 from itertools import chain
 
 from eomaps import Maps
-from eomaps.colorbar import ColorBar
 
 
-def get_members(
-    obj, key="", with_sublevel=False, prefix="", names_only=False, exclude=[]
+def get_autosummary(
+    currentmodule="eomaps.eomaps",
+    members=[],
+    template="obj_with_attributes_no_toc",
 ):
+    return (
+        f".. currentmodule:: {currentmodule}\n"
+        ".. autosummary::\n"
+        "    :toctree: ../generated\n"
+        "    :nosignatures:\n"
+        f"    :template: {template}.rst\n\n"
+        + "\n".join(f"    {m}" for m in members)
+        + "\n\n"
+    )
+
+
+def get_members(obj, key="", with_sublevel=False, names_only=False, exclude=[]):
     """get a list of attributes of a given object"""
     # use attrgetter to allow also nested attributes (Maps.x.y)
     if len(key) == 0:
-        startstr = f"{prefix}{obj.__name__}"
+        startstr = f"{obj.__name__}"
         members = filter(lambda x: not x.startswith("_") and not x in exclude, dir(obj))
     else:
-        startstr = f"{prefix}{obj.__name__}.{key}"
+        startstr = f"{obj.__name__}.{key}"
         members = filter(
             lambda x: not x.startswith("_") and not x in exclude,
             dir(attrgetter(key)(obj)),
@@ -44,78 +57,56 @@ def get_members(
 
 
 def make_feature_toctree_file():
-    s = (
-        ":orphan:\n"
-        ".. currentmodule:: eomaps.eomaps\n\n"
-        ".. autosummary::\n"
-        "    :toctree: ../generated\n"
-        "    :nosignatures:\n"
-        "    :template: obj_with_attributes_no_toc.rst\n\n"
-        #        "    Maps\n"
-        "    ColorBar\n"
-        "    Maps.config\n"
-    )
-
-    s += (
-        "\n".join(get_members(Maps, "", False, "    ", exclude=["CRS", "CLASSIFIERS"]))
-        + "\n"
-    )
-
-    for key in ("set_shape", "draw", "from_file", "read_file", "util", "add_wms"):
-        s += "\n".join(get_members(Maps, key, False, "    ")) + "\n"
-
+    # Fetch all members of the Maps object that should get a auto-generated docs-file
+    members = list(get_members(Maps, "", False, exclude=["CRS", "CLASSIFIERS"]))
+    for key in (
+        "set_shape",
+        "draw",
+        "from_file",
+        "read_file",
+        "util",
+        "add_wms",
+    ):
+        members.extend(get_members(Maps, key, False))
     for key in ("add_feature", "cb"):
-        s += "\n".join(get_members(Maps, key, True, "    ")) + "\n"
+        members.extend(get_members(Maps, key, True))
 
-    s += "\n\n"
-    s += (
-        ".. currentmodule:: eomaps.colorbar\n"
-        ".. autosummary::\n"
-        "    :toctree: ../generated\n"
-        "    :nosignatures:\n"
-        "    :template: custom-class-template.rst\n\n"
-        "    ColorBar\n"
+    # create a page that will be used for sphinx-autodoc to create stub-files
+    s = ":orphan:\n\n"
+    s += get_autosummary(
+        "eomaps.eomaps", ["Maps.config", *members], "obj_with_attributes_no_toc"
+    )
+    s += get_autosummary("eomaps.colorbar", ["ColorBar"], "custom-class-template")
+    s += get_autosummary(
+        "eomaps.grid", ["GridLines", "GridLabels"], "custom-class-template"
+    )
+    s += get_autosummary("eomaps.compass", ["Compass"], "custom-class-template")
+    s += get_autosummary("eomaps.scalebar", ["ScaleBar"], "custom-class-template")
+    s += get_autosummary(
+        "eomaps.inset_maps",
+        [
+            "InsetMaps.set_inset_position",
+            "InsetMaps.add_extent_indicator",
+            "InsetMaps.add_indicator_line",
+        ],
+        "obj_with_attributes_no_toc",
     )
 
-    s += "\n\n"
-    s += (
-        ".. currentmodule:: eomaps.grid\n"
-        ".. autosummary::\n"
-        "    :toctree: ../generated\n"
-        "    :nosignatures:\n"
-        "    :template: custom-class-template.rst\n\n"
-        "    GridLines\n"
-        "    GridLabels\n"
-    )
+    basepath = Path(__file__).parent
 
-    s += "\n\n"
-    s += (
-        ".. currentmodule:: eomaps.compass\n"
-        ".. autosummary::\n"
-        "    :toctree: ../generated\n"
-        "    :nosignatures:\n"
-        "    :template: custom-class-template.rst\n\n"
-        "    Compass\n"
-    )
-
-    s += "\n\n"
-    s += (
-        ".. currentmodule:: eomaps.scalebar\n"
-        ".. autosummary::\n"
-        "    :toctree: ../generated\n"
-        "    :nosignatures:\n"
-        "    :template: custom-class-template.rst\n\n"
-        "    ScaleBar\n"
-    )
-
-    with open(
-        Path(__file__).parent / "api" / "autodoc_additional_props.rst", "w"
-    ) as file:
+    with open(basepath / "api" / "autodoc_additional_props.rst", "w") as file:
         file.write(s)
 
-    src = Path(__file__).parent / "api" / "api_Maps.rst"
+    # Copy the custom api files to the "generated" docs folder so that they serve
+    # as the autodoc-files for the associated objects.
+    # This is done to redirect links for :py:class:`<object>` to the custom file
+    # to get a more customized page for the API docs of the objects.
 
-    (Path(__file__).parent / "generated").mkdir(exist_ok=True)
-    dest = Path(__file__).parent / "generated" / "eomaps.eomaps.Maps.rst"
+    src_basepath = basepath / "api"
+    dest_basepath = basepath / "generated"
 
-    dest.write_text(src.read_text())  # for text files
+    (basepath / "generated").mkdir(exist_ok=True)
+    # copy all files starting with "eomaps." (e.g. "eomaps.eomaps.Maps.rst")
+    # Note: original source-files are ignored in conf.py to avoid duplication warnings!
+    for file in filter(lambda x: x.stem.startswith("eomaps."), src_basepath.iterdir()):
+        (dest_basepath / file.name).write_text(file.read_text())

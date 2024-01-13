@@ -99,6 +99,9 @@ exclude_patterns = [
     "jupyter_execute/*",
     ".jupyter_cache/*",
     ".virtual_documents/*",
+    # files starting with eomaps. are copied to the generated folder
+    # (check "make_feature_toctree_file()" for more details.
+    "api/eomaps.*",
 ]
 
 source_suffix = {

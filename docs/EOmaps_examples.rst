@@ -8,21 +8,7 @@
 ... a collection of examples that show how to create beautiful interactive maps.
 
 
-.. table::
-  :width: 100%
-
-  +-----------+-----------+-----------+-----------+-----------+
-  | |eximg01| | |eximg02| | |eximg03| | |eximg04| | |eximg05| |
-  +-----------+-----------+-----------+-----------+-----------+
-  | |eximg06| | |eximg07| | |eximg08| | |eximg09| | |eximg10| |
-  +-----------+-----------+-----------+-----------+-----------+
-  | |eximg11| | |eximg12| | |eximg13| | |eximg14| | |eximg15| |
-  +-----------+-----------+-----------+-----------+-----------+
-
-
-.. contents:: Contents:
-  :local:
-  :depth: 1
+.. include:: example_galery.rst
 
 
 .. _ex_1:

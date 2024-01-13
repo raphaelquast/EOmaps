@@ -225,6 +225,8 @@ Available shapes (see bleow for details on each plot-shape!):
       | ... and ``m.set_shape.shade_points()`` is attempted to be used for the rest.
 
 
+.. _shp_ellipses:
+
 Ellipses
 ********
 
@@ -250,6 +252,8 @@ Ellipses
                          radius_crs=4326, # projection in which the ellipse is defined
                          n=50             # number of calculated points on the ellipse
                          )
+
+.. _shp_rectangles:
 
 Rectangles
 **********
@@ -279,6 +283,7 @@ Rectangles
                            )
 
 
+.. _shp_geod_circles:
 
 Geodesic Circles
 ****************
@@ -306,6 +311,7 @@ Geodesic Circles
                              n=50             # number of calculated points on the circle
                              )
 
+.. _shp_voronoi:
 
 Voronoi Diagram
 ***************
@@ -335,8 +341,7 @@ Voronoi Diagram
                                 )
 
 
-
-
+.. _shp_delaunay:
 
 Delaunay Triangulation
 **********************
@@ -368,6 +373,8 @@ Delaunay Triangulation
                                        mask_crs="in",     # projection of the mask dimension
                                       )
 
+.. _shp_contour:
+
 Contour plots
 *************
 
@@ -395,6 +402,7 @@ Contour plots
 
     m.set_shape.contour(filled=True)   # filled contour polygons (True) or contour lines (False)
 
+.. _shp_scatter:
 
 Scatter Points
 **************
@@ -422,6 +430,7 @@ Scatter Points
                                marker="*",       # the marker shape to use
                                )
 
+.. _shp_raster:
 
 Raster
 ******
@@ -449,6 +458,8 @@ Raster
                        aggregator='mean',   # aggregation method to use
                        valid_fraction=0.5,  # % of masked values in aggregation bin for masked result
                        interp_order=0,      # spline interpolation order for "spline" aggregator
+
+.. _shp_shade_raster:
 
 Shade Raster
 ************
@@ -478,6 +489,8 @@ Shade Raster
                              shade_hook=None,      # datashader shade hook callback
                              agg_hook=None,        # datashader aggregation hook callback
                              )
+
+.. _shp_shade_points:
 
 Shade Points
 ************

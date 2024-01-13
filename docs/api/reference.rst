@@ -21,6 +21,31 @@ eomaps
 Feature objects
 ===============
 
+
+.. card::
+    :shadow: none
+
+    .. card:: InsetMaps
+        :link: ../generated/eomaps.inset_maps.InsetMaps
+        :link-type: doc
+        :margin: 0
+
+        .. currentmodule:: eomaps.inset_maps
+
+        .. autosummary::
+            :toctree: ../generated
+            :template: custom-class-template.rst
+            :nosignatures:
+
+            InsetMaps
+
+    +++
+
+    .. currentmodule:: eomaps.eomaps
+
+    See :py:meth:`Maps.add_inset_map` on how to add a colorbar to a map!
+
+
 .. card::
     :shadow: none
 

@@ -12,7 +12,7 @@
     <p>
 
 
-Here you can find detailed explanations on all the functionalities of EOmaps.
+Here you can find detailed explanations on all the features and functionalities of EOmaps.
 
 .. admonition:: Interested in contributing to EOmaps?
 
@@ -37,44 +37,58 @@ Want to visualize some data? Have a look at the :doc:`api_data_visualization` se
 EOmaps provides a variety of plot-shapes so you can select a shape that suits the structure, size and spatial representativeness of your data:
 
 
-.. raw:: html
+.. grid:: 2 2 5 5
+    :gutter: 1
 
-    <table width="100%" style="font-size:90%; table-layout:fixed; overflow:scroll;">
-    <tr>
-    <th width="20%">Ellipses</th>
-    <th width="20%">Rectangles</th>
-    <th width="20%">Geodesic Circles</th>
-    <th width="20%">Raster</th>
-    <th width="20%">Scatter Points</th>
-    </tr>
-    <tr>
-    <th width="20%"><a href=api_data_visualization.html#ellipses><img src="_static/shape_imgs/ellipses.png"/></a></th>
-    <th width="20%"><a href=api_data_visualization.html#rectangles><img src="_static/shape_imgs/rectangles.png"/></a></th>
-    <th width="20%"><a href=api_data_visualization.html#geodesic-circles><img src="_static/shape_imgs/geod_circles.png"/></a></th>
-    <th width="20%"><a href=api_data_visualization.html#raster><img src="_static/shape_imgs/raster.png"/></a></th>
-    <th width="20%"><a href=api_data_visualization.html#scatter-points><img src="_static/shape_imgs/scatter_points.png"/></a></th>
-    </tr>
-    <tr>
-    <th width="20%">Contour</th>
-    <th width="20%">Voronoi Diagram</th>
-    <th width="20%">Delaunay Triangulation</th>
-    <th width="20%">Shade Raster</th>
-    <th width="20%">Shade Points</th>
-    </tr>
-    <tr>
-    <th width="20%"><a href=api_data_visualization.html#contour><img src="_static/shape_imgs/contour_filled.png"/></a></th>
-    <th width="20%"><a href=api_data_visualization.html#voronoi-diagram><img src="_static/shape_imgs/voronoi_diagram.png"/></a></th>
-    <th width="20%"><a href=api_data_visualization.html#delaunay-triangulation><img src="_static/shape_imgs/delaunay_triangulation.png"/></a></th>
-    <th width="20%"><a href=api_data_visualization.html#shade-raster><img src="_static/shape_imgs/shade_raster.png"/></a></th>
-    <th width="20%"><a href=api_data_visualization.html#shade-points><img src="_static/shape_imgs/shade_points.png"/></a></th>
-    </tr>
-    </table>
+    .. grid-item-card:: Ellipses
+        :img-bottom: _static/shape_imgs/ellipses.png
+        :link: shp_ellipses
+        :link-type: ref
 
+    .. grid-item-card:: Rectangles
+        :img-bottom: _static/shape_imgs/rectangles.png
+        :link: shp_rectangles
+        :link-type: ref
 
-.. raw:: html
+    .. grid-item-card:: Geodesic Circles
+        :img-bottom: _static/shape_imgs/geod_circles.png
+        :link: shp_geod_circles
+        :link-type: ref
 
-    </p>
+    .. grid-item-card:: raster
+        :img-bottom: _static/shape_imgs/raster.png
+        :link: shp_raster
+        :link-type: ref
 
+    .. grid-item-card:: Scatter Points
+        :img-bottom: _static/shape_imgs/scatter_points.png
+        :link: shp_scatter
+        :link-type: ref
+
+    .. grid-item-card:: Contour
+        :img-bottom: _static/shape_imgs/contour.png
+        :link: shp_contour
+        :link-type: ref
+
+    .. grid-item-card:: Voronoi Diagram
+        :img-bottom: _static/shape_imgs/voronoi_diagram.png
+        :link: shp_voronoi
+        :link-type: ref
+
+    .. grid-item-card:: Delaunay Triangulation
+        :img-bottom: _static/shape_imgs/delaunay_triangulation.png
+        :link: shp_delaunay
+        :link-type: ref
+
+    .. grid-item-card:: Shade Raster
+        :img-bottom: _static/shape_imgs/shade_raster.png
+        :link: shp_shade_raster
+        :link-type: ref
+
+    .. grid-item-card:: Shade Points
+        :img-bottom: _static/shape_imgs/shade_points.png
+        :link: shp_shade_points
+        :link-type: ref
 
 
 Map Features
@@ -84,29 +98,65 @@ Map Features
 EOmaps provides many useful tools to customize your maps.
 
 
-.. list-table::
-    :width: 100%
-    :widths: 50 50
 
-    * - |  :doc:`notebooks/inset_maps`
-        |  Create zoomed-in views on specific regions of a map.
-      - |  :doc:`notebooks/naturalearth_features`
-        |  Add basic map features (coastlines, ocean-coloring etc. ) to the map.
+.. grid:: 1 1 2 2
+    :gutter: 1
 
-    * - |  :doc:`api_webmaps`
-        |  Add imagery provided by WebMap services (ts, wms, wmts, xyz) to the map.
-      - |  :doc:`api_vector_data`
-        |  Add vector geometries to the map.
+    .. grid-item-card:: :doc:`notebooks/naturalearth_features`
+        :link: notebooks/naturalearth_features
+        :link-type: doc
+        :shadow: none
 
-    * - |  :doc:`api_annotations_markers_etc`
-        |  Add markers, annotations, lines, logos etc. to the map.
-      - |  :doc:`api_scalebar`
-        |  Add a scalebar to the map.
+        Add basic map features (coastlines, ocean-coloring etc. ) to the map.
 
-    * - |  :doc:`api_compass`
-        |  Add a compass (or North Arrow) to the map.
-      - |  :doc:`api_gridlines`
-        |  Add grid-lines (and optionally grid-labels) to the map.
+    .. grid-item-card:: :doc:`api_webmaps`
+        :link: api_webmaps
+        :link-type: doc
+        :shadow: none
+
+        Add imagery provided by WebMap services to the map.
+
+    .. grid-item-card:: :doc:`notebooks/inset_maps`
+        :link: notebooks/inset_maps
+        :link-type: doc
+        :shadow: none
+
+        Create zoomed-in views on specific regions of a map.
+
+    .. grid-item-card:: :doc:`api_vector_data`
+        :link: api_vector_data
+        :link-type: doc
+        :shadow: none
+
+        Add vector geometries to the map.
+
+    .. grid-item-card:: :doc:`api_annotations_markers_etc`
+        :link: api_annotations_markers_etc
+        :link-type: doc
+        :shadow: none
+
+        Add markers, annotations, lines, logos etc. to the map.
+
+    .. grid-item-card:: :doc:`api_scalebar`
+        :link: api_scalebar
+        :link-type: doc
+        :shadow: none
+
+        Add a scalebar to the map.
+
+    .. grid-item-card:: :doc:`api_compass`
+        :link: api_compass
+        :link-type: doc
+        :shadow: none
+
+        Add a compass (or North Arrow) to the map.
+
+    .. grid-item-card:: :doc:`api_gridlines`
+        :link: api_gridlines
+        :link-type: doc
+        :shadow: none
+
+        Add grid-lines (and optionally grid-labels) to the map.
 
 
 Interactivity
@@ -114,56 +164,88 @@ Interactivity
 
 With a few lines of code, you can turn your maps into interactive data-analysis widgets!
 
-.. list-table::
-    :width: 100%
-    :widths: 50 50
 
-    * - |  :doc:`api_companion_widget`
-        |  A graphical user-interface to interact with the map.
-      - |  :doc:`api_callbacks`
-        |  Turn your maps into interactive data-analysis widgets.
-    * - |  :doc:`api_layout_editor`
-        |  Interactively re-arrange and re-size axes of a figure.
-      - |  :doc:`api_draw`
-        |  Interactively draw geometries on a map and export them as shapefiles.
-    * - |  :doc:`api_utils`
-        |  A collection of utility widgets (layer-sliders, layer-selectors)
-      -
+.. grid:: 1 1 2 2
+    :gutter: 1
+
+    .. grid-item-card:: :doc:`api_companion_widget`
+        :link: api_companion_widget
+        :link-type: doc
+        :shadow: none
+
+        A graphical user-interface to interact with the map.
+
+    .. grid-item-card:: :doc:`api_callbacks`
+        :link: api_callbacks
+        :link-type: doc
+        :shadow: none
+
+        Turn your maps into interactive data-analysis widgets.
+
+    .. grid-item-card:: :doc:`api_layout_editor`
+        :link: api_layout_editor
+        :link-type: doc
+        :shadow: none
+
+        Interactively re-arrange and re-size axes of a figure.
+
+    .. grid-item-card:: :doc:`api_draw`
+        :link: api_draw
+        :link-type: doc
+        :shadow: none
+
+        Interactively draw geometries on a map and export them as shapefiles.
+
+    .. grid-item-card:: :doc:`api_utils`
+        :link: api_utils
+        :link-type: doc
+        :shadow: none
+
+        A collection of utility widgets (layer-sliders, layer-selectors)
+
 
 Miscellaneous
 ~~~~~~~~~~~~~
 
-.. list-table::
-    :width: 100%
-    :widths: 50 50
+.. grid:: 1 1 2 2
+    :gutter: 1
 
-    * - |  :doc:`api_logging`
-        |  Details on logging.
-      - |  :doc:`api_command_line_interface`
-        |  How to use the command-line interface `eomaps`.
-    * - |  :doc:`api_read_data`
-        |  Read data from NetCDF, GeoTIFF or CSV files.
-      - |  :doc:`api_misc`
-        |  Additional functions and properties that might come in handy.
+    .. grid-item-card:: :doc:`api_logging`
+        :link: api_logging
+        :link-type: doc
+        :shadow: none
 
+        Details on logging.
 
+    .. grid-item-card:: :doc:`api_command_line_interface`
+        :link: api_command_line_interface
+        :link-type: doc
+        :shadow: none
+
+        How to use the ``eomaps`` command-line interface.
+
+    .. grid-item-card:: :doc:`api_read_data`
+        :link: api_companion_widget
+        :link-type: doc
+        :shadow: none
+
+        Read data from NetCDF, GeoTIFF or CSV files.
+
+    .. grid-item-card:: :doc:`api_misc`
+        :link: api_misc
+        :link-type: doc
+        :shadow: none
+
+        Additional functions and properties that might come in handy.
 
 
 Examples
 --------
 
-Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabilities (incl. source code)!
+Make sure to check out the :doc:`Examples <EOmaps_examples>` for an overview of the capabilities (incl. source code)!
 
-.. table::
-   :width: 100%
 
-   +-----------+-----------+-----------+-----------+-----------+
-   | |eximg01| | |eximg02| | |eximg03| | |eximg04| | |eximg05| |
-   +-----------+-----------+-----------+-----------+-----------+
-   | |eximg06| | |eximg07| | |eximg08| | |eximg09| | |eximg10| |
-   +-----------+-----------+-----------+-----------+-----------+
-   | |eximg11| | |eximg12| | |eximg13| | |eximg14| | |eximg15| |
-   +-----------+-----------+-----------+-----------+-----------+
+.. include:: example_galery.rst
 
 
 .. toctree::
@@ -174,6 +256,12 @@ Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabil
     installation
     FAQ
 
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+   :caption: Contribute
+
+   contribute
 
 .. toctree::
     :hidden:
@@ -228,13 +316,6 @@ Make sure to check out the :doc:`EOmaps_examples` for an overview of the capabil
 
    EOmaps_examples
 
-
-.. toctree::
-   :hidden:
-   :maxdepth: 2
-   :caption: Contribute
-
-   contribute
 
 .. toctree::
    :hidden:
