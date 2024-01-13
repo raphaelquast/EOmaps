@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QObject
 from qtpy.QtGui import QKeySequence

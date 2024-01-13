@@ -26,7 +26,7 @@ keywords = ["Visualization", "Plotting", "Maps", "Geographical Data"]
 
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Framework :: Matplotlib",
     "Topic :: Scientific/Engineering",
