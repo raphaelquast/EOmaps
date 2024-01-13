@@ -9,8 +9,8 @@
     :depth: 1
 
 
-Recommended way (via ``conda`` and ``mamba``)
----------------------------------------------
+Via ``conda`` and ``mamba``
+---------------------------
 
 EOmaps is available via the ``conda-forge`` channel and can be installed via:
 
@@ -56,8 +56,8 @@ More details on how to **configure your favorite IDE** to work with EOmaps can b
 
 
 
-Alternative way (via ``pip``)
------------------------------
+Via ``pip``
+-----------
 
 EOmaps is also available on ``pip``.
 
