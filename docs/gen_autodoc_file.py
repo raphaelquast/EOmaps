@@ -76,6 +76,8 @@ def make_feature_toctree_file():
     s += get_autosummary(
         "eomaps.eomaps", ["Maps.config", *members], "obj_with_attributes_no_toc"
     )
+    s += get_autosummary("eomaps.mapsgrid", ["MapsGrid"], "custom-class-template")
+
     s += get_autosummary("eomaps.colorbar", ["ColorBar"], "custom-class-template")
     s += get_autosummary(
         "eomaps.grid", ["GridLines", "GridLabels"], "custom-class-template"

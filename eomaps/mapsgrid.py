@@ -73,10 +73,6 @@ class MapsGrid:
 
     Attributes
     ----------
-    f : matplotlib.figure
-        The matplotlib figure object
-    gridspec : matplotlib.GridSpec
-        The matplotlib GridSpec instance used to initialize the axes.
     m_<identifier> : eomaps.Maps objects
         The individual Maps-objects can be accessed via `mgrid.m_<identifier>`
         The identifiers are hereby `<row>_<col>` or the keys of the `m_inits`
