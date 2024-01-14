@@ -77,13 +77,18 @@ def make_feature_toctree_file():
         "eomaps.eomaps", ["Maps.config", *members], "obj_with_attributes_no_toc"
     )
     s += get_autosummary("eomaps.mapsgrid", ["MapsGrid"], "custom-class-template")
-
     s += get_autosummary("eomaps.colorbar", ["ColorBar"], "custom-class-template")
+    s += get_autosummary("eomaps.compass", ["Compass"], "custom-class-template")
+    s += get_autosummary("eomaps.scalebar", ["ScaleBar"], "custom-class-template")
+    s += get_autosummary(
+        "eomaps.callbacks",
+        ["ClickCallbacks", "PickCallbacks", "KeypressCallbacks"],
+        "custom-class-template",
+    )
+
     s += get_autosummary(
         "eomaps.grid", ["GridLines", "GridLabels"], "custom-class-template"
     )
-    s += get_autosummary("eomaps.compass", ["Compass"], "custom-class-template")
-    s += get_autosummary("eomaps.scalebar", ["ScaleBar"], "custom-class-template")
     s += get_autosummary(
         "eomaps.inset_maps",
         [
