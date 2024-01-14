@@ -62,7 +62,7 @@ Layer management
 ~~~~~~~~~~~~~~~~
 
 .. image:: _static/intro.png
-   :width: 40%
+   :width: 70%
 
 
 A :py:class:`Maps` object represents a collection of features, callbacks,.. **on the assigned layer**.
