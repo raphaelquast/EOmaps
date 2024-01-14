@@ -39,37 +39,39 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
     Maps.add_gridlines
 
 
-.. table::
-    :widths: 50 50
-    :align: center
+.. grid:: 1 1 2 2
 
-    +-------------------------------------------------------------------+-----------------------------------------+
-    | .. code-block:: python                                            | .. image:: _static/minigifs/grid_01.png |
-    |   :name: test_add_gridlines                                       |     :align: center                      |
-    |                                                                   |                                         |
-    |   from eomaps import Maps                                         | |img_minsize|                           |
-    |   m = Maps(Maps.CRS.Mollweide(), frameon=False)                   |                                         |
-    |   m.add_feature.preset.ocean()                                    |                                         |
-    |                                                                   |                                         |
-    |   # add gridlines with a fixed grid-spacing                       |                                         |
-    |   mg = m.new_layer("grid")                                        |                                         |
-    |   g0 = mg.add_gridlines(d=40, ec="orange", lw=3, zorder=2)        |                                         |
-    |   g1 = mg.add_gridlines(d=(10, 20), ec="orange", lw=.5, zorder=1) |                                         |
-    |                                                                   |                                         |
-    |   # add fine-grained gridlines in a specific area                 |                                         |
-    |   g2 = mg.add_gridlines(d=2, ec="darkred", lw=0.5, zorder=0,      |                                         |
-    |                         bounds=(-20, 20, -10, 30))                |                                         |
-    |   g3 = mg.add_gridlines(d=2, ec="b", lw=0.5, zorder=0,            |                                         |
-    |                         bounds=(60, 100, 30, 70))                 |                                         |
-    |                                                                   |                                         |
-    |   # add dedicated gridlines at specific coordinates               |                                         |
-    |   g4 = mg.add_gridlines(([-123, -112, -75], [35, 65]),            |                                         |
-    |                         ec="k", lw=2, ls="--", zorder=20,         |                                         |
-    |                         bounds=(-140, 20, -50, 70)                |                                         |
-    |                         )                                         |                                         |
-    |                                                                   |                                         |
-    |   m.show_layer(m.layer, "grid")                                   |                                         |
-    +-------------------------------------------------------------------+-----------------------------------------+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_add_gridlines
+
+            from eomaps import Maps
+            m = Maps(Maps.CRS.Mollweide(), frameon=False)
+            m.add_feature.preset.ocean()
+
+            # add gridlines with a fixed grid-spacing
+            mg = m.new_layer("grid")
+            g0 = mg.add_gridlines(d=40, ec="orange", lw=3, zorder=2)
+            g1 = mg.add_gridlines(d=(10, 20), ec="orange", lw=.5, zorder=1)
+
+            # add fine-grained gridlines in a specific area
+            g2 = mg.add_gridlines(d=2, ec="darkred", lw=0.5, zorder=0,
+                                  bounds=(-20, 20, -10, 30))
+            g3 = mg.add_gridlines(d=2, ec="b", lw=0.5, zorder=0,
+                                  bounds=(60, 100, 30, 70))
+
+            # add dedicated gridlines at specific coordinates
+            g4 = mg.add_gridlines(([-123, -112, -75], [35, 65]),
+                                  ec="k", lw=2, ls="--", zorder=20,
+                                  bounds=(-140, 20, -50, 70)
+                                  )
+
+            m.show_layer(m.layer, "grid")
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/grid_01.png
 
 
 .. currentmodule:: eomaps.grid
@@ -116,31 +118,34 @@ be used to add a label only to every n\ :sup:`th` grid line.
 To **change the appearance of the labels**, any kwarg supported by `matplotlib.pyplot.text <https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.text.html>`_
 can be used (e.g. `color`, `fontsize`, `fontweight`, ...).
 
-.. table::
-    :widths: 50 50
-    :align: center
 
-    +--------------------------------------------------------------------------+------------------------------------------------+
-    | .. code-block:: python                                                   | .. image:: _static/minigifs/grid_labels_01.png |
-    |     :name: test_grid_labels_01                                           |     :align: center                             |
-    |                                                                          |                                                |
-    |     from eomaps import Maps                                              | |img_minsize|                                  |
-    |     m = Maps(Maps.CRS.Stereographic(), figsize=(5, 6))                   |                                                |
-    |     m.set_extent((-83, -20, -59, 13))                                    |                                                |
-    |     m.add_feature.preset.coastline()                                     |                                                |
-    |     m.add_feature.preset.ocean()                                         |                                                |
-    |                                                                          |                                                |
-    |     # draw a regular grid with 10 degree grid-spacing                    |                                                |
-    |     # and add labels to all lines except some selected lines             |                                                |
-    |     g = m.add_gridlines(10, lw=0.25, alpha=0.5)                          |                                                |
-    |     g.add_labels(fontsize=6, exclude=([-40, -30], [-30]))                |                                                |
-    |                                                                          |                                                |
-    |     # draw some specific gridlines and add bold green labels             |                                                |
-    |     g = m.add_gridlines(([-40, -30], [-30]), c="g", lw=1.5)              |                                                |
-    |     gl0 = g.add_labels(where="tlr", c="g", offset=15, fontweight="bold") |                                                |
-    |                                                                          |                                                |
-    |     # draw a bounded grid and add labels                                 |                                                |
-    |     g = m.add_gridlines(10, bounds=[-50, -20, -40, -20], c="b", lw=2)    |                                                |
-    |     g = m.add_gridlines(5,  bounds=[-50, -20, -40, -20], c="b")          |                                                |
-    |     gl = g.add_labels(where=0, fontsize=8, every=(1, -1, 2), c="b")      |                                                |
-    +--------------------------------------------------------------------------+------------------------------------------------+
+.. grid:: 1 1 2 2
+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_grid_labels_01
+
+            from eomaps import Maps
+            m = Maps(Maps.CRS.Stereographic(), figsize=(5, 6))
+            m.set_extent((-83, -20, -59, 13))
+            m.add_feature.preset.coastline()
+            m.add_feature.preset.ocean()
+
+            # draw a regular grid with 10 degree grid-spacing
+            # and add labels to all lines except some selected lines
+            g = m.add_gridlines(10, lw=0.25, alpha=0.5)
+            g.add_labels(fontsize=6, exclude=([-40, -30], [-30]))
+
+            # draw some specific gridlines and add bold green labels
+            g = m.add_gridlines(([-40, -30], [-30]), c="g", lw=1.5)
+            gl0 = g.add_labels(where="tlr", c="g", offset=15, fontweight="bold")
+
+            # draw a bounded grid and add labels
+            g = m.add_gridlines(10, bounds=[-50, -20, -40, -20], c="b", lw=2)
+            g = m.add_gridlines(5,  bounds=[-50, -20, -40, -20], c="b")
+            gl = g.add_labels(where=0, fontsize=8, every=(1, -1, 2), c="b")
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/grid_labels_01.png

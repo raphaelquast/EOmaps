@@ -542,33 +542,35 @@ To assign a classification scheme to a :py:class:`Maps` object, use ``m.set_clas
     Maps.set_classify
 
 
-.. table::
-    :widths: 70 30
-    :align: center
+.. grid:: 1 1 2 2
 
-    +------------------------------------------------------------------+--------------------------------------------------+
-    | .. code-block:: python                                           | .. image:: _static/minigifs/classify_data_01.png |
-    |     :name: test_classify_data                                    |     :align: center                               |
-    |                                                                  |                                                  |
-    |     from eomaps import Maps                                      | |img_minsize|                                    |
-    |     import numpy as np                                           |                                                  |
-    |                                                                  |                                                  |
-    |     data = np.random.normal(0, 1, (50, 50))                      |                                                  |
-    |     x = np.linspace(-45, 45, 50)                                 |                                                  |
-    |     y = np.linspace(-45, 45, 50)                                 |                                                  |
-    |                                                                  |                                                  |
-    |     m = Maps(figsize=(4, 5))                                     |                                                  |
-    |     m.add_feature.preset.coastline(lw=2)                         |                                                  |
-    |     m.add_feature.preset.ocean(zorder=99, alpha=0.5)             |                                                  |
-    |     m.set_data(data, x, y)                                       |                                                  |
-    |     m.set_shape.ellipses()                                       |                                                  |
-    |     m.set_classify.StdMean(multiples=[-1.5, -.5, .5, 1.5])       |                                                  |
-    |     m.plot_map(vmin=-3, vmax=3)                                  |                                                  |
-    |                                                                  |                                                  |
-    |     cb = m.add_colorbar(pos=0.2, label="StdMean classification") |                                                  |
-    |     cb.tick_params(labelsize=7)                                  |                                                  |
-    +------------------------------------------------------------------+--------------------------------------------------+
+    .. grid-item::
 
+         .. code-block:: python
+            :name: test_classify_data
+
+            from eomaps import Maps
+            import numpy as np
+
+            data = np.random.normal(0, 1, (50, 50))
+            x = np.linspace(-45, 45, 50)
+            y = np.linspace(-45, 45, 50)
+
+            m = Maps(figsize=(4, 5))
+            m.add_feature.preset.coastline(lw=2)
+            m.add_feature.preset.ocean(zorder=99, alpha=0.5)
+            m.set_data(data, x, y)
+            m.set_shape.ellipses()
+            m.set_classify.StdMean(multiples=[-1.5, -.5, .5, 1.5])
+            m.plot_map(vmin=-3, vmax=3)
+
+            cb = m.add_colorbar(pos=0.2, label="StdMean classification")
+            cb.tick_params(labelsize=7)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/classify_data_01.png
+            :width: 75%
 
 
 Currently available classification-schemes are (see `mapclassify <https://github.com/pysal/mapclassify>`_ for details):
@@ -828,43 +830,46 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
     Colorbars are only visible if the layer at which the data was plotted is visible!
 
 
-.. table::
-    :widths: 60 40
-    :align: center
+.. grid:: 1 1 2 2
 
-    +-----------------------------------------------------------------+------------------------------------------+
-    | .. code-block:: python                                          | .. image:: _static/minigifs/colorbar.gif |
-    |     :name: test_colorbars                                       |     :align: center                       |
-    |                                                                 |                                          |
-    |     from eomaps import Maps                                     | |img_minsize|                            |
-    |     import numpy as np                                          |                                          |
-    |                                                                 |                                          |
-    |     data = np.random.normal(0, 1, (50, 50))                     |                                          |
-    |     x = np.linspace(-45, 45, 50)                                |                                          |
-    |     y = np.linspace(-45, 45, 50)                                |                                          |
-    |                                                                 |                                          |
-    |     m = Maps(layer="all")                                       |                                          |
-    |     m.add_feature.preset.coastline()                            |                                          |
-    |     m.add_feature.preset.ocean(zorder=99, alpha=0.5)            |                                          |
-    |     m.util.layer_selector(loc="upper left")                     |                                          |
-    |                                                                 |                                          |
-    |     mA = m.new_layer("A")                                       |                                          |
-    |     mA.set_data(data, x, y)                                     |                                          |
-    |     mA.set_classify.Quantiles(k=5)                              |                                          |
-    |     mA.plot_map(vmin=-3, vmax=3)                                |                                          |
-    |     cbA = mA.add_colorbar(label="Quantile classification")      |                                          |
-    |     cbA.tick_params(rotation=45)                                |                                          |
-    |                                                                 |                                          |
-    |     mB = m.new_layer("B")                                       |                                          |
-    |     mB.set_data(data, x, y)                                     |                                          |
-    |     mB.set_classify.EqualInterval(k=5)                          |                                          |
-    |     mB.plot_map(vmin=-3, vmax=3)                                |                                          |
-    |     cbB = mB.add_colorbar(label="EqualInterval classification") |                                          |
-    |     cbB.tick_params(labelcolor="darkblue", labelsize=9)         |                                          |
-    |                                                                 |                                          |
-    |     m.subplots_adjust(bottom=0.1)                               |                                          |
-    |     m.show_layer(mA.layer)                                      |                                          |
-    +-----------------------------------------------------------------+------------------------------------------+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_colorbars
+
+            from eomaps import Maps
+            import numpy as np
+
+            data = np.random.normal(0, 1, (50, 50))
+            x = np.linspace(-45, 45, 50)
+            y = np.linspace(-45, 45, 50)
+
+            m = Maps(layer="all")
+            m.add_feature.preset.coastline()
+            m.add_feature.preset.ocean(zorder=99, alpha=0.5)
+            m.util.layer_selector(loc="upper left")
+
+            mA = m.new_layer("A")
+            mA.set_data(data, x, y)
+            mA.set_classify.Quantiles(k=5)
+            mA.plot_map(vmin=-3, vmax=3)
+            cbA = mA.add_colorbar(label="Quantile classification")
+            cbA.tick_params(rotation=45)
+
+            mB = m.new_layer("B")
+            mB.set_data(data, x, y)
+            mB.set_classify.EqualInterval(k=5)
+            mB.plot_map(vmin=-3, vmax=3)
+            cbB = mB.add_colorbar(label="EqualInterval classification")
+            cbB.tick_params(labelcolor="darkblue", labelsize=9)
+
+            m.subplots_adjust(bottom=0.1)
+            m.show_layer(mA.layer)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/colorbar.gif
+
 
 .. autosummary::
     :nosignatures:
@@ -893,32 +898,38 @@ Set colorbar tick labels based on bins
 
 To label the colorbar with custom names for a given set of bins, use :py:meth:`ColorBar.set_bin_labels`:
 
-.. table::
 
-    +-------------------------------------------------------------------------------+------------------------------------------------+
-    | .. code-block:: python                                                        | .. image:: _static/minigifs/colorbar_ticks.png |
-    |     :name: test_colorbar_bin_labels                                           |   :align: center                               |
-    |                                                                               |                                                |
-    |     import numpy as np                                                        | |img_minsize|                                  |
-    |     from eomaps import Maps                                                   |                                                |
-    |     # specify some random data                                                |                                                |
-    |     lon, lat = np.mgrid[-45:45, -45:45]                                       |                                                |
-    |     data = np.random.normal(0, 50, lon.shape)                                 |                                                |
-    |                                                                               |                                                |
-    |     # use a custom set of bins to classify the data                           |                                                |
-    |     bins = np.array([-50, -30, -20, 20, 30, 40, 50])                          |                                                |
-    |     names = np.array(["below -50", "A", "B", "C", "D", "E", "F", "above 50"]) |                                                |
-    |                                                                               |                                                |
-    |     m = Maps()                                                                |                                                |
-    |     m.add_feature.preset.coastline()                                          |                                                |
-    |     m.set_data(data, lon, lat)                                                |                                                |
-    |     m.set_classify.UserDefined(bins=bins)                                     |                                                |
-    |     m.plot_map(cmap="tab10")                                                  |                                                |
-    |     m.add_colorbar()                                                          |                                                |
-    |                                                                               |                                                |
-    |     # set custom colorbar-ticks based on the bins                             |                                                |
-    |     m.colorbar.set_bin_labels(bins, names)                                    |                                                |
-    +-------------------------------------------------------------------------------+------------------------------------------------+
+.. grid:: 1 1 2 2
+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_colorbar_bin_labels
+
+            import numpy as np
+            from eomaps import Maps
+            # specify some random data
+            lon, lat = np.mgrid[-45:45, -45:45]
+            data = np.random.normal(0, 50, lon.shape)
+
+            # use a custom set of bins to classify the data
+            bins = np.array([-50, -30, -20, 20, 30, 40, 50])
+            names = np.array(["below -50", "A", "B", "C", "D", "E", "F", "above 50"])
+
+            m = Maps()
+            m.add_feature.preset.coastline()
+            m.set_data(data, lon, lat)
+            m.set_classify.UserDefined(bins=bins)
+            m.plot_map(cmap="tab10")
+            m.add_colorbar()
+
+            # set custom colorbar-ticks based on the bins
+            m.colorbar.set_bin_labels(bins, names)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/colorbar_ticks.png
+
 
 
 .. autosummary::
@@ -939,21 +950,25 @@ Using the colorbar as a "dynamic shade indicator"
 For shade shapes, the colorbar can be used to indicate the distribution of the shaded
 pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
 
-.. table::
 
-    +--------------------------------------------------------------------+--------------------------------------------------+
-    | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.gif |
-    |   :name: test_colorbar_dynamic_shade_indicator                     |   :align: center                                 |
-    |                                                                    |                                                  |
-    |   from eomaps import Maps                                          | |img_minsize|                                    |
-    |   import numpy as np                                               |                                                  |
-    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                                  |
-    |                                                                    |                                                  |
-    |   m = Maps()                                                       |                                                  |
-    |   m.add_feature.preset.coastline()                                 |                                                  |
-    |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                                  |
-    |   m.set_shape.shade_raster()                                       |                                                  |
-    |   m.plot_map()                                                     |                                                  |
-    |   m.add_colorbar(dynamic_shade_indicator=True, hist_bins=20)       |                                                  |
-    |                                                                    |                                                  |
-    +--------------------------------------------------------------------+--------------------------------------------------+
+.. grid:: 1 1 2 2
+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_colorbar_dynamic_shade_indicator
+
+            from eomaps import Maps
+            import numpy as np
+            x, y = np.mgrid[-45:45, 20:60]
+
+            m = Maps()
+            m.add_feature.preset.coastline()
+            m.set_data(data=x+y, x=x, y=y, crs=4326)
+            m.set_shape.shade_raster()
+            m.plot_map()
+            m.add_colorbar(dynamic_shade_indicator=True, hist_bins=20)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/dynamic_colorbar.gif
