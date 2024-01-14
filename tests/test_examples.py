@@ -1,45 +1,38 @@
+"""Test running all python-files in docs/examples that start with 'example_' """
+from pathlib import Path
+import matplotlib.pyplot as plt
 import unittest
 
 
-class TestExamples(unittest.TestCase):
-    def test_example1(self):
-        import example1
+def gen_test(name, code):
+    def test(*args, **kwargs):
+        try:
+            exec(code)
+        except Exception as ex:
+            raise AssertionError(f"Example '{name}' failed.") from ex
+        finally:
+            plt.close("all")
 
-    def test_example2(self):
-        import example2
+    return test
 
-    def test_example3(self):
-        import example3
 
-    def test_example4(self):
-        import example4
+class _TestSequenceMeta(type):
+    def __new__(mcs, name, bases, tests):
+        # the path to the folder containing the example scripts
+        parent_path = Path(__file__).parent.parent / "docs" / "examples"
 
-    def test_example5(self):
-        import example5
+        examples = filter(
+            lambda x: x.stem.startswith("example_") and x.suffix == ".py",
+            parent_path.iterdir(),
+        )
 
-    def test_example6(self):
-        import example6
+        # generate unique tests for each example
+        for f in examples:
+            test_name = f"test_{f.stem}"
+            tests[test_name] = gen_test(name, f.read_text())
 
-    def test_example7(self):
-        import example7
+        return type.__new__(mcs, name, bases, tests)
 
-    def test_example8(self):
-        import example8
 
-    def test_example9(self):
-        import example9
-
-    def test_example_inset_maps(self):
-        import example_inset_maps
-
-    def test_example_row_col_selector(self):
-        import example_row_col_selector
-
-    def test_example_lines(self):
-        import example_lines
-
-    def test_example_gridlines(self):
-        import example_gridlines
-
-    def test_example_contour(self):
-        import example_contour
+class TestExamples(unittest.TestCase, metaclass=_TestSequenceMeta):
+    pass

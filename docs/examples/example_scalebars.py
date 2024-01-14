@@ -1,4 +1,4 @@
-# EOmaps example 8: Adding scalebars - what about distances?
+# EOmaps example: Adding scalebars - what about distances?
 
 from eomaps import Maps
 

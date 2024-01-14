@@ -1,4 +1,4 @@
-# EOmaps example : drawing lines on a map
+# EOmaps example: drawing lines on a map
 
 from eomaps import Maps
 

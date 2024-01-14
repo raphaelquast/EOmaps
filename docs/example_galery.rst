@@ -2,86 +2,86 @@
     :gutter: 1
 
     .. grid-item-card::
-        :img-background: _static/fig1.gif
+        :img-background: _static/example_images/example_basics.gif
         :img-alt: Example 1 - Basic data visualization
-        :link: ex_1
+        :link: example_basics
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/fig2.png
+        :img-background: _static/example_images/example_customization.png
         :img-alt: Example 2 - Customize the appearance of the map
-        :link: ex_2
+        :link: example_customization
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/fig3.gif
+        :img-background: _static/example_images/example_multiple_maps.gif
         :img-alt: Example 3 - Data-classification and multiple Maps in a figure
-        :link: ex_3
+        :link: example_multiple_maps
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/fig4.gif
+        :img-background: _static/example_images/example_callbacks.gif
         :img-alt: Example 4 - Callbacks - turn your maps into interactive widgets
-        :link: ex_4
+        :link: example_callbacks
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/fig5.gif
+        :img-background: _static/example_images/example_overlays.gif
         :img-alt: Example 5 - Overlays, markers and annotations
-        :link: ex_5
+        :link: example_overlays
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/fig6.gif
+        :img-background: _static/example_images/example_webmaps.gif
         :img-alt: Example 6 - WebMap services and layer-switching
-        :link: ex_6
+        :link: example_webmaps
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/fig7.gif
+        :img-background: _static/example_images/example_vector_data.gif
         :img-alt: Example 7 - Vector data - interactive geometries
-        :link: ex_7
+        :link: example_vector_data
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/fig8.gif
+        :img-background: _static/example_images/example_scalebars.gif
         :img-alt: Example 8 - Using Scalebars
-        :link: ex_8
+        :link: example_scalebars
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/fig9.gif
+        :img-background: _static/example_images/example_timeseries.gif
         :img-alt: Example 9 - Data analysis widgets - Timeseries and histograms
-        :link: ex_9
+        :link: example_timeseries
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/example_row_col_selector.gif
+        :img-background: _static/example_images/example_row_col_selector.gif
         :img-alt: Example 10 - Data analysis widgets - Select 1D slices of a 2D dataset
-        :link: ex_10
+        :link: example_row_col_selector
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/example_inset_maps.png
+        :img-background: _static/example_images/example_inset_maps.png
         :img-alt: Example 11 - Inset-maps - get a zoomed-in view on selected areas
-        :link: ex_11
+        :link: example_inset_maps
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/example_lines.png
+        :img-background: _static/example_images/example_lines.png
         :img-alt: Example 12 - Lines and Annotations
         :text-align: center
-        :link: ex_12
+        :link: example_lines
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/example_gridlines.png
+        :img-background: _static/example_images/example_gridlines.png
         :img-alt: Example 13 - Gridlines and Grid Labels
-        :link: ex_13
+        :link: example_gridlines
         :link-type: ref
 
     .. grid-item-card::
-        :img-background: _static/example_contour.png
+        :img-background: _static/example_images/example_contour.png
         :img-alt: Example 14 - Contour plots and Contour Levels
-        :link: ex_14
+        :link: example_contour
         :link-type: ref

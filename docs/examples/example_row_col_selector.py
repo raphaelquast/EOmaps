@@ -1,3 +1,5 @@
+# EOmaps example: Select 1D slices of a 2D dataset
+    
 from eomaps import Maps
 import numpy as np
 

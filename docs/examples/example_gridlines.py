@@ -1,4 +1,4 @@
-# EOmaps Example:  Customized gridlines
+# EOmaps example:  Customized gridlines
 
 from eomaps import Maps
 

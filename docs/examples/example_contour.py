@@ -1,4 +1,4 @@
-# EOmaps Example:  Contour plots and contour levels
+# EOmaps example:  Contour plots and contour levels
 
 from eomaps import Maps
 import numpy as np

@@ -1,4 +1,4 @@
-# EOmaps example 7: Using geopandas - interactive shapes!
+# EOmaps example: Using geopandas - interactive shapes!
 
 from eomaps import Maps
 import pandas as pd

@@ -1,4 +1,4 @@
-# EOmaps example 5: Add overlays and indicators
+# EOmaps example: Add overlays and indicators
 
 from eomaps import Maps
 import pandas as pd

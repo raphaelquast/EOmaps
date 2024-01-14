@@ -1,4 +1,4 @@
-# EOmaps example 2: Data-classification and multiple Maps in one figure
+# EOmaps example: Data-classification and multiple Maps in one figure
 
 from eomaps import Maps
 import pandas as pd

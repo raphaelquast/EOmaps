@@ -1,3 +1,5 @@
+# EOmaps example: How to create inset-maps
+
 from eomaps import Maps
 import numpy as np
 
