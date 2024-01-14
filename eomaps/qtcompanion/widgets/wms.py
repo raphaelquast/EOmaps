@@ -41,7 +41,7 @@ class WMSBase:
     def ask_for_legend(self, wms, wmslayer):
         if hasattr(wms, "add_legend"):
             try:
-                img = wms.fetch_legend(silent=True)
+                img = wms.fetch_legend()
                 if img is not None:
                     self._ask_for_legend(wms, wmslayer, img)
             except:

@@ -64,7 +64,6 @@ classify = ["mapclassify"]
 wms = [
     "owslib",
     "requests",
-    "cairosvg",
 ]
 
 shade = ["datashader"]

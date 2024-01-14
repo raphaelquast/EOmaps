@@ -84,7 +84,7 @@ class _WebMapLayer:
 
         print(f"\n LEGEND available: {legQ}\n\n" + txt)
 
-    def fetch_legend(self, style=None, silent=True):
+    def fetch_legend(self, style=None):
         if style is None:
             style = self._style
         try:
@@ -98,15 +98,19 @@ class _WebMapLayer:
                     img = cairosvg.svg2png(legend.content)
 
                 except ImportError:
-                    warn("EOmaps: the legend is '.svg'... please install 'cairosvg'")
+                    _log.warning(
+                        "EOmaps: The legend image is provided as a '.svg' graphic. "
+                        "To add svg graphics to a map, you must install the optional "
+                        "dependency 'cairosvg'! (see: https://cairosvg.org/)",
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG)
                     return None
             else:
                 img = legend.content
 
             img = Image.open(BytesIO(img))
         except Exception:
-            if not silent:
-                warn("EOmaps: could not fetch the legend")
+            if _log.getEffectiveLevel() <= logging.DEBUG:
+                _log.warning("EOmaps: could not fetch the wms legend", exc_info=True)
             return None
         return img
 
