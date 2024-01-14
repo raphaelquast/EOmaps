@@ -6,13 +6,16 @@ dependencies:
   - python = 3.11
   - numpy
   - scipy
-  - pandas
-  - geopandas
   - matplotlib >=3.4
   - cartopy >=0.20.0
   - descartes
   - mapclassify
   - pyproj
+
+  # ------------- to support Dataframes
+  - pandas
+  # ------------- to support GeoDataFrames
+  - geopandas
   # --------------for data-shading
   - datashader
   # --------------for GeoTIFF and NetCDF files
