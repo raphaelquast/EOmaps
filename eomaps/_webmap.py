@@ -102,7 +102,8 @@ class _WebMapLayer:
                         "EOmaps: The legend image is provided as a '.svg' graphic. "
                         "To add svg graphics to a map, you must install the optional "
                         "dependency 'cairosvg'! (see: https://cairosvg.org/)",
-                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG)
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    )
                     return None
             else:
                 img = legend.content
