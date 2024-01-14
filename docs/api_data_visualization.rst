@@ -84,7 +84,7 @@ A dataset is fully specified by setting the following properties:
 
 .. note::
 
-    Make sure to use a individual :py:class:`Maps` object (e.g. with ``m2 = m.new_layer()`` for each dataset!
+    Make sure to use a individual :py:class:`Maps` object (e.g. with ``m2 = m.new_layer()``) for each dataset!
     Calling :py:meth:`Maps.plot_map` multiple times on the same :py:class:`Maps` object will remove
     and override the previously plotted dataset!
 
@@ -96,6 +96,7 @@ A dataset is fully specified by setting the following properties:
     - Plotting data in its native crs will omit the reprojection step and is therefore a lot faster!
     - If your dataset is 2D (e.g. a raster), it is best (for speed and memory) to provide the coordinates as 1D vectors!
 
+       - 1D coordinate vectors will be broadcasted using matrix-indexing! (e.g. ``x[nx], y[ny] -> data[nx, ny]``)
        - Note that reprojecting 1D coordinate vectors to a different crs will result in (possibly very large) 2D coordinate arrays!
 
 
@@ -788,7 +789,7 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
     import numpy as np
 
     x, y = np.meshgrid(np.linspace(-20, 40, 100),
-                    np.linspace(50, 70, 50))
+                       np.linspace(50, 70, 50))
 
     # values must be between 0 and 1
     r = np.random.randint(0, 100, x.shape) / 100
