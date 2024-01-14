@@ -29,6 +29,7 @@ Any contributions are welcome!
 
 .. _configuring_the_editor:
 
+
 Configuring the editor (IDE)
 ****************************
 
@@ -186,6 +187,7 @@ However, for some editors there are special settings that can be adjusted to imp
 
     Checkout the `matplotlib doc <https://matplotlib.org/stable/users/explain/interactive.html#jupyter-notebooks-jupyterlab>`_
     for more info!
+
 
 Record interactive maps to create animations
 ********************************************
@@ -391,6 +393,7 @@ Important changes between major versions
 
     - ``setup.py`` and ``_version.py`` have been removed in favor of using a ``pyproject.toml`` file
 
+    - scripts for the examples have been re-named and are now located in ``docs\examples``
 
     The following (previously deprecated) methods are now **removed**:
 

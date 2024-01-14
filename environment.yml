@@ -22,7 +22,6 @@ dependencies:
   # --------------for WebMaps
   - owslib
   - requests
-  - cairosvg
   # --------------to support multiple Qt versions
   - qtpy
   # --------------for testing
