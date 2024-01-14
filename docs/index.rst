@@ -99,7 +99,7 @@ EOmaps provides many useful tools to customize your maps.
 
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
     :gutter: 1
 
     .. grid-item-card:: :doc:`notebooks/naturalearth_features`
@@ -165,7 +165,7 @@ Interactivity
 With a few lines of code, you can turn your maps into interactive data-analysis widgets!
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
     :gutter: 1
 
     .. grid-item-card:: :doc:`api_companion_widget`
@@ -207,7 +207,7 @@ With a few lines of code, you can turn your maps into interactive data-analysis 
 Miscellaneous
 ~~~~~~~~~~~~~
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
     :gutter: 1
 
     .. grid-item-card:: :doc:`api_logging`

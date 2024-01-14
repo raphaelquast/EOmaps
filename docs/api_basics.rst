@@ -376,7 +376,7 @@ To position the map in a (virtual) grid, one of the following options are possib
     indices (1-based, and including last) of the map, e.g., ``Maps(ax=(3, 1, (1, 2)))`` makes a map that spans the upper 2/3 of the figure.
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -396,7 +396,7 @@ To position the map in a (virtual) grid, one of the following options are possib
         :img-background: _static/grids/grid1.png
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -419,7 +419,7 @@ To position the map in a (virtual) grid, one of the following options are possib
         :img-background: _static/grids/grid2.png
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -450,7 +450,7 @@ To position the map in a (virtual) grid, one of the following options are possib
   - The digits are interpreted as if given separately as three single-digit integers, i.e. ``Maps(ax=235)`` is the same as ``Maps(ax=(2, 3, 5))``.
   - Note that this can only be used if there are no more than 9 subplots.
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -468,7 +468,7 @@ To position the map in a (virtual) grid, one of the following options are possib
         :img-background: _static/grids/grid4.png
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -492,7 +492,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 
 - A matplotlib `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -527,7 +527,7 @@ To set the absolute position of the map, provide a list of 4 floats representing
     Also, using ``m.f.tight_layout()`` will not work with axes added in this way.
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -589,7 +589,7 @@ Here's an example to show how it works:
 
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 

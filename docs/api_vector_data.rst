@@ -56,25 +56,29 @@ Once the ``picker_name`` is specified, pick-callbacks can be attached via:
 
 - ``m.cb.pick[<PICKER NAME>].attach.< CALLBACK >()``
 
-| For example, to highlight the clicked country, you could use:
 
-.. table::
-    :widths: 50 50
-    :align: center
+For example, to highlight the clicked country, you could use:
 
-    +----------------------------------------------------------------------------+----------------------------------------------+
-    | .. code-block:: python                                                     | .. image:: _static/minigifs/add_gdf_pick.gif |
-    |     :name: test_pick_gdf                                                   |   :align: center                             |
-    |                                                                            |                                              |
-    |     from eomaps import Maps                                                |                                              |
-    |     m = Maps()                                                             |                                              |
-    |     # get the GeoDataFrame for a given NaturalEarth feature                |                                              |
-    |     gdf = m.add_feature.cultural.admin_0_countries.get_gdf(scale=110)      |                                              |
-    |                                                                            |                                              |
-    |     # pick the shapes of the GeoDataFrame based on a "contains" query      |                                              |
-    |     m.add_gdf(gdf, picker_name="countries", pick_method="contains")        |                                              |
-    |                                                                            |                                              |
-    |     # temporarily highlight the picked geometry                            |                                              |
-    |     m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2) |                                              |
-    |                                                                            |                                              |
-    +----------------------------------------------------------------------------+----------------------------------------------+
+
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_pick_gdf
+
+            from eomaps import Maps
+            m = Maps()
+            # get the GeoDataFrame for a given NaturalEarth feature
+            gdf = m.add_feature.cultural.admin_0_countries.get_gdf(scale=110)
+
+            # pick the shapes of the GeoDataFrame based on a "contains" query
+            m.add_gdf(gdf, picker_name="countries", pick_method="contains")
+
+            # temporarily highlight the picked geometry
+            m.cb.pick["countries"].attach.highlight_geometry(fc="r", ec="g", lw=2)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/add_gdf_pick.gif
+            :width: 75%

@@ -43,30 +43,31 @@ and ``< LAYER >`` indicates the actual layer-name.
     - most services come either in ``epsg=4326`` or in ``Maps.CRS.GOOGLE_MERCATOR`` projection
 
 
-.. table::
-    :widths: 50 50
-    :align: center
+.. grid:: 1 1 1 2
 
-    +------------------------------------------------------------------------------------------------+-----------------------------------------+
-    | .. code-block:: python                                                                         | .. image:: _static/minigifs/add_wms.png |
-    |                                                                                                |   :align: center                        |
-    |     from eomaps import MapsGrid                                                                |                                         |
-    |     mg = MapsGrid(crs=Maps.CRS.GOOGLE_MERCATOR)                                                | |img_minsize|                           |
-    |     mg.join_limits()                                                                           |                                         |
-    |                                                                                                |                                         |
-    |     mg.m_0_0.add_wms.OpenStreetMap.add_layer.default()                                         |                                         |
-    |     mg.m_0_1.add_wms.OpenStreetMap.add_layer.stamen_toner()                                    |                                         |
-    |                                                                                                |                                         |
-    |     mg.m_1_1.add_wms.S1GBM.add_layer.vv()                                                      |                                         |
-    |                                                                                                |                                         |
-    |     # ... for more advanced                                                                    |                                         |
-    |     layer = mg.m_1_0.add_wms.ISRIC_SoilGrids.nitrogen.add_layer.nitrogen_0_5cm_mean            |                                         |
-    |     layer.set_extent_to_bbox() # set the extent according to the boundingBox                   |                                         |
-    |     layer.info                 # the "info" property provides useful information on the layer  |                                         |
-    |     layer()                    # call the layer to add it to the map                           |                                         |
-    |     layer.add_legend()         # if a legend is provided, you can add it to the map!           |                                         |
-    |                                                                                                |                                         |
-    +------------------------------------------------------------------------------------------------+-----------------------------------------+
+    .. grid-item::
+
+         .. code-block:: python
+
+            from eomaps import MapsGrid
+            mg = MapsGrid(crs=Maps.CRS.GOOGLE_MERCATOR)
+            mg.join_limits()
+
+            mg.m_0_0.add_wms.OpenStreetMap.add_layer.default()
+            mg.m_0_1.add_wms.OpenStreetMap.add_layer.stamen_toner()
+
+            mg.m_1_1.add_wms.S1GBM.add_layer.vv()
+
+            # ... for more advanced
+            layer = mg.m_1_0.add_wms.ISRIC_SoilGrids.nitrogen.add_layer.nitrogen_0_5cm_mean
+            layer.set_extent_to_bbox() # set the extent according to the boundingBox
+            layer.info                 # the "info" property provides useful information on the layer
+            layer()                    # call the layer to add it to the map
+            layer.add_legend()         # if a legend is provided, you can add it to the map!
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/add_wms.png
 
 
 Pre-defined WebMap services
@@ -170,47 +171,50 @@ To pass additional arguments to a WebMap service, simply provide them when when 
 To show an example, here's how to fetch multiple timestamps for the UV-index of the Copernicus Airquality service.
 (provided by https://atmosphere.copernicus.eu/)
 
-.. table::
-    :widths: 50 50
-    :align: center
 
-    +-------------------------------------------------------------------------------------+----------------------------------------------+
-    | .. code-block:: python                                                              | .. image:: _static/minigifs/advanced_wms.gif |
-    |                                                                                     |   :align: center                             |
-    |     from eomaps import Maps                                                         |                                              |
-    |     import pandas as pd                                                             | |img_minsize|                                |
-    |                                                                                     |                                              |
-    |     m = Maps(layer="all", figsize=(8, 4))                                           |                                              |
-    |     m.subplots_adjust(left=0.05, right=0.95)                                        |                                              |
-    |     m.all.add_feature.preset.coastline()                                            |                                              |
-    |     m.add_logo()                                                                    |                                              |
-    |                                                                                     |                                              |
-    |     layer = m.add_wms.CAMS.add_layer.composition_uvindex_clearsky                   |                                              |
-    |     timepos = layer.wms_layer.timepositions   # available time-positions            |                                              |
-    |     all_styles = list(layer.wms_layer.styles) # available styles                    |                                              |
-    |                                                                                     |                                              |
-    |     # create a list of timestamps to fetch                                          |                                              |
-    |     start, stop, freq = timepos[1].split(r"/")                                      |                                              |
-    |     times = pd.date_range(start, stop, freq=freq.replace("PT", ""))                 |                                              |
-    |     times = times.strftime("%Y-%m-%dT%H:%M:%SZ")                                    |                                              |
-    |                                                                                     |                                              |
-    |     style = all_styles[0]     # use the first available style                       |                                              |
-    |     for time in times[:6]:                                                          |                                              |
-    |         # call the layer to add it to the map                                       |                                              |
-    |         layer(time=time,                                                            |                                              |
-    |               styles=[style],   # provide a list with 1 entry here                  |                                              |
-    |               layer=time        # put each WebMap on an individual layer            |                                              |
-    |               )                                                                     |                                              |
-    |                                                                                     |                                              |
-    |     layer.add_legend()  # add a legend for the WebMap service                       |                                              |
-    |                                                                                     |                                              |
-    |     # add a "slider" and a "selector" widget                                        |                                              |
-    |     m.util.layer_selector(ncol=3, loc="upper center", fontsize=6, labelspacing=1.3) |                                              |
-    |     m.util.layer_slider()                                                           |                                              |
-    |                                                                                     |                                              |
-    |     # attach a callback to fetch all layers if you press l on the keyboard          |                                              |
-    |     cid = m.all.cb.keypress.attach.fetch_layers(key="l")                            |                                              |
-    |     # fetch all layers so that they are cached and switching layers is fast         |                                              |
-    |     m.fetch_layers()                                                                |                                              |
-    |     m.show_layer(times[0])      # make the first timestamp visible                  |                                              |
-    +-------------------------------------------------------------------------------------+----------------------------------------------+
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+
+         .. code-block:: python
+
+            from eomaps import Maps
+            import pandas as pd
+
+            m = Maps(layer="all", figsize=(8, 4))
+            m.subplots_adjust(left=0.05, right=0.95)
+            m.all.add_feature.preset.coastline()
+            m.add_logo()
+
+            layer = m.add_wms.CAMS.add_layer.composition_uvindex_clearsky
+            timepos = layer.wms_layer.timepositions   # available time-positions
+            all_styles = list(layer.wms_layer.styles) # available styles
+
+            # create a list of timestamps to fetch
+            start, stop, freq = timepos[1].split(r"/")
+            times = pd.date_range(start, stop, freq=freq.replace("PT", ""))
+            times = times.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            style = all_styles[0]     # use the first available style
+            for time in times[:6]:
+                # call the layer to add it to the map
+                layer(time=time,
+                      styles=[style],   # provide a list with 1 entry here
+                      layer=time        # put each WebMap on an individual layer
+                      )
+
+            layer.add_legend()  # add a legend for the WebMap service
+
+            # add a "slider" and a "selector" widget
+            m.util.layer_selector(ncol=3, loc="upper center", fontsize=6, labelspacing=1.3)
+            m.util.layer_slider()
+
+            # attach a callback to fetch all layers if you press l on the keyboard
+            cid = m.all.cb.keypress.attach.fetch_layers(key="l")
+            # fetch all layers so that they are cached and switching layers is fast
+            m.fetch_layers()
+            m.show_layer(times[0])      # make the first timestamp visible
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/advanced_wms.gif

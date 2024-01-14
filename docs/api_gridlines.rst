@@ -39,7 +39,7 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
     Maps.add_gridlines
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -119,7 +119,7 @@ To **change the appearance of the labels**, any kwarg supported by `matplotlib.p
 can be used (e.g. `color`, `fontsize`, `fontweight`, ...).
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 

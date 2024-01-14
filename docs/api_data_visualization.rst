@@ -542,7 +542,7 @@ To assign a classification scheme to a :py:class:`Maps` object, use ``m.set_clas
     Maps.set_classify
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -830,7 +830,7 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
     Colorbars are only visible if the layer at which the data was plotted is visible!
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -899,7 +899,7 @@ Set colorbar tick labels based on bins
 To label the colorbar with custom names for a given set of bins, use :py:meth:`ColorBar.set_bin_labels`:
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -951,7 +951,7 @@ For shade shapes, the colorbar can be used to indicate the distribution of the s
 pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 

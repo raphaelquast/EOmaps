@@ -28,7 +28,7 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
     Maps.add_compass
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 

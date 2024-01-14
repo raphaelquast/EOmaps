@@ -25,19 +25,23 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
 
 
 
-.. table::
-    :widths: 70 30
-    :align: center
+.. grid:: 1 1 1 2
 
-    +-----------------------------------+------------------------------------------+
-    | .. code-block:: python            | .. image:: _static/minigifs/scalebar.gif |
-    |   :name: test_add_scalebar        |   :align: center                         |
-    |                                   |                                          |
-    |   from eomaps import Maps         | |img_minsize|                            |
-    |   m = Maps(Maps.CRS.Sinusoidal()) |                                          |
-    |   m.add_feature.preset.ocean()    |                                          |
-    |   s = m.add_scalebar()            |                                          |
-    +-----------------------------------+------------------------------------------+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_add_scalebar
+
+            from eomaps import Maps
+            m = Maps(Maps.CRS.Sinusoidal())
+            m.add_feature.preset.ocean()
+            s = m.add_scalebar()
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/scalebar.gif
+            :width: 50%
+
 
 .. admonition:: Interacting with the scalebar
 

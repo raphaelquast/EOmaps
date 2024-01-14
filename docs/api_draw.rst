@@ -17,7 +17,7 @@ Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using 
 
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 

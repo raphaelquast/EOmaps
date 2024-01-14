@@ -51,7 +51,7 @@ To dynamically add annotations if you click on the map, checkout the associated 
 
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -149,7 +149,7 @@ To dynamically add markers if you click on the map, checkout the associated :ref
     Maps.add_marker
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -234,7 +234,7 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
 
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -287,7 +287,7 @@ To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indica
     Maps.indicate_extent
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -333,7 +333,7 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 - To fix the relative position of the logo with respect to the map-axis, use ``fix_position=True``
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 

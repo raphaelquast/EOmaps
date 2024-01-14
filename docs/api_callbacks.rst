@@ -68,7 +68,7 @@ The ``< EVENT CATEGORY >`` hereby specifies the event that will trigger the call
 
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
@@ -360,7 +360,7 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 
 
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 1 2
 
     .. grid-item::
 
