@@ -137,13 +137,3 @@ source_suffix = {
     ".ipynb": "myst-nb",
     ".myst": "myst-nb",
 }
-
-# a global substitution used to fix issues with images in tables
-# in the mobile-theme (without a span they get resized to 0. This forces a size
-# of at least 20% of the browser-window size)
-
-rst_prolog = """
-    .. |img_minsize| raw:: html
-
-       <span style="display: inline-block; width: 20vw; height: 0px;"></span>
-    """
