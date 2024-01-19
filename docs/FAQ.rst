@@ -400,3 +400,8 @@ Important changes between major versions
     - `m.set_data_specs` -> use ``m.set_data`` instead
     - `m.add_wms.DLR_basemaps...` -> use ``m.add_wms.DLR.basemap...`` instead
     - `m_inset.indicate_inset_extent` -> use ``m_inset.add_extent_indicator`` instead
+
+    There have been substantial changes to the internals of the callback machinery
+
+    - The public ``Maps`` API is unaffected
+    - Changes are primarily in the modules ``cb_container.py`` and ``callbacks.py``
