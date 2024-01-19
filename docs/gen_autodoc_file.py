@@ -70,12 +70,27 @@ def make_feature_toctree_file():
         members.extend(get_members(Maps, key, False))
     for key in ("add_feature", "cb"):
         members.extend(get_members(Maps, key, True))
+    for key in (
+        "cb.click.attach",
+        "cb.pick.attach",
+        "cb.move.attach",
+        "cb.keypress.attach",
+    ):
+        members.extend(get_members(Maps, key, True))
+    for key in (
+        "cb.click.get",
+        "cb.pick.get",
+        "cb.move.get",
+        "cb.keypress.get"
+        ):
+        members.extend(get_members(Maps, key, False))
 
     # create a page that will be used for sphinx-autodoc to create stub-files
     s = ":orphan:\n\n"
     s += get_autosummary(
         "eomaps.eomaps", ["Maps.config", *members], "obj_with_attributes_no_toc"
     )
+
     s += get_autosummary("eomaps.mapsgrid", ["MapsGrid"], "custom-class-template")
     s += get_autosummary("eomaps.colorbar", ["ColorBar"], "custom-class-template")
     s += get_autosummary("eomaps.compass", ["Compass"], "custom-class-template")

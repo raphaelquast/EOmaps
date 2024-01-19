@@ -48,10 +48,22 @@ def setup(app):
     Maps.add_wms.__name__ = "add_wms"
     Maps.util.__name__ = "util"
     Maps.cb.__name__ = "cb"
+
     Maps.cb.click.__name__ = "click"
+    Maps.cb.click.attach.__name__ = "attach"
+    Maps.cb.click.get.__name__ = "get"
+
     Maps.cb.pick.__name__ = "pick"
+    Maps.cb.pick.attach.__name__ = "attach"
+    Maps.cb.pick.get.__name__ = "get"
+
     Maps.cb.keypress.__name__ = "keypress"
+    Maps.cb.keypress.attach.__name__ = "attach"
+    Maps.cb.keypress.get.__name__ = "get"
+
     Maps.cb.move.__name__ = "move"
+    Maps.cb.move.attach.__name__ = "attach"
+    Maps.cb.move.get.__name__ = "get"
 
 
 # -- Project information
