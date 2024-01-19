@@ -333,10 +333,10 @@ class ClickCallbacks(QtWidgets.QFrame):
         # (irrespective of the visible layer!)
         for m in (self.m.parent, *self.m.parent._children):
             if m.ax == self.m.ax:
-                m.cb.click._cb.clear_annotations()
-                m.cb.click._cb.clear_markers()
-                m.cb.pick._cb.clear_annotations()
-                m.cb.pick._cb.clear_markers()
+                m.cb.click._attach.clear_annotations(m.cb.click.attach)
+                m.cb.click._attach.clear_markers(m.cb.click.attach)
+                m.cb.pick._attach.clear_annotations(m.cb.pick.attach)
+                m.cb.pick._attach.clear_markers(m.cb.pick.attach)
 
         self.m.BM.update()
 

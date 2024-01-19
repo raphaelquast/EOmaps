@@ -586,9 +586,10 @@ class TestCallbacks(unittest.TestCase):
     def test_clear_markers(self):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
-        m.cb.click.attach.mark(permanent=True)
+        cid = m.cb.click.attach.mark(permanent=True)
         self.click_ax_center(m)
         self.assertTrue(len(m.cb.click.get.permanent_markers) == 1)
+        m.cb.click.remove(cid)
 
         cid = m.cb.click.attach.clear_markers()
         self.click_ax_center(m)

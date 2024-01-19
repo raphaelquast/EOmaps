@@ -2156,8 +2156,9 @@ class Maps(metaclass=_MapsMeta):
 
         permanent = kwargs.pop("permanent", None)
 
-        # add marker
-        marker = self.cb.click._cb.mark(
+        # call the "mark" callback function to add the marker
+        marker = self.cb.click._attach.mark(
+            self.cb.click.attach,
             ID=ID,
             pos=xy,
             radius=radius,
@@ -2315,7 +2316,8 @@ class Maps(metaclass=_MapsMeta):
                 usetext = repeat(text)
 
         for x, y, texti, vali, indi, IDi in zip(xy[0], xy[1], usetext, val, ind, ID):
-            ann = self.cb.click._cb.annotate(
+            ann = self.cb.click._attach.annotate(
+                self.cb.click.attach,
                 ID=IDi,
                 pos=(x, y),
                 val=vali,

@@ -264,7 +264,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.plot_map()
 
         # attach all pick callbacks
-        for n, cb in enumerate(m.cb.pick._cb_list):
+        for n, cb in enumerate(m.cb.pick.attach._available_callbacks()):
             if n == 1:
                 mouse_button = 1
                 double_click = False
@@ -290,7 +290,7 @@ class TestBasicPlotting(unittest.TestCase):
             self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 0)
 
         # attach all click callbacks
-        for n, cb in enumerate(m.cb.click._cb_list):
+        for n, cb in enumerate(m.cb.click.attach._available_callbacks()):
             if n == 1:
                 mouse_button = 1
                 double_click = False
@@ -318,7 +318,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         # attach all keypress callbacks
         double_click, mouse_button = True, 1
-        for n, cb in enumerate(m.cb.keypress._cb_list):
+        for n, cb in enumerate(m.cb.keypress.attach._available_callbacks()):
             if n == 1:
                 key = "x"
             if n == 2:
