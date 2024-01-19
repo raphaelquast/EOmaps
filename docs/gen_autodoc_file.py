@@ -77,12 +77,7 @@ def make_feature_toctree_file():
         "cb.keypress.attach",
     ):
         members.extend(get_members(Maps, key, True))
-    for key in (
-        "cb.click.get",
-        "cb.pick.get",
-        "cb.move.get",
-        "cb.keypress.get"
-        ):
+    for key in ("cb.click.get", "cb.pick.get", "cb.move.get", "cb.keypress.get"):
         members.extend(get_members(Maps, key, False))
 
     # create a page that will be used for sphinx-autodoc to create stub-files
