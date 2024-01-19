@@ -366,9 +366,22 @@ class _CallbackContainer(object):
         """
         self._execute_while_toolbar_active = q
 
-    def _attach_decorator(self, func):
+    def _try_decorator(self, func):
+        @wraps(func)
         def inner(*args, **kwargs):
-            return self._add_callback(callback=func, *args, **kwargs)
+            try:
+                func(*args, **kwargs)
+            except Exception:
+                _log.error("problem during callback", exc_info=True)
+
+        return inner
+
+    def _attach_decorator(self, func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            return self._add_callback(
+                callback=self._try_decorator(func), *args, **kwargs
+            )
 
         return inner
 
@@ -836,6 +849,7 @@ class _ClickContainer(_CallbackContainer):
             else:
                 self._init_picker()
 
+        cb_name = callback if isinstance(callback, str) else callback.__name__
         # attach "on_move" callbacks
         movecb_name = None
 
@@ -844,16 +858,16 @@ class _ClickContainer(_CallbackContainer):
         # set on_motion=True as default for "click" callbacks that
         # are also supported as move callbacks and False otherwise
         if self._method == "click" and on_motion is None:
-            if hasattr(self._m.cb._click_move._attach, callback.__name__):
+            if hasattr(self._m.cb._click_move._attach, cb_name):
                 on_motion = True
             else:
                 on_motion = False
-        else:
+        elif on_motion is None:
             on_motion = False
 
         if self._method == "click" and on_motion is True:
             # attach associated click+move callback
-            if not hasattr(self._m.cb._click_move._attach, callback.__name__):
+            if not hasattr(self._m.cb._click_move._attach, cb_name):
                 on_motion = False
                 _log.warning(
                     f"Using 'on_motion' = True for the '{callback}' callback has no effect!"
