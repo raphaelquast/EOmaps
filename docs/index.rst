@@ -79,7 +79,7 @@ EOmaps provides a variety of plot-shapes so you can select a shape that suits th
         :link-type: ref
 
     .. grid-item-card:: Contour
-        :img-bottom: _static/shape_imgs/contour.png
+        :img-bottom: _static/shape_imgs/contour_unfilled_filled.png
         :link: shp_contour
         :link-type: ref
 
