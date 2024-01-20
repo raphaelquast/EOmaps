@@ -14,20 +14,34 @@
 
 Here you can find detailed explanations on all the features and functionalities of EOmaps.
 
-.. admonition:: Interested in contributing to EOmaps?
 
-    | Found a bug or got an idea for an interesting feature?
-    | Open an issue on `GitHub <https://github.com/raphaelquast/EOmaps>`_ or head over to the :doc:`contribute` to see how to setup EOmaps for development!
+.. card:: Found a bug or got an idea for an interesting feature?
+
+    .. grid:: 1 1 2 2
+        :gutter: 1
+        :margin: 0
+
+        .. grid-item-card:: :doc:`contribute`
+            :link: contribute
+            :link-type: doc
+
+            Get all information you need to start contributing to EOmaps!
+
+        .. grid-item-card:: GitHub
+            :link: https://github.com/raphaelquast/EOmaps/
+            :link-type: url
+
+            Open an issue or start a discussion on GitHub!
 
 
 
 Getting Started
 ---------------
 
-To get started, have a look at the :doc:`api_basics` section to get to know
-the basic concepts of EOmaps.
+To get started, have a look at the :doc:`installation` instructions and the  :doc:`api_basics` section to learn how to use EOmaps!
 
 In addition, there is also the :doc:`api_companion_widget` GUI that can be used to interactively edit/compare/overlay maps and explore the features and functionalities.
+
 
 Data Visualization
 ------------------
@@ -35,7 +49,6 @@ Data Visualization
 Want to visualize some data? Have a look at the :doc:`api_data_visualization` section to learn how to create beautiful maps with your datasets!
 
 EOmaps provides a variety of plot-shapes so you can select a shape that suits the structure, size and spatial representativeness of your data:
-
 
 .. grid:: 2 2 5 5
     :gutter: 1
@@ -94,10 +107,7 @@ EOmaps provides a variety of plot-shapes so you can select a shape that suits th
 Map Features
 ------------
 
-
 EOmaps provides many useful tools to customize your maps.
-
-
 
 .. grid:: 1 1 1 2
     :gutter: 1
@@ -163,7 +173,6 @@ Interactivity
 -------------
 
 With a few lines of code, you can turn your maps into interactive data-analysis widgets!
-
 
 .. grid:: 1 1 1 2
     :gutter: 1
@@ -258,9 +267,7 @@ Examples
 
 Make sure to check out the :doc:`Examples <EOmaps_examples>` for an overview of the capabilities (incl. source code)!
 
-
 .. include:: example_galery.rst
-
 
 .. toctree::
     :hidden:
