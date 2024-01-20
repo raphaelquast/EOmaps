@@ -3,15 +3,16 @@ channels:
   - conda-forge
 
 dependencies:
-  - python = 3.11
+  - python >= 3.8
   - numpy
   - scipy
   - matplotlib >=3.4
   - cartopy >=0.20.0
   - descartes
+  # ------------- to handle data-classification
   - mapclassify
+  # ------------- to handle reprojections
   - pyproj
-
   # ------------- to support Dataframes
   - pandas
   # ------------- to support GeoDataFrames
@@ -27,12 +28,21 @@ dependencies:
   - requests
   # --------------to support multiple Qt versions
   - qtpy
-  # --------------for testing
+
+  ### To run the tests
   - coveralls
   - pytest
   - pytest-cov
-  # --------------for building the docs
-  - sphinx-copybutton
-  - sphinx
+  # --------------for testing the docs
+  # (e.g. parsing .rst code-blocks and Jupyter Notebooks)
   - docutils
+  - jupyter
+  - nbformat
+
+  ### To build the docs
+  - docutils
+  - sphinx
+  - sphinx-copybutton
+  - sphinx-design
   - sphinx_rtd_theme
+  - myst-nb

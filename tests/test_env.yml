@@ -5,14 +5,17 @@ channels:
 dependencies:
   - numpy
   - scipy
-  - pandas
-  - geopandas
   - matplotlib >=3.4
   - cartopy >=0.20.0
   - descartes
+  # ------------- to handle data-classification
   - mapclassify
+  # ------------- to handle reprojections
   - pyproj
-  - pyepsg
+  # ------------- to support Dataframes
+  - pandas
+  # ------------- to support GeoDataFrames
+  - geopandas
   # --------------for data-shading
   - datashader
   # --------------for GeoTIFF and NetCDF files
@@ -22,7 +25,10 @@ dependencies:
   # --------------for WebMaps
   - owslib
   - requests
-  # --------------for testing
+  # --------------to support multiple Qt versions
+  - qtpy
+
+  ### To run the tests
   - coveralls
   - pytest
   - pytest-cov
