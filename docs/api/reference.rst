@@ -43,7 +43,7 @@ Feature objects
 
     .. currentmodule:: eomaps.eomaps
 
-    See :py:meth:`Maps.add_inset_map` on how to add a colorbar to a map!
+    See :py:meth:`Maps.new_inset_map` on how to create a new InsetMap!
 
 
 .. card::
