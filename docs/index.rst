@@ -239,6 +239,20 @@ Miscellaneous
         Additional functions and properties that might come in handy.
 
 
+API Reference
+~~~~~~~~~~~~~
+
+.. grid:: 1 1 1 2
+    :gutter: 1
+
+    .. grid-item-card:: EOmaps API reference
+        :link: api/reference
+        :link-type: doc
+        :shadow: none
+
+        Detailed information on the API of EOmaps.
+
+
 Examples
 --------
 
