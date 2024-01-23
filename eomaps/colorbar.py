@@ -869,8 +869,11 @@ class ColorBar:
                 # self._m.coll.add_callback(self._redraw_colorbar)
 
                 def check_data_updated(*args, **kwargs):
-                    # make sure the artist is drawn before checking for new data
-                    self._m.f.draw_artist(self._m.coll)
+                    # make sure the artist is updated before checking for new data
+                    # TODO check if this is really enough to ensure that the coll
+                    # is fully updated (calling coll.draw() is not an option since it
+                    # would result make the collection appear on any layer!)
+                    self._m.coll.changed()
                     dsdata = self._m.coll.get_ds_data()
                     if getattr(self, "_last_ds_data", None) is not None:
                         if not self._last_ds_data.equals(dsdata):
