@@ -2906,6 +2906,7 @@ class Maps(metaclass=_MapsMeta):
             else:
                 # set vmin/vmax for aggregations that do NOT represent data values
                 # allow vmin/vmax = None (e.g. autoscaling)
+                self._vmin, self._vmax = vmin, vmax
                 if "count" in aggname:
                     # if the reduction represents a count, don't count empty pixels
                     if vmin and vmin <= 0:
@@ -2913,9 +2914,6 @@ class Maps(metaclass=_MapsMeta):
                             "EOmaps: setting vmin=1 to avoid counting empty pixels..."
                         )
                         self._vmin = 1
-
-                    if vmax and vmax > 0:
-                        self._vmax = vmax
 
     def plot_map(
         self,
