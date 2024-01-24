@@ -711,7 +711,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         # don't show normal tooltips while showhelp is active
         # (they would cause the help-popups to disappear after ~ 1 sec)
         if event.type() == QtCore.QEvent.ToolTip and self.window().showhelp:
-            return
+            return False
 
         return super().event(event)
 
