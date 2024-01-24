@@ -2869,8 +2869,11 @@ class Maps(metaclass=_MapsMeta):
         return vmin, vmax
 
     def _set_vmin_vmax(self, vmin=None, vmax=None):
-        vmin = self._encode_values(vmin)
-        vmax = self._encode_values(vmax)
+        # don't encode nan-vailes to avoid setting the fill-value as vmin/vmax
+        if vmin is not None:
+            vmin = self._encode_values(vmin)
+        if vmax is not None:
+            vmax = self._encode_values(vmax)
 
         # handle inherited bounds
         if self._inherit_classification is not None:

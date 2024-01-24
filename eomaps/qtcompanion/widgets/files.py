@@ -695,8 +695,12 @@ class PlotXarrayWidget(PlotFileWidget):
         f = self._file_handle
 
         try:
-            vmin = f[self.parameter.text()].min()
-            vmax = f[self.parameter.text()].max()
+
+            vals = f[self.parameter.text()]
+            if hasattr(vals, "_FillValue"):
+                vals = vals.where(vals != vals._FillValue)
+            vmin = vals.min()
+            vmax = vals.max()
 
             self.vmin.setText(str(float(vmin)))
             self.vmax.setText(str(float(vmax)))
