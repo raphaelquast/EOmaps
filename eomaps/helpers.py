@@ -1327,6 +1327,11 @@ class LayoutEditor:
         self.m._emit_signal("layoutEditorDeactivated")
 
         self.m.redraw()
+        # try to push the current view to the "home" toolbar button
+        try:
+            self.m.f.canvas.toolbar.push_current()
+        except Exception:
+            pass
 
     def _reset_callbacks(self):
         # disconnect all callbacks of the layout-editor
@@ -1538,6 +1543,12 @@ class LayoutEditor:
                 axes[i].set_position(val)
 
         self.m.redraw()
+
+        # try to push the current view to the "home" toolbar button
+        try:
+            self.m.f.canvas.toolbar.push_current()
+        except Exception:
+            pass
 
 
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
