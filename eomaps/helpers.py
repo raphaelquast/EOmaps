@@ -100,6 +100,12 @@ class _TransformedBoundsLocator:
         # Subtracting transSubfigure will typically rely on inverted(),
         # freezing the transform; thus, this needs to be delayed until draw
         # time as transSubfigure may otherwise change after this is evaluated.
+        if ax.figure is None:
+            return TransformedBbox(
+                Bbox.from_bounds(*self._bounds),
+                self._transform,
+            )
+
         return TransformedBbox(
             Bbox.from_bounds(*self._bounds),
             self._transform - ax.figure.transSubfigure,
@@ -689,7 +695,6 @@ class LayoutEditor:
 
         self._ax_picked = []
         self._m_picked = []
-        self._cb_picked = []
 
         self._modifier_pressed = False
 
@@ -792,23 +797,8 @@ class LayoutEditor:
         return [m.ax for m in self.ms]
 
     @property
-    def cbaxes(self):
-        axes = list()
-        for m in self.ms:
-            axes.extend((i._ax for i in m._colorbars))
-        return axes
-
-    @property
     def axes(self):
         return self.f.axes
-
-    @property
-    def cbs(self):
-        # get all colorbars
-        cbs = list()
-        for m in self.ms:
-            cbs.extend(m._colorbars)
-        return cbs
 
     @staticmethod
     def roundto(x, base=10):
@@ -929,24 +919,13 @@ class LayoutEditor:
         for ax in self.axes:
             self._color_unpicked(ax)
 
-        for cb in self.cbs:
-            for ax in (cb.ax_cb, cb.ax_cb_plot):
-                self._color_unpicked(ax)
-
         for ax in self._ax_picked:
             if ax is not None:
                 self._color_picked(ax)
 
-        for cb in self._cb_picked:
-            for ax in (cb.ax_cb, cb.ax_cb_plot):
-                self._color_picked(ax)
-
     def _set_startpos(self, event):
         self._start_position = (event.x, event.y)
-        self._start_ax_position = {
-            i: (i.bbox.x0, i.bbox.y0)
-            for i in (*self._ax_picked, *(cb._ax for cb in self._cb_picked))
-        }
+        self._start_ax_position = {i: (i.bbox.x0, i.bbox.y0) for i in self._ax_picked}
 
     def _add_to_history(self):
         self._history_undone.clear()
@@ -987,7 +966,7 @@ class LayoutEditor:
 
         if eventax not in self.axes:
             # if no axes is clicked "unpick" previously picked axes
-            if len(self._ax_picked) + len(self._cb_picked) == 0:
+            if len(self._ax_picked) == 0:
                 # if there was nothing picked there's nothing to do
                 # except updating the info-text visibility
 
@@ -997,7 +976,6 @@ class LayoutEditor:
                 return
 
             self._ax_picked = []
-            self._cb_picked = []
             self._m_picked = []
             self._color_axes()
             self._remove_snap_grid()
@@ -1017,38 +995,22 @@ class LayoutEditor:
                     self._m_picked.remove(m)
                 else:
                     self._m_picked.append(m)
-            elif eventax in self.cbaxes:
-                cb = self.cbs[self.cbaxes.index(eventax)]
-                if cb in self._cb_picked:
-                    self._cb_picked.remove(cb)
-                else:
-                    self._cb_picked.append(cb)
             else:
                 if eventax in self._ax_picked:
                     self._ax_picked.remove(eventax)
                 else:
                     self._ax_picked.append(eventax)
         else:
-            selected = eventax in self._ax_picked
-            if eventax in self.cbaxes:
-                selected = (
-                    selected or self.cbs[self.cbaxes.index(eventax)] in self._cb_picked
-                )
-
-            if not selected:
+            if eventax not in self._ax_picked:
                 self._m_picked = []
-                self._cb_picked = []
                 self._ax_picked = []
 
                 if eventax in self.axes:
                     if eventax in self.maxes:
                         self._ax_picked.append(eventax)
                         self._m_picked.append(self.ms[self.maxes.index(eventax)])
-                    elif eventax in self.cbaxes:
-                        self._cb_picked.append(self.cbs[self.cbaxes.index(eventax)])
                     else:
                         self._m_picked = []
-                        self._cb_picked = []
                         self._ax_picked.append(eventax)
 
                     self._add_snap_grid()
@@ -1069,10 +1031,8 @@ class LayoutEditor:
         with ExitStack() as stack:
             for ax in self._ax_picked:
                 stack.enter_context(ax._cm_set(visible=False))
-
-            for cb in self._cb_picked:
-                stack.enter_context(cb.ax_cb._cm_set(visible=False))
-                stack.enter_context(cb.ax_cb_plot._cm_set(visible=False))
+                for child_ax in ax.child_axes:
+                    stack.enter_context(child_ax._cm_set(visible=False))
 
             self.m.BM.blit_artists(self.axes, None, False)
 
@@ -1096,10 +1056,6 @@ class LayoutEditor:
             bbox = self._get_move_with_key_bbox(ax, event.key)
             ax.set_position(bbox)
 
-        for cb in self._cb_picked:
-            bbox = self._get_move_with_key_bbox(cb._ax, event.key)
-            cb.set_position(bbox)
-
         self._add_to_history()
         self._color_axes()
         self.blit_artists()
@@ -1121,29 +1077,12 @@ class LayoutEditor:
             bbox = self._get_move_bbox(ax, event.x, event.y)
             ax.set_position(bbox)
 
-        for cb in self._cb_picked:
-            if cb is None:
-                return
-
-            bbox = self._get_move_bbox(cb._ax, event.x, event.y)
-            cb.set_position(bbox)
-
         self._add_to_history()
         self._color_axes()
         self.blit_artists()
 
     def blit_artists(self):
-        # TODO the current colorbar implementation requires the parent colorbar
-        # to be drawn in order to change the inherited position.
-        # a full redraw takes care of that but it is slower than blitting...
-        if len(self._cb_picked) > 0:
-            self.m.redraw()
-            return
-
         artists = [*self._ax_picked]
-        for cb in self._cb_picked:
-            artists.append(cb.ax_cb)
-            artists.append(cb.ax_cb_plot)
 
         if getattr(self, "_info_text", None) is not None:
             artists.append(self._info_text)
@@ -1158,31 +1097,30 @@ class LayoutEditor:
                 return False
 
         # ordinary axes picked
-        if self._scale_direction not in ["set_hist_size"]:
+        if self._scale_direction == "set_hist_size":
+            for ax in self._ax_picked:
+                cbs = getattr(ax, "_EOmaps_cb", None)
+                if cbs is None:
+                    continue
+
+                # use the hist-size of the first colorbar as start
+                start_size = cbs[0]._hist_size
+                for cb in cbs:
+                    new_size = np.clip(start_size + event.step * 0.02, 0.0, 1.0)
+                    cb._set_hist_size(new_size)
+
+            self._add_to_history()
+            self.blit_artists()
+        # ordinary axes picked
+        else:
             for ax in self._ax_picked:
                 if ax is None:
                     continue
                 resize_bbox = self._get_resize_bbox(ax, event.step)
                 if resize_bbox is not None:
                     ax.set_position(resize_bbox)
-
-        for cb in self._cb_picked:
-            if cb is None:
-                continue
-
-            if self._scale_direction == "set_hist_size":
-                start_size = cb._hist_size
-
-                new_size = np.clip(start_size + event.step * 0.02, 0.0, 1.0)
-                cb.set_hist_size(new_size)
-            else:
-                resize_bbox = self._get_resize_bbox(cb._ax, event.step)
-                if resize_bbox is not None:
-                    cb.set_position(resize_bbox)
-
-        self._add_to_history()
-        # self._color_axes()
-        self.blit_artists()
+            self._add_to_history()
+            self.blit_artists()
 
     def cb_key_press(self, event):
         # release shift key on every keypress
@@ -1284,6 +1222,18 @@ class LayoutEditor:
 
         return snap
 
+    def ax_on_layer(self, ax):
+        return ax in [
+            ax
+            for ax in self.f.axes
+            if (
+                ax in self.m.BM._get_unmanaged_axes()
+                or ax in self.m.BM.get_bg_artists(self.m.BM.bg_layer)
+                or ax in self.m.BM.get_artists(self.m.BM.bg_layer)
+                or ax in self.maxes
+            )
+        ]
+
     def _make_draggable(self, filepath=None):
         # Uncheck active pan/zoom actions of the matplotlib toolbar.
         # use a try-except block to avoid issues with ipympl in jupyter notebooks
@@ -1320,10 +1270,6 @@ class LayoutEditor:
             # check if the axis is the container-axes of a colorbar
             cbaxQ = ax.get_label() == "cb"
 
-            self._revert_props.append((ax.set_visible, ax.get_visible()))
-            self._revert_props.append((ax.set_frame_on, ax.get_frame_on()))
-            self._revert_props.append((ax.set_animated, ax.get_animated()))
-
             if not ax.axison:
                 showXY = False
                 self._revert_props.append(ax.set_axis_off)
@@ -1332,15 +1278,26 @@ class LayoutEditor:
                 showXY = True
 
             # keep singular axes hidden
+            self._revert_props.append((ax.set_visible, ax.get_visible()))
             if not singularax:
-                ax.set_visible(True)
+
+                if self.ax_on_layer(ax):
+                    ax.set_visible(True)
+                else:
+                    ax.set_visible(False)
             else:
                 ax.set_visible(False)
 
+            self._revert_props.append((ax.set_animated, ax.get_animated()))
             ax.set_animated(False)
+
+            self._revert_props.append((ax.set_frame_on, ax.get_frame_on()))
             ax.set_frame_on(True)
 
             for child in ax.get_children():
+                # make sure we don't treat axes again (in case they are child-axes)
+                if child in self.f.axes:
+                    continue
                 revert_props = [
                     "edgecolor",
                     "linewidth",
@@ -1380,11 +1337,6 @@ class LayoutEditor:
                     # make all other children invisible (to avoid drawing them)
                     child.set_visible(False)
                     child.set_animated(True)
-
-        # hide all colorbars that are not on the visible layer
-        for cb in self.cbs:
-            if cb._m.layer != self.m.BM.bg_layer:
-                cb.set_visible(False)
 
         # only re-draw if info-text is None
         if getattr(self, "_info_text", None) is None:
@@ -1431,7 +1383,6 @@ class LayoutEditor:
 
         # clear all picks on exit
         self._ax_picked = []
-        self._cb_picked = []
         self._m_picked = []
 
         _log.info("EOmaps: Exiting layout-editor mode...")
@@ -1456,17 +1407,11 @@ class LayoutEditor:
 
         self.modifier_pressed = False
 
-        # show all colorbars that are on the visible layer
-        active_layers = self.m.BM._get_active_layers_alphas[0]
-        for cb in self.cbs:
-            if cb._m.layer in active_layers:
-                cb.set_visible(True)
-
         # reset the histogram-size of all colorbars to make sure previously hidden
         # axes (e.g. size=0) become visible if the size is now > 0.
         for m in self.ms:
             for cb in m._colorbars:
-                cb.set_hist_size()
+                cb._set_hist_size(update_all=True)
 
         # remove snap-grid (if it's still visible)
         self._remove_snap_grid()
@@ -1685,7 +1630,7 @@ class LayoutEditor:
 
             i = int(key[: key.find("_")])
             if key.endswith("_histogram_size"):
-                cbs[i].set_hist_size(val)
+                cbs[i]._set_hist_size(val)
             else:
                 axes[i].set_position(val)
 
@@ -1963,6 +1908,8 @@ class BlitManager(LayerParser):
             layer_visible = self._layer_is_subset(val, m.layer)
 
             for cb in m._colorbars:
+                cb._hide_singular_axes()
+
                 if layer_visible:
                     if cb in self._hidden_artists:
                         self._hidden_artists.remove(cb)
