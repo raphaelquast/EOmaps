@@ -1,4 +1,4 @@
-from itertools import pairwise, cycle
+from itertools import cycle
 from functools import partial
 from textwrap import dedent
 
@@ -10,7 +10,7 @@ from matplotlib.patches import Rectangle
 
 import numpy as np
 
-from eomaps.helpers import _TransformedBoundsLocator
+from eomaps.helpers import _TransformedBoundsLocator, pairwise
 
 
 def get_named_bins_formatter(bins, names, show_values=False):
