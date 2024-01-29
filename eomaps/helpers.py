@@ -1457,7 +1457,7 @@ class LayoutEditor:
         self.modifier_pressed = False
 
         # show all colorbars that are on the visible layer
-        active_layers = self.m.BM._get_layers_alphas()[0]
+        active_layers = self.m.BM._get_active_layers_alphas[0]
         for cb in self.cbs:
             if cb._m.layer in active_layers:
                 cb.set_visible(True)
