@@ -741,7 +741,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
         shape = "ellipses" if shape == "round" else "rectangles"
 
         if not isinstance(layer, str):
-            layer = self.m._get_combined_layer_name(*layer)
+            layer = self.m.BM._get_combined_layer_name(*layer)
 
         # add spines and relevant inset-map layers to the specified peek-layer
         layer = self.m.BM._get_showlayer_name(layer, transparent=True)
@@ -875,7 +875,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
 
         self.m.BM._after_restore_actions.append(
             self.m.BM._get_restore_bg_action(
-                "|".join([self.m.BM.bg_layer, layer]),
+                self.m.BM._get_combined_layer_name(self.m.BM.bg_layer, layer),
                 (x0, y0, blitw, blith),
                 alpha=alpha,
                 clip_path=clip_path,
@@ -1307,10 +1307,10 @@ class KeypressCallbacks:
         """
 
         if isinstance(layer, list):
-            layer = self._m._get_combined_layer_name(*layer)
+            layer = self._m.BM._get_combined_layer_name(*layer)
         elif isinstance(layer, tuple):
             # e.g. (layer-name, layer-transparency)
-            layer = self._m._get_combined_layer_name(layer)
+            layer = self._m.BM._get_combined_layer_name(layer)
 
         # in case the layer is currently on top, remove it
         if not self._m.BM.bg_layer.endswith(f"|{layer}"):

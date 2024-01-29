@@ -380,7 +380,7 @@ class Maps(metaclass=_MapsMeta):
             self._signal_container = None
 
         # make sure the used layer-name is valid
-        layer = self._check_layer_name(layer)
+        layer = BlitManager._check_layer_name(layer)
 
         self._inherit_classification = None
 
@@ -3196,41 +3196,6 @@ class Maps(metaclass=_MapsMeta):
         # set _data_plotted to True to trigger updates in the data-manager
         self._data_plotted = True
 
-    @lru_cache()
-    def _get_combined_layer_name(self, *args):
-        try:
-            combnames = []
-            for i in args:
-                if isinstance(i, str):
-                    combnames.append(i)
-                elif isinstance(i, (list, tuple)):
-                    assert (
-                        len(i) == 2
-                        and isinstance(i[0], str)
-                        and i[1] >= 0
-                        and i[1] <= 1
-                    ), (
-                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
-                        "You can provide either a single layer-name as string, a list "
-                        "of layer-names or a list of tuples of the form: "
-                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
-                    )
-
-                    if i[1] < 1:
-                        combnames.append(i[0] + "{" + str(i[1]) + "}")
-                    else:
-                        combnames.append(i[0])
-                else:
-                    raise TypeError(
-                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
-                        "You can provide either a single layer-name as string, a list "
-                        "of layer-names or a list of tuples of the form: "
-                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
-                    )
-            return "|".join(combnames)
-        except Exception:
-            raise TypeError(f"EOmaps: Unable to combine the layer-names {args}")
-
     def show_layer(self, *args, clear=True):
         """
         Show a single layer or (transparently) overlay multiple selected layers.
@@ -3275,36 +3240,26 @@ class Maps(metaclass=_MapsMeta):
         Maps.util.layer_slider : Add a slider to switch layers to the map.
 
         """
-        name = self._get_combined_layer_name(*args)
-
-        layers = self._get_layers()
-
+        name = self.BM._get_combined_layer_name(*args)
         if not isinstance(name, str):
             _log.info("EOmaps: All layer-names are converted to strings!")
             name = str(name)
 
-        if "|" in name:
-            # take special care of "_" to allow 'private' (e.g. hidden) multi-layers
-            names = [i.strip() for i in name.split("|") if i != "_"]
-        else:
-            names = [name]
+        # check if all layers exist
+        existing_layers = self._get_layers()
+        layers_to_show, _ = self.BM._parse_multi_layer_str(name)
 
-        for i in names:
-            # ignore non-existing private layers
-            if i.startswith("__"):
-                continue
+        # don't check private layer-names
+        layers_to_show = [i for i in layers_to_show if not i.startswith("_")]
+        missing_layers = set(layers_to_show).difference(set(existing_layers))
+        if len(missing_layers) > 0:
+            lstr = " - " + "\n - ".join(map(str, existing_layers))
 
-            if "{" in i and i.endswith("}"):
-                i = i.split("{")[0]  # strip off transparency assignments
-
-            if i not in layers:
-                lstr = " - " + "\n - ".join(map(str, layers))
-
-                _log.error(
-                    f"EOmaps: The layer '{i}' does not exist...\n"
-                    + f"Use one of: \n{lstr}"
-                )
-                return
+            _log.error(
+                f"EOmaps: The layers {missing_layers} do not exist...\n"
+                + f"Use one of: \n{lstr}"
+            )
+            return
 
         # invoke the bg_layer setter of the blit-manager
         self.BM.bg_layer = name
@@ -3406,14 +3361,16 @@ class Maps(metaclass=_MapsMeta):
                 self._indicate_companion_map(False)
 
                 if layer is not None:
-                    layer = self._get_combined_layer_name(*layer)
+                    layer = self.BM._get_combined_layer_name(*layer)
 
                 # add the figure background patch as the bottom layer
                 initial_layer = self.BM.bg_layer
 
                 if transparent is False:
                     showlayer_name = self.BM._get_showlayer_name(layer=layer)
-                    layer_with_bg = "|".join(["__BG__", showlayer_name])
+                    layer_with_bg = self.BM._get_combined_layer_name(
+                        "__BG__", showlayer_name
+                    )
                     self.show_layer(layer_with_bg)
                     sn = self._get_snapshot()
                     # restore the previous layer
@@ -3505,7 +3462,9 @@ class Maps(metaclass=_MapsMeta):
             transparent = kwargs.get("transparent", False)
             if transparent is False:
                 showlayer_name = self.BM._get_showlayer_name(initial_layer)
-                layer_with_bg = "|".join(["__BG__", showlayer_name])
+                layer_with_bg = self.BM._get_combined_layer_name(
+                    "__BG__", showlayer_name
+                )
                 self.show_layer(layer_with_bg)
 
             dpi = kwargs.get("dpi", None)
@@ -3522,11 +3481,10 @@ class Maps(metaclass=_MapsMeta):
                 self._update_shade_axis_size(dpi=dpi)
 
             # get all layer names that should be drawn
-            savelayers, alphas = self.BM._get_layers_alphas(
-                self.BM._get_showlayer_name(
-                    self._get_combined_layer_name(self.BM.bg_layer)
-                )
+            savelayers, alphas = self.BM._parse_multi_layer_str(
+                self.BM._get_showlayer_name(self.BM.bg_layer)
             )
+
             # make sure inset-maps are drawn on top of normal maps
             savelayers.sort(key=lambda x: x.startswith("__inset_"))
 
@@ -3937,41 +3895,6 @@ class Maps(metaclass=_MapsMeta):
                 "EOmaps: Cleanup problem!",
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
-
-    def _check_layer_name(self, layer):
-        if not isinstance(layer, str):
-            _log.info("EOmaps: All layer-names are converted to strings!")
-            layer = str(layer)
-
-        if layer.startswith("__") and not layer.startswith("__inset_"):
-            raise TypeError(
-                "EOmaps: Layer-names starting with '__' are reserved "
-                "for internal use and cannot be used as Maps-layer-names!"
-            )
-
-        reserved_symbs = {
-            # "|": (
-            #     "It is used as a separation-character to combine multiple "
-            #     "layers (e.g. m.show_layer('A|B') will overlay the layer 'B' "
-            #     "on top of 'A'."
-            # ),
-            "{": (
-                "It is used to specify transparency when combining multiple "
-                "layers (e.g. m.show_layer('A|B{0.5}') will overlay the layer "
-                "'B' with 50% transparency on top of the layer 'A'."
-            ),
-        }
-
-        reserved_symbs["}"] = reserved_symbs["{"]
-
-        for symb, explanation in reserved_symbs.items():
-            if symb in layer:
-                raise TypeError(
-                    f"EOmaps: The symbol '{symb}' is not allowed in layer-names!\n"
-                    + explanation
-                )
-
-        return layer
 
     def _save_to_clipboard(self, **kwargs):
         """
@@ -5204,7 +5127,9 @@ class Maps(metaclass=_MapsMeta):
 
         # add all (possibly still invisible) layers with artists defined
         # (ONLY do this for unique layers... skip multi-layers )
-        layers = layers.union({i for i in self.BM._bg_artists if "|" not in i})
+        layers = layers.union(
+            chain(*(self.BM._parse_multi_layer_str(i)[0] for i in self.BM._bg_artists))
+        )
 
         # exclude private layers
         if exclude_private:

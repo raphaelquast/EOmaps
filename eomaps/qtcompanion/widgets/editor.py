@@ -808,7 +808,7 @@ class LayerTabBar(QtWidgets.QTabBar):
     @Slot()
     def tab_moved(self):
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_layers_alphas()
+        active_layers, alphas = self.m.BM._get_active_layers_alphas
 
         # get the name of the layer that was moved
         layer = self.tabText(self.currentIndex())
@@ -866,7 +866,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             return
 
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_layers_alphas()
+        active_layers, alphas = self.m.BM._get_active_layers_alphas
 
         # cleanup the layer and remove any artists etc.
         for m in list(self.m._children):
@@ -891,7 +891,11 @@ class LayerTabBar(QtWidgets.QTabBar):
                 # otherwise switch to the first available layer
                 try:
                     switchlayer = next(
-                        (i for i in self.m.BM._bg_artists if layer not in i.split("|"))
+                        (
+                            i
+                            for i in self.m.BM._bg_artists
+                            if layer not in self.m.BM._parse_multi_layer_str(i)[0]
+                        )
                     )
                     self.m.show_layer(switchlayer)
                 except StopIteration:
@@ -928,7 +932,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         multicolor = QtGui.QColor(50, 150, 50)  # QtGui.QColor(0, 128, 0)
 
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_layers_alphas()
+        active_layers, alphas = self.m.BM._get_active_layers_alphas
 
         for i in range(self.count()):
             selected_layer = self.tabText(i)
@@ -971,7 +975,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         currlayer = self.m.BM.bg_layer
         # only populate if the current layer is not part of the last set of layers
         # (e.g. to allow show/hide of selected layers without removing the tabs)
-        if not set(lastlayer.split("|")).issuperset(set(currlayer.split("|"))):
+        if not self.m.BM._layer_visible(lastlayer):
             self.populate(*args, **kwargs)
             self._last_populated_layer = currlayer
         else:
@@ -1094,9 +1098,11 @@ class LayerTabBar(QtWidgets.QTabBar):
                 return
 
             # get currently active layers
-            active_layers, alphas = self.m.BM._get_layers_alphas()
+            active_layers, alphas = self.m.BM._get_active_layers_alphas
 
-            for x in (i for i in layer.split("|") if i != "_"):
+            for x in (
+                i for i in self.m.BM._parse_multi_layer_str(layer)[0] if i != "_"
+            ):
                 if x not in active_layers:
                     active_layers.append(x)
                     alphas.append(LayerTransparencySlider._alphas.get(layer, 1))
@@ -1371,19 +1377,12 @@ class ArtistEditorTabs(LayerArtistTabs):
     @Slot()
     def populate_on_layer(self, *args, **kwargs):
         lastlayer = getattr(self, "_last_populated_layer", "")
-        currlayer = self.m.BM.bg_layer
-
-        # ignore global layer transparencies (no need to re-populate if global)
-        # transparency changes.
-        # NOTE: This is necessary to avoid recursions for multi-layers!
-        last_layers = set(self.m.BM._get_layers_alphas(lastlayer)[0])
-        curr_layers = set(self.m.BM._get_layers_alphas(currlayer)[0])
 
         # only populate if the current layer is not part of the last set of layers
         # (e.g. to allow show/hide of selected layers without removing the tabs)
-        if not last_layers.issuperset(curr_layers):
+        if not self.m.BM._layer_visible(lastlayer):
+            self._last_populated_layer = self.m.BM.bg_layer
             self.populate(*args, **kwargs)
-            self._last_populated_layer = currlayer
         else:
             # TODO check why adjusting the tab-order causes recursions if multiple
             # layers are selected (and the transparency of a sub-layer is changed)
@@ -1413,7 +1412,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
             # if more than max_n_layers layers are available, show only active tabs to
             # avoid performance issues when too many tabs are created
-            alllayers = [i for i in self.m.BM._bg_layer.split("|") if i in alllayers]
+            alllayers = self.m.BM._get_active_layers_alphas[0]
             for i in range(self.count(), -1, -1):
                 self.removeTab(i)
         else:
@@ -1456,7 +1455,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         tabbar.set_current_tab_by_name(self._current_tab_name)
 
     def get_layer_alpha(self, layer):
-        layers, alphas = self.m.BM._get_layers_alphas()
+        layers, alphas = self.m.BM._get_active_layers_alphas
         if layer in layers:
             idx = layers.index(layer)
             alpha = alphas[idx]
@@ -1686,7 +1685,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
     @Slot()
     def set_layer_alpha(self, layer, alpha):
-        layers, alphas = self.m.BM._get_layers_alphas()
+        layers, alphas = self.m.BM._get_active_layers_alphas
         if layer in layers:
             idx = layers.index(layer)
             alphas[idx] = alpha
