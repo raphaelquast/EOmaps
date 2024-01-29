@@ -57,16 +57,11 @@ class ColorBarBase:
         self,
         orientation="horizontal",
         extend_frac=0.025,
-        hist_kwargs=None,
         tick_precision=2,
         margin=None,
     ):
 
         self._hist_size = 0.9
-        if hist_kwargs is not None:
-            self._hist_kwargs = hist_kwargs
-        else:
-            self._hist_kwargs = {}
 
         self._extend_frac = extend_frac
 
@@ -344,9 +339,15 @@ class ColorBarBase:
         self, bins=None, out_of_range_vals="keep", show_outline=False, **kwargs
     ):
 
+        self._hist_kwargs = kwargs
         self._hist_bins = bins
         self._out_of_range_vals = out_of_range_vals
         self._show_outline = show_outline
+
+        if "range" not in self._hist_kwargs:
+            self._hist_kwargs["range"] = (
+                (self._vmin, self._vmax) if (self._vmin and self._vmax) else None
+            )
 
         # plot the histogram
         h = self.ax_cb_plot.hist(
@@ -354,7 +355,7 @@ class ColorBarBase:
             orientation=self._hist_orientation,
             bins=self._hist_bins,
             align="mid",
-            **kwargs,
+            **self._hist_kwargs,
         )
 
         if self._show_outline:
@@ -548,6 +549,7 @@ class ColorBarBase:
             bins=self._hist_bins,
             out_of_range_vals=self._out_of_range_vals,
             show_outline=self._show_outline,
+            **self._hist_kwargs,
         )
 
     def _set_labels(self, cb_label=None, hist_label=None, **kwargs):
@@ -1433,10 +1435,11 @@ class ColorBar(ColorBarBase):
         >>> m.add_colorbar(hist_bins="bins", label="some data")
 
         """
+        if hist_kwargs is None:
+            hist_kwargs = dict()
 
         cb = cls(
             orientation=orientation,
-            hist_kwargs=hist_kwargs,
             tick_precision=tick_precision,
             inherit_position=inherit_position,
             extend_frac=extend_frac,
@@ -1460,6 +1463,7 @@ class ColorBar(ColorBarBase):
             bins=bins,
             out_of_range_vals=out_of_range_vals,
             show_outline=show_outline,
+            **hist_kwargs,
         )
 
         cb._set_tick_formatter()
