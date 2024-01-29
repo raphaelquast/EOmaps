@@ -2715,7 +2715,7 @@ class Maps(metaclass=_MapsMeta):
                 _TransformedBoundsLocator(fixed_pos.bounds, self.ax.transAxes)
             )
 
-    @wraps(ColorBar.add_colorbar.__init__)
+    @wraps(ColorBar.add_colorbar)
     def add_colorbar(self, *args, **kwargs):
         """Add a colorbar to the map."""
         if self.coll is None:
@@ -2723,11 +2723,7 @@ class Maps(metaclass=_MapsMeta):
                 "EOmaps: You must plot a dataset before " "adding a colorbar!"
             )
 
-        colorbar = ColorBar.add_colorbar(
-            self,
-            *args,
-            **kwargs,
-        )
+        colorbar = ColorBar.add_colorbar(self, *args, **kwargs)
 
         self._colorbars.append(colorbar)
         self.BM._refetch_layer(self.layer)
