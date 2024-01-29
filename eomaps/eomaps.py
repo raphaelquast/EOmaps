@@ -217,6 +217,94 @@ class _MapsMeta(type):
         if log_level is not None:
             set_loglevel(log_level)
 
+    @staticmethod
+    def apply_webagg_fix():
+        """
+        Apply fix to avoid slow updates and lags due to event-accumulation in webagg backend.
+
+        (e.g. when using `matplotlib.use("webagg")`)
+
+        - Events that occur while draws are pending are dropped and only the
+          last event of each type that occured during the wait is finally executed.
+
+        Note
+        ----
+
+        Using this fix is **experimental** and will monkey-patch matplotlibs
+        `FigureCanvasWebAggCore` and `FigureManagerWebAgg` to avoid event accumulation!
+
+        You MUST call this function at the very beginning of the script to ensure
+        changes are applied correctly!
+
+        There might be unwanted side-effects for callbacks that require all events
+        to be executed consecutively independent of the draw-state (e.g. typing text).
+        """
+        from matplotlib.backends.backend_webagg_core import (
+            FigureCanvasWebAggCore,
+            FigureManagerWebAgg,
+        )
+
+        def handle_ack(self, event):
+            self._ack_cnt += 1  # count the number of received images
+
+        def refresh_all(self):
+            if self.web_sockets:
+                diff = self.canvas.get_diff_image()
+                if diff is not None:
+                    for s in self.web_sockets:
+                        s.send_binary(diff)
+
+                    self._send_cnt += 1  # count the number of sent images
+
+        def handle_event(self, event):
+            if not hasattr(self, "_event_cache"):
+                self._event_cache = dict()
+
+            cnt_equal = self._ack_cnt == self.manager._send_cnt
+
+            # always process ack and draw events
+            # process other events only if "ack count" equals "send count"
+            # (e.g. if we received and handled all pending images)
+            if cnt_equal or event["type"] in ["ack", "draw"]:
+                # immediately process all cached events
+                for cache_event_type, cache_event in self._event_cache.items():
+                    getattr(
+                        self,
+                        "handle_{0}".format(cache_event_type),
+                        self.handle_unknown_event,
+                    )(cache_event)
+                self._event_cache.clear()
+
+                # reset counters to avoid overflows (just a precaution to avoid overflows)
+                if cnt_equal:
+                    self._ack_cnt, self.manager._send_cnt = 0, 0
+
+                # process event
+                e_type = event["type"]
+                handler = getattr(
+                    self, "handle_{0}".format(e_type), self.handle_unknown_event
+                )
+            else:
+                # ignore events in case we have a pending image that is on the way to be processed
+                # cache the latest event of each type so we can process it once we are ready
+                self._event_cache[event["type"]] = event
+
+                # a final savety precaution in case send count is lower than ack count
+                # (e.g. we wait for an image but there was no image sent)
+                if self.manager._send_cnt < self._ack_cnt:
+                    # reset counts... they seem to be incorrect
+                    self._ack_cnt, self.manager._send_cnt = 0, 0
+                return
+
+            return handler(event)
+
+        FigureCanvasWebAggCore._ack_cnt = 0
+        FigureCanvasWebAggCore.handle_ack = handle_ack
+        FigureCanvasWebAggCore.handle_event = handle_event
+
+        FigureManagerWebAgg._send_cnt = 0
+        FigureManagerWebAgg.refresh_all = refresh_all
+
 
 class Maps(metaclass=_MapsMeta):
     """
