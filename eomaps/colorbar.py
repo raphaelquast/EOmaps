@@ -95,29 +95,6 @@ class ColorBarBase:
     def _hist_orientation(self):
         return "vertical" if self.orientation == "horizontal" else "horizontal"
 
-    def _default_cb_tick_formatter(self, x, pos, precision=None):
-        """
-        A formatter to format the tick-labels of the colorbar for encoded datasets.
-        (used in xaxis.set_major_formatter() )
-        """
-        # if precision=None the shortest representation of the number is used
-        return np.format_float_positional(
-            self._m._decode_values(x), precision=self._tick_precision
-        )
-
-    def _classified_cb_tick_formatter(self, x, pos, precision=None):
-        """
-        A formatter to format the tick-labels of the colorbar for classified datasets.
-        (used in xaxis.set_major_formatter() )
-        """
-        # if precision=None the shortest representation of the number is used
-        if x >= self._vmin and x <= self._vmax:
-            return np.format_float_positional(
-                self._m._decode_values(x), precision=self._tick_precision, trim="-"
-            )
-        else:
-            return ""
-
     def _get_data(self):
         # TODO
         return self._data
@@ -682,7 +659,33 @@ class ColorBar(ColorBarBase):
     def layer(self):
         return self._m.layer
 
+    def _default_cb_tick_formatter(self, x, pos, precision=None):
+        """
+        A formatter to format the tick-labels of the colorbar for encoded datasets.
+        (used in xaxis.set_major_formatter() )
+        """
+        # if precision=None the shortest representation of the number is used
+        return np.format_float_positional(
+            self._m._decode_values(x), precision=self._tick_precision
+        )
+
+    def _classified_cb_tick_formatter(self, x, pos, precision=None):
+        """
+        A formatter to format the tick-labels of the colorbar for classified datasets.
+        (used in xaxis.set_major_formatter() )
+        """
+        # if precision=None the shortest representation of the number is used
+        if x >= self._vmin and x <= self._vmax:
+            return np.format_float_positional(
+                self._m._decode_values(x), precision=self._tick_precision, trim="-"
+            )
+        else:
+            return ""
+
     def _hide_singular_axes(self):
+        # make sure that the mechanism for hiding singular axes does not show
+        # colorbars that are not on the visible layer
+
         super()._hide_singular_axes()
         if self.layer != self._m.BM.bg_layer:
             self.ax_cb.set_visible(False)
@@ -1199,7 +1202,7 @@ class ColorBar(ColorBarBase):
         out_of_range_vals="keep",
         tick_precision=2,
         dynamic_shade_indicator=False,
-        extend=None,
+        extend="both",
         **hist_kwargs,
     ):
 
