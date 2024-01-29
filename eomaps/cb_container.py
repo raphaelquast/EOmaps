@@ -851,8 +851,10 @@ class _ClickContainer(_CallbackContainer):
             on_motion = False
 
         if self._method == "click" and on_motion is True:
-            # attach associated click+move callback
-            if not hasattr(self._m.cb._click_move._attach, cb_name):
+            # attach associated default click+move callbacks if available
+            if isinstance(callback, str) and not hasattr(
+                self._m.cb._click_move._attach, callback
+            ):
                 on_motion = False
                 _log.warning(
                     f"Using 'on_motion' = True for the '{callback}' callback has no effect!"
