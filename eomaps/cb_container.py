@@ -284,25 +284,10 @@ class _CallbackContainer(object):
             Indicator if the callback should be executed on the currently visible
             layer or not.
         """
-        if self.execute_on_all_layers:
+        if self.execute_on_all_layers or layer == "all":
             return True
 
-        visible_layer = self._m.BM.bg_layer
-        if layer == "all":
-            # the all layer is always executed
-            return True
-        elif "|" in visible_layer:
-            if layer == visible_layer:
-                # return true for the multi-layer itself
-                return True
-            else:
-                # return true for layers that are part of the multi-layer
-                # (make sure to strip off transparency assignments, e.g. "layer{}" )
-                return any(
-                    i.strip().split("{")[0] == layer for i in visible_layer.split("|")
-                )
-        else:
-            return layer == visible_layer
+        return self._m.BM._layer_visible(layer)
 
     @property
     def execute_on_all_layers(self):

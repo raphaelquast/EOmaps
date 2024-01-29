@@ -669,7 +669,7 @@ class TestCallbacks(unittest.TestCase):
 
         key_press_event(m.f.canvas, "0")
         key_release_event(m.f.canvas, "0")
-        self.assertTrue(m.BM._bg_layer == m._get_combined_layer_name(m.layer, "A"))
+        self.assertTrue(m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, "A"))
         key_press_event(m.f.canvas, "0")
         key_release_event(m.f.canvas, "0")
         self.assertTrue(m.BM._bg_layer == m.layer)
@@ -677,7 +677,7 @@ class TestCallbacks(unittest.TestCase):
         key_press_event(m.f.canvas, "1")
         key_release_event(m.f.canvas, "1")
         self.assertTrue(
-            m.BM._bg_layer == m._get_combined_layer_name(m.layer, ("B", 0.5))
+            m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, ("B", 0.5))
         )
         key_press_event(m.f.canvas, "1")
         key_release_event(m.f.canvas, "1")
@@ -686,7 +686,7 @@ class TestCallbacks(unittest.TestCase):
         key_press_event(m.f.canvas, "2")
         key_release_event(m.f.canvas, "2")
         self.assertTrue(
-            m.BM._bg_layer == m._get_combined_layer_name(m.layer, "A", ("B", 0.5))
+            m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, "A", ("B", 0.5))
         )
         key_press_event(m.f.canvas, "2")
         key_release_event(m.f.canvas, "2")
@@ -724,7 +724,9 @@ class TestCallbacks(unittest.TestCase):
         # now the 3rd callback should trigger
         key_press_event(m.f.canvas, "3")
         key_release_event(m.f.canvas, "3")
-        self.assertTrue(m.BM._bg_layer == m._get_combined_layer_name("2", ("3", 0.5)))
+        self.assertTrue(
+            m.BM._bg_layer == m.BM._get_combined_layer_name("2", ("3", 0.5))
+        )
 
         m.all.cb.keypress.remove(cid0)
         m.all.cb.keypress.remove(cid1)

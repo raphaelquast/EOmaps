@@ -168,7 +168,7 @@ class _WebMapLayer:
             legax.imshow(legend)
 
             # hide the legend if the corresponding layer is not active at the moment
-            if self._layer not in self._m.BM._get_layers_alphas()[0]:
+            if not self._m.BM._layer_visible(self._layer):
                 legax.set_visible(False)
 
             self._m.BM.add_artist(legax, self._layer)
@@ -385,7 +385,7 @@ class _WMTSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or self._layer in m.BM._get_layers_alphas()[0]:
+            if self._layer == "all" or m.BM._layer_visible(self._layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     self._m,
@@ -496,7 +496,7 @@ class _WMSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or self._layer in m.BM.bg_layer.split("|"):
+            if m.BM._layer_visible(self._layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     m=m,

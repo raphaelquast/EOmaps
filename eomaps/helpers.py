@@ -280,6 +280,153 @@ def _add_to_docstring(prefix=None, suffix=None, insert=None):
     return decorator
 
 
+class LayerParser:
+    @staticmethod
+    def _parse_single_layer_str(layer):
+        """
+        Parse a single layer-string (with optional transparency assignment).
+
+        Parameters
+        ----------
+        layer : str
+            A layer-string (with transparency provided in curly brackets).
+
+        Returns
+        -------
+        name: str
+            The name of the layer.
+        alpha:
+            The transparency of the layer.
+
+        """
+        # split transparency
+        t_split = layer.find("{")
+        if t_split > 0:
+            name = layer[:t_split]
+            alpha = layer[t_split + 1 :]
+            if not alpha.endswith("}"):
+                raise TypeError(
+                    f"EOmaps: unable to parse multilayer-transparency for '{layer}'"
+                )
+            return name, float(alpha[:-1])
+        else:
+            return layer, 1
+
+    @classmethod
+    def _parse_multi_layer_str(cls, layer=None):
+        layers, alphas = zip(*map(cls._parse_single_layer_str, layer.split("|")))
+        return list(layers), list(alphas)
+
+    @classmethod
+    def _layer_is_subset(cls, layer1, layer2):
+        """
+        Return True if combined layer-name 'layer2' is a subset of 'layer1'.
+
+        - Transparency assignments are stripped off before comparison
+
+        Parameters
+        ----------
+        layer1, layer2 : str
+            The combined layer-names to check.
+
+        Returns
+        -------
+        subset: bool
+            True if layer2 is a subset of layer1, False otherwise
+
+        """
+        # get a list of the currently visible layers
+        layers1, _ = cls._parse_multi_layer_str(layer1)
+        layers2, _ = cls._parse_multi_layer_str(layer2)
+
+        return set(layers1).issubset(layers2)
+
+    @staticmethod
+    def _get_combined_layer_name(*args):
+        """
+        Create a combine layer name from layer-names or tuples (name, transparency).
+
+        Parameters
+        ----------
+        *args : str or tuple
+            The layers to combine. (e.g. `"A"`, `"B"` or `("A", .5)`, `("B", .23)`, ...)
+
+        Returns
+        -------
+        str
+            The combined layer-name.
+
+        """
+        try:
+            combnames = []
+            for i in args:
+                if isinstance(i, str):
+                    combnames.append(i)
+                elif isinstance(i, (list, tuple)):
+                    assert (
+                        len(i) == 2
+                        and isinstance(i[0], str)
+                        and i[1] >= 0
+                        and i[1] <= 1
+                    ), (
+                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
+                        "You can provide either a single layer-name as string, a list "
+                        "of layer-names or a list of tuples of the form: "
+                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
+                    )
+
+                    if i[1] < 1:
+                        combnames.append(i[0] + "{" + str(i[1]) + "}")
+                    else:
+                        combnames.append(i[0])
+                else:
+                    raise TypeError(
+                        f"EOmaps: unable to identify the layer-assignment: {i} .\n"
+                        "You can provide either a single layer-name as string, a list "
+                        "of layer-names or a list of tuples of the form: "
+                        "(< layer-name (str) >, < layer-transparency [0-1] > )"
+                    )
+            return "|".join(combnames)
+        except Exception:
+            raise TypeError(f"EOmaps: Unable to combine the layer-names {args}")
+
+    @staticmethod
+    def _check_layer_name(layer):
+        if not isinstance(layer, str):
+            _log.info("EOmaps: All layer-names are converted to strings!")
+            layer = str(layer)
+
+        if layer.startswith("__") and not layer.startswith("__inset_"):
+            raise TypeError(
+                "EOmaps: Layer-names starting with '__' are reserved "
+                "for internal use and cannot be used as Maps-layer-names!"
+            )
+
+        reserved_symbs = {
+            # "|": (
+            #     "It is used as a separation-character to combine multiple "
+            #     "layers (e.g. m.show_layer('A|B') will overlay the layer 'B' "
+            #     "on top of 'A'."
+            # ),
+            "{": (
+                "It is used to specify transparency when combining multiple "
+                "layers (e.g. m.show_layer('A|B{0.5}') will overlay the layer "
+                "'B' with 50% transparency on top of the layer 'A'."
+            ),
+        }
+
+        reserved_symbs["}"] = reserved_symbs["{"]
+
+        for symb, explanation in reserved_symbs.items():
+            if symb in layer:
+                raise TypeError(
+                    f"EOmaps: The symbol '{symb}' is not allowed in layer-names!\n"
+                    + explanation
+                )
+
+        return layer
+
+
 class SearchTree:
     """Class to perform fast nearest-neighbour queries."""
 
@@ -1310,7 +1457,7 @@ class LayoutEditor:
         self.modifier_pressed = False
 
         # show all colorbars that are on the visible layer
-        active_layers = self.m.BM._get_layers_alphas()[0]
+        active_layers = self.m.BM._get_active_layers_alphas[0]
         for cb in self.cbs:
             if cb._m.layer in active_layers:
                 cb.set_visible(True)
@@ -1552,7 +1699,7 @@ class LayoutEditor:
 
 
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
-class BlitManager:
+class BlitManager(LayerParser):
     """Manager used to schedule draw events, cache backgrounds, etc."""
 
     _snapshot_on_update = False
@@ -1716,27 +1863,28 @@ class BlitManager:
                 try:
                     f = self._on_layer_change[False].pop(0)
                     f(layer=layer)
-                except Exception as ex:
+                except Exception:
                     _log.error(
                         "EOmaps: Issue while executing a layer-change action",
                         exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                     )
 
+            sublayers, _ = self._parse_multi_layer_str(layer)
             if new:
-                for l in layer.split("|"):
-                    # individual callables executed if a specific layer is activate
+                for l in sublayers:
+                    # individual callables executed if a specific layer is activated
                     # persistent callbacks
                     for f in reversed(self._on_layer_activation[True].get(layer, [])):
                         f(layer=l)
 
-            for l in layer.split("|"):
+            for l in sublayers:
                 # single-shot callbacks
                 single_shot_funcs = self._on_layer_activation[False].get(l, [])
                 while len(single_shot_funcs) > 0:
                     try:
                         f = single_shot_funcs.pop(0)
                         f(layer=l)
-                    except Exception as ex:
+                    except Exception:
                         _log.error(
                             "EOmaps: Issue while executing a layer-change action",
                             exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
@@ -1797,8 +1945,10 @@ class BlitManager:
             return
 
         # check if a new layer is activated (or added to a multi-layer)
-        old_layers = self._bg_layer.split("|")
-        new = val != self._bg_layer or any(l not in old_layers for l in val.split("|"))
+        old_layers = set(self._parse_multi_layer_str(self._bg_layer)[0])
+        new_layers = set(self._parse_multi_layer_str(val)[0])
+
+        new = old_layers != new_layers
 
         # make sure we use a "full" update for webagg and ipympl backends
         # (e.g. force full redraw of canvas instead of a diff)
@@ -1806,14 +1956,11 @@ class BlitManager:
         self._bg_layer = val
 
         # a general callable to be called on every layer change
-
         self._do_on_layer_change(layer=val, new=new)
-
-        layer_names = val.split("|")
 
         # hide all colorbars that are not on the visible layer
         for m in [self._m.parent, *self._m.parent._children]:
-            layer_visible = m.layer in layer_names
+            layer_visible = self._layer_is_subset(val, m.layer)
 
             for cb in m._colorbars:
                 if layer_visible:
@@ -1826,7 +1973,9 @@ class BlitManager:
         # hide all wms_legends that are not on the visible layer
         if hasattr(self._m.parent, "_wms_legend"):
             for layer, legends in self._m.parent._wms_legend.items():
-                if layer in layer_names:
+                layer_visible = self._layer_is_subset(val, layer)
+
+                if layer_visible:
                     for i in legends:
                         i.set_visible(True)
                 else:
@@ -1908,8 +2057,10 @@ class BlitManager:
         else:
             # set any background that contains the layer for refetch
             self._layers_to_refetch.add(layer)
+
             for l in self._bg_layers:
-                if layer in l.split("|"):
+                sublayers, _ = self._parse_multi_layer_str(l)
+                if layer in sublayers:
                     self._layers_to_refetch.add(l)
 
     def _bg_artists_sort(self, art):
@@ -1995,34 +2146,45 @@ class BlitManager:
 
         return artists
 
-    def _get_layers_alphas(self, layer=None):
-        if layer is None:
-            layer = self.bg_layer
+    def _layer_visible(self, layer):
+        """
+        Return True if the layer is currently visible.
 
-        layers, alphas = [], []
-        for l in layer.split("|"):
-            if l.endswith("}") and "{" in l:
-                try:
-                    name, a = l.split("{", maxsplit=1)
-                    a = float(a.replace("}", ""))
+        - layer is considered visible if all sub-layers of a combined layer are visible
+        - transparency assignments do not alter the layer visibility
 
-                    layers.append(name)
-                    alphas.append(a)
-                except Exception:
-                    raise TypeError(
-                        "EOmaps: unable to parse multilayer-transparency " f"for '{l}'"
-                    )
-            else:
-                layers.append(l)
-                alphas.append(1)
-        return layers, alphas
+        Parameters
+        ----------
+        layer : str
+            The combined layer-name to check. (e.g. 'A|B{.4}|C{.3}')
+
+        Returns
+        -------
+        visible: bool
+            True if the layer is currently visible, False otherwise
+
+        """
+        return layer == "all" or self._layer_is_subset(layer, self.bg_layer)
+
+    @property
+    def _get_active_layers_alphas(self):
+        """
+        Return the currently visible layers (and their associated transparencies)
+
+        Returns
+        -------
+        layers, alphas: list of str, list of float
+            2 lists of layer-names and associated global transparencies.
+
+        """
+        return self._parse_multi_layer_str(self.bg_layer)
 
     # cache the last 10 combined backgrounds to avoid re-combining backgrounds
     # on updates of interactive artists
     # cache is automatically cleared on draw if any layer is tagged for re-fetch!
     @lru_cache(10)
     def _combine_bgs(self, layer):
-        layers, alphas = self._get_layers_alphas(layer)
+        layers, alphas = self._parse_multi_layer_str(layer)
 
         # make sure all layers are already fetched
         for l in layers:
@@ -2234,7 +2396,8 @@ class BlitManager:
                 # in case there is a stale (unmanaged) artists and the
                 # stale-artist layer is attempted to be drawn, re-draw the
                 # cached background for the unmanaged-artists layer
-                if self._unmanaged_artists_layer in self._bg_layer.split("|") and any(
+                active_layers, _ = self._get_active_layers_alphas
+                if self._unmanaged_artists_layer in active_layers and any(
                     a.stale for a in self._get_unmanaged_artists()
                 ):
                     self._refetch_layer(self._unmanaged_artists_layer)
@@ -2409,7 +2572,7 @@ class BlitManager:
 
                     removed = True
                     layers.append(key)
-                layer = "|".join(layers)
+                layer = self._get_combined_layer_name(*layers)
         else:
             if layer not in self._bg_artists:
                 return
@@ -2493,16 +2656,13 @@ class BlitManager:
         if renderer is None:
             return
 
-        # make sure to strip-off transparency-assignments (e.g. "layer1{0.5}")
         if layers is None:
-            layers = [self.bg_layer]
-            layers.extend(
-                (l.split("{", maxsplit=1)[0] for l in self.bg_layer.split("|"))
-            )
+            active_layers, _ = self._get_active_layers_alphas
+            layers = [self.bg_layer, *active_layers]
         else:
-            layers = list(chain(*(i.split("|") for i in layers)))
-            for l in layers:
-                layers.append(l.split("{", maxsplit=1)[0])
+            (layers,) = list(
+                chain(*(self._parse_multi_layer_str(l)[0] for l in layers))
+            )
 
         if artists is None:
             artists = []
@@ -2642,7 +2802,7 @@ class BlitManager:
 
         # show inset map layers and spines only if they contain at least 1 artist
         inset_Q = False
-        for l in layer.split("|"):
+        for l in self._parse_multi_layer_str(layer)[0]:
             narts = len(self._bg_artists.get("__inset_" + l, []))
 
             if narts > 0:
@@ -2652,7 +2812,7 @@ class BlitManager:
         if inset_Q:
             show_layers.append("__inset___SPINES__")
 
-        return self._m._get_combined_layer_name(*show_layers)
+        return self._get_combined_layer_name(*show_layers)
 
     def update(
         self,

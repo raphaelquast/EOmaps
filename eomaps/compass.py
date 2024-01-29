@@ -409,9 +409,7 @@ class Compass:
 
     @property
     def _layer_visible(self):
-        return self.layer == "all" or (
-            self.layer in (*self._m.BM.bg_layer.split("|"), self._m.BM.bg_layer)
-        )
+        return self._m.BM._layer_visible(self.layer)
 
     def _disconnect(self):
         """Disconnect the callbacks."""
