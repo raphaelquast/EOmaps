@@ -889,7 +889,6 @@ The returned ``ColorBar``-object has the following useful methods defined:
     ColorBar.set_hist_size
     ColorBar.tick_params
     ColorBar.set_visible
-    ColorBar.remove
 
 Set colorbar tick labels based on bins
 **************************************
