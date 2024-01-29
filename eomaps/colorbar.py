@@ -851,8 +851,9 @@ class ColorBar(ColorBarBase):
         """
         Indicate contour locations in the colorbar.
 
-        Note: Before using this function you must draw a dataset with the ``"contour"``
-        shape! (you can also indicate contours from other Maps-objects by using
+        Note: Before using this function you must draw a dataset with the
+        :py:class:`contour <eomaps.eomaps.Maps.set_shape.contour>` shape!
+        (you can also indicate contours from other Maps-objects by using
         the optional ``contour_map`` argument.)
 
         Parameters
@@ -1048,7 +1049,8 @@ class ColorBar(ColorBarBase):
 
         The labels will be placed at the center of each bin.
 
-        This is most useful when using `m.set_classify.UserDefined(bins=[...])`
+        This is most useful when using
+        :py:meth:`Maps.set_classify.UserDefined(bins=[...]) <eomaps.eomaps.Maps.set_classify>`
         to classify the data with respect to custom bins.
 
         Parameters
@@ -1278,7 +1280,8 @@ class ColorBar(ColorBarBase):
         Add a colorbar to the map.
 
         The colorbar always represents the data of the associated Maps-object
-        that was assigned in the last call to `m.plot_map()`.
+        that was assigned in the last call to
+        :py:meth:`Maps.plot_map() <eomaps.eomaps.Maps.plot_map>`.
 
         By default, the colorbar will only be visible on the layer of the associated
         Maps-object.
@@ -1286,6 +1289,8 @@ class ColorBar(ColorBarBase):
         After the colorbar has been created, it can be accessed via:
 
             >>> cb = m.colorbar
+
+        For more details, see :py:class:`ColorBar <eomaps.colorbar.ColorBar>`.
 
         Parameters
         ----------
