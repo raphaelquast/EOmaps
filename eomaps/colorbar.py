@@ -127,6 +127,7 @@ class ColorBarBase:
                         gs[1, :],
                         label="cb",
                         zorder=zorder,
+                        navigate=False,
                     )
                 else:
                     gs = GridSpecFromSubplotSpec(
@@ -141,12 +142,14 @@ class ColorBarBase:
                         gs[:, 1],
                         label="cb",
                         zorder=zorder,
+                        navigate=False,
                     )
             elif isinstance(pos, SubplotSpec):
                 self._ax = f.add_subplot(
                     pos,
                     label="cb",
                     zorder=zorder,
+                    navigate=False,
                 )
             elif isinstance(pos, (list, tuple)):
                 x0, y0, w, h = pos
@@ -156,7 +159,7 @@ class ColorBarBase:
 
                 # the parent axes holding the 2 child-axes
                 self._ax = plt.Axes(f, bbox, label="cb", zorder=zorder)
-                f.add_axes(self._ax)
+                f.add_axes(self._ax, navigate=False)
 
             # make all spines, labels etc. invisible for the base-axis
             self._ax.set_axis_off()
@@ -166,6 +169,7 @@ class ColorBarBase:
             self._ax.get_position(),
             label="EOmaps_cb",
             zorder=zorder - 1,  # make zorder 1 lower than container axes for picking
+            navigate=False,
         )
 
         # histogram axes
@@ -173,6 +177,7 @@ class ColorBarBase:
             self._ax.get_position(),
             label="EOmaps_cb_hist",
             zorder=zorder - 1,  # make zorder 1 lower than container axes for picking
+            navigate=False,
         )
 
         # add axes as child-axes
@@ -263,30 +268,17 @@ class ColorBarBase:
         self._set_axes_locators(l_cb_bounds, l_hist_bounds)
         self._style_hist_ticks()
 
-    def get_extend_fracs(self):
-        # if no colorbar is found, use the full axis
-        if not hasattr(self, "cb"):
-            return 0, 1
-
-        return 0, 1
-
-        extend = self.cb.extend
-
-        # extend fraction is defined as % of the interior colorbar length!
-        getfrac = lambda n: self._extend_frac / (1 + n * self._extend_frac)
-
-        if extend == "both":
-            frac = getfrac(2)
-            return frac, 1 - 2 * frac
-        elif extend == "min":
-            frac = getfrac(1)
-            return frac, 1 - frac
-        elif extend == "max":
-            return 0, 1 - getfrac(1)
-        else:
-            return 0, 1
-
     def set_scale(self, log=False):
+        """
+        Set the scale of the colorbar histogram. (e.g. logarithmic or linear)
+
+        Parameters
+        ----------
+        log : bool, optional
+            If True, use a logarithmic scale for the histogram.
+            The default is False.
+
+        """
         if self.orientation == "horizontal":
             # set axis scale
             if log is True:
@@ -603,7 +595,7 @@ class ColorBarBase:
 
     def set_labels(self, cb_label=None, hist_label=None, **kwargs):
         """
-        Set the labels (and the styling) for the colorbar (and the histogram).
+        Set the labels (and the label-style) for the colorbar (and the histogram).
 
         For more details, see `ColorBar.ax_cb.set_xlabel(..)` and matplotlib's `.Text`
         properties.
@@ -672,6 +664,8 @@ class ColorBarBase:
 
 
 class ColorBar(ColorBarBase):
+    """Class to draw colorbars with a histogram on top"""
+
     def __init__(self, *args, inherit_position=True, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -798,7 +792,7 @@ class ColorBar(ColorBarBase):
         self._set_hist_size(size, update_all=True)
         self._m.BM.update()
 
-    def make_dynamic(self):
+    def _make_dynamic(self):
         self._dynamic_shade_indicator = True
 
         if not hasattr(self._m.coll, "get_ds_data"):
@@ -1218,8 +1212,41 @@ class ColorBar(ColorBarBase):
         super()._redraw(*args, **kwargs)
         self._set_tick_formatter()
 
+    def set_position(self, pos):
+        """
+        Set the position of the colorbar
+        (and all colorbars that share the same location)
+
+        Parameters
+        ----------
+        pos : [left, bottom, width, height] or ~matplotlib.transforms.Bbox
+            The new position of the in .Figure coordinates.
+        """
+        self._ax.set_position(pos)
+        if self._dynamic_shade_indicator is False:
+            self._m.redraw(self.layer)
+
+    def set_visible(self, vis):
+        """
+        Set the visibility of the colorbar.
+
+        Parameters
+        ----------
+        vis : bool
+            - True: colorbar visible
+            - False: colorbar not visible
+        """
+        for ax in (self.ax_cb, self.ax_cb_plot):
+            ax.set_visible(vis)
+
+        if vis is True:
+            self._hide_singular_axes()
+
+        if self._dynamic_shade_indicator is False:
+            self._m.redraw(self.layer)
+
     @classmethod
-    def add_colorbar(
+    def _new_colorbar(
         cls,
         m,
         pos=0.4,
@@ -1240,6 +1267,160 @@ class ColorBar(ColorBarBase):
         margin=None,
         **kwargs,
     ):
+        """
+        Add a colorbar to the map.
+
+        The colorbar always represents the data of the associated Maps-object
+        that was assigned in the last call to `m.plot_map()`.
+
+        By default, the colorbar will only be visible on the layer of the associated
+        Maps-object.
+
+        After the colorbar has been created, it can be accessed via:
+
+            >>> cb = m.colorbar
+
+        Parameters
+        ----------
+        pos : float or 4-tuple, optional
+
+            - float: fraction of the axis size that is used to create the colorbar.
+              The axes of the Maps-object will be shrunk accordingly to make space
+              for the colorbar.
+            - 4-tuple (x0, y0, width, height):
+              Absolute position of the colorbar in relative figure-units (0-1).
+              In this case, existing axes are NOT automatically re-positioned!
+
+            Note: By default, multiple colorbars on different layers share their
+            position! To force placement of a colorbar, use "inherit_position=False".
+
+            The default is 0.4.
+        inherit_position : bool or None optional
+            Indicator if the colorbar should share its position with other colorbars
+            that represent datasets on the same plot-axis.
+
+            - If True, and there is already another colorbar for the given plot-axis,
+              the value of "pos" will be ignored and the new colorbar will share its
+              position with the parent-colorbar. (e.g. all colorbars for a given axis will
+              overlap and moving a colorbar in one layer will move all other relevant
+              colorbars accordingly).
+            - If None: If the colorbar is added on a different layer than the parent
+              colorbar, use "inherit_position=True", else use "inherit_position=False".
+
+            The default is None
+        hist_size : float or None
+            The fraction of the colorbar occupied by the histogram.
+
+            - None: no histogram will be drawn
+            - 0:
+            - 0.9: 90% histogram, 10% colorbar
+            - 1: only histogram
+
+        hist_bins : int, list, tuple, array or "bins", optional
+
+            - If int: The number of histogram-bins to use for the colorbar.
+            - If list, tuple or numpy-array: the bins to use
+            - If "bins": use the bins obtained from the classification
+              (ONLY possible if a classification scheme is used!)
+
+            The default is 256.
+        extend : str or None, optional
+            Set how extension-arrows should be added.
+
+            - None: extension-arrow behavior is determined by the provided dataset
+              in conjunction with the limits (e.g. vmin and vmax).
+            - "neither": extension arrows are never added
+            - "min" or "max": only min / max extension arrows are added
+            - "both": both min and max extension arrows are added
+
+            Note: If the colorbar inherits its position from a colorbar on a different
+            layer, the extend-behavior is inherited as well!
+
+            The default is None.
+        extend_frac : float, optional
+            The fraction of the colorbar-size to use for extension-arrows.
+            (Extension-arrows are added if out-of-range values are found!)
+            The default is 0.025.
+        orientation : str, optional
+            The orientation of the colorbar ("horizontal" or "vertical").
+            The default is "horizontal".
+        dynamic_shade_indicator : bool, optional
+            ONLY relevant if data-shading is used! ("shade_raster" or "shade_points")
+
+            - False: The colorbar represents the actual (full) dataset
+            - True: The colorbar is dynamically updated and represents the density of
+              the shaded pixel values within the current field of view.
+
+            The default is False.
+        show_outline : bool or dict
+            Indicator if an outline should be added to the histogram.
+            (e.g. a line encompassing the histogram)
+            If a dict is provided, it is passed to `plt.step()` to style the line.
+            (e.g. with ordinary matplotlib parameters such as color, lw, ls etc.)
+            If True, the following properties are used:
+
+            - {"color": "k", "lw": 1}
+
+            The default is False.
+        tick_precision : int or None
+            The precision of the tick-labels in the colorbar.
+            (e.g. a precision of 2 means that 0.12345 will be shown as 0.12)
+            The default is 2.
+        log : bool, optional
+            Indicator if the y-axis of the plot should be logarithmic or not.
+            The default is False
+        out_of_range_vals : str or None
+
+            - if "mask": out-of range values will be masked.
+              (e.g. values outside the colorbar limits are not represented in the
+              histogram and NO extend-arrows are added)
+            - if "clip": out-of-range values will be clipped.
+              (e.g. values outside the colorbar limits will be represented in the
+              min/max bins of the histogram)
+
+            The default is "clip"
+        hist_kwargs : dict
+            A dictionary with keyword-arguments passed to the creation of the histogram
+            (e.g. passed to `plt.hist()` )
+        label : str, optional
+            The label used for the colorbar.
+            Use `ColorBar.set_labels()` to set the labels (and styling) for the
+            colorbar and the histogram.
+            The default is None.
+        ylabel : str, optional
+            The label used for the y-axis of the colorbar. The default is None
+        layer : str
+            The layer at which the colorbar will be drawn.
+            NOTE: In most cases you should NOT need to adjust the layer!
+            The layer is automatically assigned to the layer at which the
+            data was plotted and Colorbars are only visible on the assigned layer!
+        kwargs :
+            All additional kwargs are passed to the creation of the colorbar
+            (e.g. `plt.colorbar()`)
+
+        See Also
+        --------
+        ColorBar.set_bin_labels:  Use custom names for classified colorbar bins.
+
+        Examples
+        --------
+
+        >>> x = y = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        >>> data = [1, 2, 6, 6, 6, 8, 7, 3, 9, 10]
+        >>> m = Maps()
+        >>> m.set_data(data, x, y)
+        >>> m.plot_map()
+        >>> m.add_colorbar(label="some data")
+
+        >>> x = y = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        >>> data = [1, 2, 6, 6, 6, 8, 7, 3, 9, 10]
+        >>> m = Maps()
+        >>> m.set_data(data, x, y)
+        >>> m.set_classify.Quantiles(k=6)
+        >>> m.plot_map()
+        >>> m.add_colorbar(hist_bins="bins", label="some data")
+
+        """
 
         cb = cls(
             orientation=orientation,
@@ -1274,6 +1455,6 @@ class ColorBar(ColorBarBase):
         cb.set_labels(cb_label=label, hist_label=ylabel)
 
         if dynamic_shade_indicator:
-            cb.make_dynamic()
+            cb._make_dynamic()
 
         return cb
