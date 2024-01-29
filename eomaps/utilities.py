@@ -256,7 +256,7 @@ class LayerSelector(SelectorButtons):
             uselayers = []
             for l in layers:
                 if not isinstance(l, str):
-                    uselayers.append(m._get_combined_layer_name(*l))
+                    uselayers.append(m.BM._get_combined_layer_name(*l))
                 else:
                     uselayers.append(l)
             layers = uselayers
@@ -448,7 +448,7 @@ class LayerSlider(Slider):
             uselayers = []
             for l in layers:
                 if not isinstance(l, str):
-                    uselayers.append(m._get_combined_layer_name(*l))
+                    uselayers.append(m.BM._get_combined_layer_name(*l))
                 else:
                     uselayers.append(l)
             layers = uselayers

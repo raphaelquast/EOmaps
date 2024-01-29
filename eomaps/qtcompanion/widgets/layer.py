@@ -121,7 +121,7 @@ class AutoUpdateLayerLabel(QtWidgets.QLabel):
         self.setTextInteractionFlags(Qt.NoTextInteraction)
 
     def get_text(self):
-        layers, alphas = self.m.BM._get_layers_alphas()
+        layers, alphas = self.m.BM._get_active_layers_alphas
 
         prefix = "&nbsp;&nbsp;&nbsp;&nbsp;" "<font color=gray>"
         suffix = "<\font>"
@@ -269,7 +269,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         uselayer = "???"
 
         if len(active_layers) > 1:
-            uselayer = "|".join(active_layers)
+            uselayer = self.m.BM._get_combined_layer_name(*active_layers)
         elif len(active_layers) == 1:
             uselayer = active_layers[0]
 
@@ -331,7 +331,9 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         actionwidget = action.defaultWidget()
 
-        checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
+        active_layers = self.m.BM._get_active_layers_alphas
+
+        checked_layers = [l for l in active_layers if l != "_"]
         selected_layer = action.data()
         selected_layers = [l for l in action.data().split("|") if l != "_"]
 
@@ -362,7 +364,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
             uselayer = "???"
             if len(checked_layers) > 1:
-                uselayer = "|".join(checked_layers)
+                uselayer = self.m.BM._get_combined_layer_name(*checked_layers)
             elif len(checked_layers) == 1:
                 uselayer = checked_layers[0]
 
@@ -374,7 +376,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     def update_checkstatus(self):
         currlayer = str(self.m.BM.bg_layer)
-        layers, alphas = self.m.BM._get_layers_alphas(currlayer)
+        layers, alphas = self.m.BM._get_active_layers_alphas
         if "|" in currlayer:
             active_layers = [i for i in layers if not i.startswith("_")]
             active_layers.append(currlayer)

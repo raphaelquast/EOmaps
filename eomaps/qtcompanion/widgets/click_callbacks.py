@@ -317,7 +317,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.widgetShown.emit()
 
     def identify_pick_map(self):
-        layers, _ = self.m.BM._get_layers_alphas()
+        layers, _ = self.m.BM._get_active_layers_alphas
         layers.extend(("all", "inset_all"))
 
         pickm = list()
@@ -366,6 +366,7 @@ class ClickCallbacks(QtWidgets.QFrame):
             else:
                 name = f"{i}"
 
+            # indicate map-layer name if combined layer is visible
             if "|" in m.BM.bg_layer:
                 if m.layer != m.BM.bg_layer:
                     name += f" ({m.layer})"
