@@ -57,35 +57,29 @@ class ColorBarBase:
         self,
         orientation="horizontal",
         extend_frac=0.025,
-        dynamic=True,
-        padding=0.1,
         hist_kwargs=None,
         tick_precision=2,
+        margin=None,
     ):
 
         self._hist_size = 0.9
-
-        self._extend_frac = extend_frac
-        self._dynamic = dynamic
-
-        self.orientation = orientation
-
-        self._log = False
-
-        self._padding = padding
-
         if hist_kwargs is not None:
             self._hist_kwargs = hist_kwargs
         else:
             self._hist_kwargs = {}
+
+        self._extend_frac = extend_frac
+
+        self.orientation = orientation
+
+        self._tick_precision = tick_precision
+        self._margin = margin
 
         self._vmin = None
         self._vmax = None
         self._norm = None
         self._cmap = None
         self._data = None
-
-        self._tick_precision = tick_precision
 
     @property
     def _scm(self):
@@ -124,29 +118,27 @@ class ColorBarBase:
                 if self.orientation == "horizontal":
                     gs = GridSpecFromSubplotSpec(
                         2,
-                        3,
+                        1,
                         parent_ax.get_subplotspec(),
                         height_ratios=(1, pos),
-                        width_ratios=(self._padding, 1, self._padding),
                     )
                     parent_ax.set_subplotspec(gs[0, :])
                     self._ax = f.add_subplot(
-                        gs[1, 1],
+                        gs[1, :],
                         label="cb",
                         zorder=zorder,
                     )
                 else:
                     gs = GridSpecFromSubplotSpec(
-                        3,
+                        1,
                         2,
                         parent_ax.get_subplotspec(),
                         width_ratios=(1, pos),
-                        height_ratios=(self._padding, 1, self._padding),
                     )
 
-                    parent_ax.set_subplotspec(gs[1, 0])
+                    parent_ax.set_subplotspec(gs[:, 0])
                     self._ax = f.add_subplot(
-                        gs[1, 1],
+                        gs[:, 1],
                         label="cb",
                         zorder=zorder,
                     )
@@ -193,8 +185,8 @@ class ColorBarBase:
         else:
             self.ax_cb_plot.sharey(self.ax_cb)
 
-            # for vertical colorbars, histogram-axis must be inverted!
-            self.ax_cb_plot.invert_xaxis()
+            # # for vertical colorbars, histogram-axis must be inverted!
+            self.ax_cb_plot.xaxis.set_inverted(True)
 
         # keep the background of the plot-axis but remove the outer frame
         self.ax_cb_plot.spines["top"].set_visible(False)
@@ -213,11 +205,14 @@ class ColorBarBase:
 
         def ychanged(event):
             if self.orientation == "horizontal":
-                self.ax_cb_plot.set_ylim(0, None, emit=False)
+                with self.ax_cb_plot.callbacks.blocked(signal="ylim_changed"):
+                    self.ax_cb_plot.set_ylim(0, None, emit=False)
 
         def xchanged(event):
             if self.orientation == "vertical":
-                self.ax_cb_plot.set_xlim(None, 0, emit=False)
+                with self.ax_cb_plot.callbacks.blocked(signal="xlim_changed"):
+                    self.ax_cb_plot.xaxis.set_inverted(True)
+                    self.ax_cb_plot.set_xlim(left=None, right=0, emit=False)
 
         self.ax_cb_plot.callbacks.connect("xlim_changed", xchanged)
         self.ax_cb_plot.callbacks.connect("ylim_changed", ychanged)
@@ -246,12 +241,24 @@ class ColorBarBase:
 
         self._hide_singular_axes()
 
+        if self._margin is None:
+            if self.orientation == "horizontal":
+                self._margin = dict(left=0.1, right=0.1, bottom=0.3, top=0.0)
+            else:
+                self._margin = dict(left=0.0, right=0.3, bottom=0.1, top=0.1)
+
+        l, r = (self._margin.get(k, 0) for k in ["left", "right"])
+        b, t = (self._margin.get(k, 0) for k in ["bottom", "top"])
+        w, h = 1 - l - r, 1 - t - b
+
         if self.orientation == "horizontal":
-            l_cb_bounds = (0, 0, 1, 1 - size)
-            l_hist_bounds = (0, 1 - size, 1, size)
+            s = (1 - self._hist_size) * h
+            l_cb_bounds = (l, b, w, s)
+            l_hist_bounds = (l, b + s, w, h - s)
         else:
-            l_cb_bounds = (size, 0, 1 - size, 1)
-            l_hist_bounds = (0, 0, size, 1)
+            s = (1 - self._hist_size) * w
+            l_cb_bounds = (l + w - s, b, s, h)
+            l_hist_bounds = (l, b, w - s, h)
 
         self._set_axes_locators(l_cb_bounds, l_hist_bounds)
         self._style_hist_ticks()
@@ -280,8 +287,6 @@ class ColorBarBase:
             return 0, 1
 
     def set_scale(self, log=False):
-        self._log = log
-
         if self.orientation == "horizontal":
             # set axis scale
             if log is True:
@@ -343,16 +348,35 @@ class ColorBarBase:
         # padding of the histogram axes confirms to the size of the colorbar arrows
         self._set_hist_size()
 
-    def _plot_histogram(self, bins=None, out_of_range_vals="keep", **kwargs):
+    def _plot_histogram(
+        self, bins=None, out_of_range_vals="keep", show_outline=False, **kwargs
+    ):
+
+        self._hist_bins = bins
+        self._out_of_range_vals = out_of_range_vals
+        self._show_outline = show_outline
 
         # plot the histogram
-        self.ax_cb_plot.hist(
-            self._preprocess_data(out_of_range_vals=out_of_range_vals),
+        h = self.ax_cb_plot.hist(
+            self._preprocess_data(out_of_range_vals=self._out_of_range_vals),
             orientation=self._hist_orientation,
-            bins=bins,
+            bins=self._hist_bins,
             align="mid",
             **kwargs,
         )
+
+        if self._show_outline:
+            if self._show_outline is True:
+                outline_props = dict(color="k", lw=1)
+            else:
+                outline_props = self._show_outline
+
+            if self.orientation == "horizontal":
+                self.ax_cb_plot.step(
+                    [h[1][0], *h[1], h[1][-1]], [0, h[0][0], *h[0], 0], **outline_props
+                )
+            else:
+                self.ax_cb_plot.step([0, *h[0], 0], [h[1][0], *h[1]], **outline_props)
 
         bins = getattr(self._norm, "boundaries", None)
 
@@ -516,7 +540,7 @@ class ColorBarBase:
 
     def _redraw(self, *args, **kwargs):
         # only re-draw if the corresponding layer is visible
-        if self.layer not in self._m.BM.bg_layer.split("|"):
+        if not self._m.BM._layer_visible(self.layer):
             return
 
         self.ax_cb.clear()
@@ -528,11 +552,10 @@ class ColorBarBase:
 
         self._plot_colorbar()
 
-        bins = self._m.classify_specs._bins
-
         self._plot_histogram(
-            bins=bins,
-            range=(self._m._vmin, self._m._vmax),
+            bins=self._hist_bins,
+            out_of_range_vals=self._out_of_range_vals,
+            show_outline=self._show_outline,
         )
 
     def _set_labels(self, cb_label=None, hist_label=None, **kwargs):
@@ -687,7 +710,7 @@ class ColorBar(ColorBarBase):
         # colorbars that are not on the visible layer
 
         super()._hide_singular_axes()
-        if self.layer != self._m.BM.bg_layer:
+        if not self._m.BM._layer_visible(self.layer):
             self.ax_cb.set_visible(False)
             self.ax_cb_plot.set_visible(False)
 
@@ -733,7 +756,7 @@ class ColorBar(ColorBarBase):
         self._norm = self._m.coll.norm
         self._cmap = self._m.coll.cmap
 
-    def _add_axes_to_layer(self):
+    def _add_axes_to_layer(self, dynamic):
         BM = self._m.BM
 
         self._layer = self._m.layer
@@ -743,7 +766,7 @@ class ColorBar(ColorBarBase):
 
         for a in (self._ax, self.ax_cb, self.ax_cb_plot):
             if a is not None:
-                if self._dynamic is True:
+                if dynamic is True:
                     BM.add_artist(a, self._layer)
                 else:
                     BM.add_bg_artist(a, self._layer)
@@ -1191,31 +1214,47 @@ class ColorBar(ColorBarBase):
             else:
                 self.ax_cb.yaxis.set_major_formatter(self._default_cb_tick_formatter)
 
+    def _redraw(self, *args, **kwargs):
+        super()._redraw(*args, **kwargs)
+        self._set_tick_formatter()
+
     @classmethod
     def add_colorbar(
         cls,
         m,
         pos=0.4,
+        inherit_position=None,
         orientation="horizontal",
         hist_bins=256,
         hist_size=0.8,
-        out_of_range_vals="keep",
+        out_of_range_vals="clip",
         tick_precision=2,
         dynamic_shade_indicator=False,
-        extend="both",
-        **hist_kwargs,
+        extend=None,
+        extend_frac=0.025,
+        log=False,
+        label=None,
+        ylabel=None,
+        show_outline=False,
+        hist_kwargs=None,
+        margin=None,
+        **kwargs,
     ):
 
         cb = cls(
             orientation=orientation,
             hist_kwargs=hist_kwargs,
             tick_precision=tick_precision,
+            inherit_position=inherit_position,
+            extend_frac=extend_frac,
+            margin=margin,
         )
         cb._set_map(m)
         cb._setup_axes(pos, m.ax)
-        cb._add_axes_to_layer()
+        cb._add_axes_to_layer(dynamic=dynamic_shade_indicator)
 
         cb._set_hist_size(hist_size)
+        cb.set_scale(log)
         cb._plot_colorbar(extend=extend)
 
         bins = (
@@ -1227,14 +1266,12 @@ class ColorBar(ColorBarBase):
         cb._plot_histogram(
             bins=bins,
             out_of_range_vals=out_of_range_vals,
+            show_outline=show_outline,
         )
 
         cb._set_tick_formatter()
 
-        if hasattr(cb._ax, "_EOmaps_cb"):
-            cb._ax._EOmaps_cb.append(cb)
-        else:
-            cb._ax._EOmaps_cb = [cb]
+        cb.set_labels(cb_label=label, hist_label=ylabel)
 
         if dynamic_shade_indicator:
             cb.make_dynamic()

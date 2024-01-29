@@ -1096,14 +1096,24 @@ class LayoutEditor:
             if not self.modifier_pressed:
                 return False
 
-        # ordinary axes picked
         if self._scale_direction == "set_hist_size":
+            # resize colorbar histogram
             for ax in self._ax_picked:
-                cbs = getattr(ax, "_EOmaps_cb", None)
-                if cbs is None:
+                if not ax.get_label() == "cb":
                     continue
 
-                # use the hist-size of the first colorbar as start
+                # identify all relevant colorbars
+                # (e.g. all colorbars that share the container-ax "cb._ax")
+                cbs = []
+                for m in self.ms:
+                    for cb in m._colorbars:
+                        if cb._ax is ax:
+                            cbs.append(cb)
+
+                if len(cbs) == 0:
+                    return False
+
+                # use the hist-size of the first colorbar as start (to avoid ambiguity)
                 start_size = cbs[0]._hist_size
                 for cb in cbs:
                     new_size = np.clip(start_size + event.step * 0.02, 0.0, 1.0)
@@ -1111,8 +1121,8 @@ class LayoutEditor:
 
             self._add_to_history()
             self.blit_artists()
-        # ordinary axes picked
         else:
+            # resize axes
             for ax in self._ax_picked:
                 if ax is None:
                     continue
