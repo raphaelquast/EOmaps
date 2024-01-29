@@ -664,7 +664,13 @@ class ColorBarBase:
 
 
 class ColorBar(ColorBarBase):
-    """Class to draw colorbars with a histogram on top"""
+    """
+    A colorbar with a histogram on top.
+
+    To add a colorbar to a map, use
+    :py:meth:`Maps.add_colorbar <eomaps.eomaps.Maps.add_colorbar>`!
+
+    """
 
     def __init__(self, *args, inherit_position=True, **kwargs):
         super().__init__(*args, **kwargs)
@@ -674,6 +680,7 @@ class ColorBar(ColorBarBase):
 
     @property
     def layer(self):
+        """The layer associated with the colorbar."""
         return self._m.layer
 
     def _default_cb_tick_formatter(self, x, pos, precision=None):
