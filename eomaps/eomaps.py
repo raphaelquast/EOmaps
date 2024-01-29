@@ -37,7 +37,6 @@ from .helpers import (
     pairwise,
     cmap_alpha,
     BlitManager,
-    LayoutEditor,
     progressbar,
     SearchTree,
     _TransformedBoundsLocator,
@@ -45,6 +44,7 @@ from .helpers import (
     register_modules,
     _key_release_event,
 )
+from .layout_editor import LayoutEditor
 from .shapes import Shapes
 from .colorbar import ColorBar
 
