@@ -10,7 +10,11 @@ from matplotlib.patches import Rectangle
 
 import numpy as np
 
-from eomaps.helpers import _TransformedBoundsLocator, pairwise
+from .helpers import _TransformedBoundsLocator, pairwise
+
+import logging
+
+_log = logging.getLogger(__name__)
 
 
 def get_named_bins_formatter(bins, names, show_values=False):
@@ -104,9 +108,6 @@ class ColorBarBase:
 
         self._parent_cb = self._identify_parent_cb()
         if self._parent_cb:
-            # inherit axis-position from the parent axis position
-            # (e.g. it can no longer be freely moved... its position is determined
-            # by the position of the parent-colorbar axis)
             self._ax = self._parent_cb._ax
         else:
             if isinstance(pos, (int, float)):
@@ -158,6 +159,7 @@ class ColorBarBase:
 
             # make all spines, labels etc. invisible for the base-axis
             self._ax.set_axis_off()
+            self._ax._eomaps_cb_axes = []
 
         # colorbar axes
         self.ax_cb = f.add_axes(
@@ -175,9 +177,8 @@ class ColorBarBase:
             navigate=False,
         )
 
-        # add axes as child-axes
-        self._ax.add_child_axes(self.ax_cb)
-        self._ax.add_child_axes(self.ax_cb_plot)
+        # remember child axes
+        self._ax._eomaps_cb_axes.extend([self.ax_cb, self.ax_cb_plot])
 
         # join colorbar and histogram axes
         if self.orientation == "horizontal":
@@ -746,6 +747,29 @@ class ColorBar(ColorBarBase):
         else:
             return None
 
+    def remove(self):
+        """Remove the colorbar from the map."""
+        if self._dynamic_shade_indicator:
+            try:
+                self._m.BM._before_fetch_bg_actions.remove(self._check_data_updated)
+            except Exception:
+                _log.debug("Problem while removing dynamic-colorbar callback")
+
+            self._m.BM.remove_artist(self.ax_cb, self.layer)
+            self._m.BM.remove_artist(self.ax_cb_plot, self.layer)
+
+        else:
+            self._m.BM.remove_bg_artist(self.ax_cb, self.layer, draw=False)
+            self._m.BM.remove_bg_artist(self.ax_cb_plot, self.layer, draw=False)
+
+        if self.ax_cb in self._ax._eomaps_cb_axes:
+            self._ax._eomaps_cb_axes.remove(self.ax_cb)
+        if self.ax_cb_plot in self._ax._eomaps_cb_axes:
+            self._ax._eomaps_cb_axes.remove(self.ax_cb_plot)
+
+        self.ax_cb.remove()
+        self.ax_cb_plot.remove()
+
     def _set_map(self, m):
         self._m = m
 
@@ -767,7 +791,7 @@ class ColorBar(ColorBarBase):
         # add all axes as artists
         self.ax_cb.set_navigate(False)
 
-        for a in (self._ax, self.ax_cb, self.ax_cb_plot):
+        for a in (self.ax_cb, self.ax_cb_plot):
             if a is not None:
                 if dynamic is True:
                     BM.add_artist(a, self._layer)
@@ -801,6 +825,20 @@ class ColorBar(ColorBarBase):
         self._set_hist_size(size, update_all=True)
         self._m.BM.update()
 
+    def _check_data_updated(self, *args, **kwargs):
+        # make sure the artist is updated before checking for new data
+        # TODO check if this is really enough to ensure that the coll
+        # is fully updated (calling coll.draw() is not an option since it
+        # would result make the collection appear on any layer!)
+        self._m.coll.changed()
+        dsdata = self._m.coll.get_ds_data()
+        if getattr(self, "_last_ds_data", None) is not None:
+            if not self._last_ds_data.equals(dsdata):
+                # if the data has changed, redraw the colorbar
+                self._redraw()
+
+        self._last_ds_data = dsdata
+
     def _make_dynamic(self):
         self._dynamic_shade_indicator = True
 
@@ -812,22 +850,7 @@ class ColorBar(ColorBarBase):
             self._cid_redraw = False
 
         if self._cid_redraw is False:
-
-            def check_data_updated(*args, **kwargs):
-                # make sure the artist is updated before checking for new data
-                # TODO check if this is really enough to ensure that the coll
-                # is fully updated (calling coll.draw() is not an option since it
-                # would result make the collection appear on any layer!)
-                self._m.coll.changed()
-                dsdata = self._m.coll.get_ds_data()
-                if getattr(self, "_last_ds_data", None) is not None:
-                    if not self._last_ds_data.equals(dsdata):
-                        # if the data has changed, redraw the colorbar
-                        self._redraw()
-
-                self._last_ds_data = dsdata
-
-            self._m.BM._before_fetch_bg_actions.append(check_data_updated)
+            self._m.BM._before_fetch_bg_actions.append(self._check_data_updated)
 
             self._m.BM.on_layer(
                 lambda *args, **kwargs: self._redraw,

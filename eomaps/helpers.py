@@ -998,8 +998,16 @@ class LayoutEditor:
             else:
                 if eventax in self._ax_picked:
                     self._ax_picked.remove(eventax)
+                    # handle colorbar axes
+                    if eventax.get_label() == "cb":
+                        for cbax in getattr(eventax, "_eomaps_cb_axes", []):
+                            self._ax_picked.remove(cbax)
                 else:
                     self._ax_picked.append(eventax)
+                    # handle colorbar axes
+                    if eventax.get_label() == "cb":
+                        for cbax in getattr(eventax, "_eomaps_cb_axes", []):
+                            self._ax_picked.append(cbax)
         else:
             if eventax not in self._ax_picked:
                 self._m_picked = []
@@ -1012,9 +1020,12 @@ class LayoutEditor:
                     else:
                         self._m_picked = []
                         self._ax_picked.append(eventax)
+                        # handle colorbar axes
+                        if eventax.get_label() == "cb":
+                            for cbax in getattr(eventax, "_eomaps_cb_axes", []):
+                                self._ax_picked.append(cbax)
 
                     self._add_snap_grid()
-
             else:
                 self._add_snap_grid()
 
@@ -1031,8 +1042,6 @@ class LayoutEditor:
         with ExitStack() as stack:
             for ax in self._ax_picked:
                 stack.enter_context(ax._cm_set(visible=False))
-                for child_ax in ax.child_axes:
-                    stack.enter_context(child_ax._cm_set(visible=False))
 
             self.m.BM.blit_artists(self.axes, None, False)
 
@@ -1233,16 +1242,19 @@ class LayoutEditor:
         return snap
 
     def ax_on_layer(self, ax):
-        return ax in [
-            ax
-            for ax in self.f.axes
-            if (
-                ax in self.m.BM._get_unmanaged_axes()
-                or ax in self.m.BM.get_bg_artists(self.m.BM.bg_layer)
-                or ax in self.m.BM.get_artists(self.m.BM.bg_layer)
-                or ax in self.maxes
-            )
-        ]
+        if ax in self.m.BM._get_unmanaged_axes():
+            return True
+        elif ax in self.maxes:
+            return True
+        else:
+            for layer in (self.m.BM.bg_layer, "__SPINES__", "all"):
+                # logos are put on the spines-layer to appear on top of spines!
+                if ax in self.m.BM.get_bg_artists(layer):
+                    return True
+                elif ax in self.m.BM.get_artists(self.m.BM.bg_layer):
+                    return True
+
+        return False
 
     def _make_draggable(self, filepath=None):
         # Uncheck active pan/zoom actions of the matplotlib toolbar.
@@ -1290,7 +1302,6 @@ class LayoutEditor:
             # keep singular axes hidden
             self._revert_props.append((ax.set_visible, ax.get_visible()))
             if not singularax:
-
                 if self.ax_on_layer(ax):
                     ax.set_visible(True)
                 else:
@@ -2121,7 +2132,7 @@ class BlitManager(LayerParser):
             True if the layer is currently visible, False otherwise
 
         """
-        return layer == "all" or self._layer_is_subset(layer, self.bg_layer)
+        return layer in "all" or self._layer_is_subset(layer, self.bg_layer)
 
     @property
     def _get_active_layers_alphas(self):
@@ -2986,7 +2997,7 @@ class BlitManager(LayerParser):
         while len(artists) > 0:
             a = artists.pop()
             try:
-                self.remove_bg_artist(a, layer)
+                self.remove_bg_artist(a, layer, draw=False)
                 # no need to remove spines (to avoid NotImplementedErrors)!
                 if not isinstance(a, Spine):
                     a.remove()
