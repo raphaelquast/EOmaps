@@ -207,13 +207,19 @@ class ColorBarBase:
         def ychanged(event):
             if self.orientation == "horizontal":
                 with self.ax_cb_plot.callbacks.blocked(signal="ylim_changed"):
-                    self.ax_cb_plot.set_ylim(0, None, emit=False)
+                    if self.ax_cb_plot.get_yscale() == "log":
+                        pass
+                    else:
+                        self.ax_cb_plot.set_ylim(0, None, emit=False)
 
         def xchanged(event):
             if self.orientation == "vertical":
                 with self.ax_cb_plot.callbacks.blocked(signal="xlim_changed"):
                     self.ax_cb_plot.xaxis.set_inverted(True)
-                    self.ax_cb_plot.set_xlim(left=None, right=0, emit=False)
+                    if self.ax_cb_plot.get_xscale() == "log":
+                        pass
+                    else:
+                        self.ax_cb_plot.set_xlim(left=None, right=0, emit=False)
 
         self.ax_cb_plot.callbacks.connect("xlim_changed", xchanged)
         self.ax_cb_plot.callbacks.connect("ylim_changed", ychanged)
@@ -446,7 +452,7 @@ class ColorBarBase:
                 transform=self.ax_cb_plot.transAxes,
             )
             # make sure lower y-limit is 0
-            if self.ax_cb_plot.get_yscale() == "log":
+            if self.ax_cb_plot.get_yscale() != "log":
                 self.ax_cb_plot.set_ylim(0)
         else:
             self.ax_cb_plot.grid(axis="x", dashes=[5, 5], c="k", alpha=0.5)
