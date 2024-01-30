@@ -36,7 +36,6 @@ from cartopy import crs as ccrs
 from .helpers import (
     pairwise,
     cmap_alpha,
-    BlitManager,
     progressbar,
     SearchTree,
     _TransformedBoundsLocator,
@@ -45,6 +44,7 @@ from .helpers import (
     _key_release_event,
 )
 
+from ._blit_manager import BlitManager
 from .layout_editor import LayoutEditor
 from .shapes import Shapes
 from .colorbar import ColorBar
