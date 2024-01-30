@@ -2715,7 +2715,7 @@ class Maps(metaclass=_MapsMeta):
                 _TransformedBoundsLocator(fixed_pos.bounds, self.ax.transAxes)
             )
 
-    @wraps(ColorBar.__init__)
+    @wraps(ColorBar._new_colorbar)
     def add_colorbar(self, *args, **kwargs):
         """Add a colorbar to the map."""
         if self.coll is None:
@@ -2723,14 +2723,7 @@ class Maps(metaclass=_MapsMeta):
                 "EOmaps: You must plot a dataset before " "adding a colorbar!"
             )
 
-        colorbar = ColorBar(
-            self,
-            *args,
-            **kwargs,
-        )
-
-        colorbar._plot_histogram()
-        colorbar._plot_colorbar()
+        colorbar = ColorBar._new_colorbar(self, *args, **kwargs)
 
         self._colorbars.append(colorbar)
         self.BM._refetch_layer(self.layer)
@@ -3498,7 +3491,7 @@ class Maps(metaclass=_MapsMeta):
 
                 # handle colorbars
                 for cb in m._colorbars:
-                    for a in cb._axes:
+                    for a in (cb.ax_cb, cb.ax_cb_plot):
                         stack.enter_context(a._cm_set(animated=False))
 
                 # set if data should be rasterized on vector export
