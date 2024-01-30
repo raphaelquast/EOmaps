@@ -581,10 +581,12 @@ class ColorBarBase:
 
 class ColorBar(ColorBarBase):
     """
-    A colorbar with a histogram on top.
+    Base class for EOmaps colorbars with a histogram on top.
 
+    Note
+    ----
     To add a colorbar to a map, use
-    :py:meth:`Maps.add_colorbar <eomaps.eomaps.Maps.add_colorbar>`!
+    :py:meth:`Maps.add_colorbar <eomaps.eomaps.Maps.add_colorbar>`.
 
     """
 

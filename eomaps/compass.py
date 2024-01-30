@@ -19,7 +19,15 @@ _log = logging.getLogger(__name__)
 
 
 class Compass:
-    """Base class for EOmaps compass objects."""
+    """
+    Base class for EOmaps compass (or North-arrow) objects.
+
+    Note
+    ----
+    To add a new compass (or north-arrow) to a map, see
+    :py:meth:`Maps.add_compass <eomaps.eomaps.Maps.add_compass>`.
+
+    """
 
     def __init__(self, m):
         self._m = m

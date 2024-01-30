@@ -22,10 +22,6 @@
 
     Checkout the docs for :py:class:`Maps` objects for all available methods!
 
-    +++
-
-    To create a new inset-map, have a look at :py:meth:`Maps.new_inset_map`.
-
 
 .. currentmodule:: eomaps.inset_maps
 

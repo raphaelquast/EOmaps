@@ -26,7 +26,15 @@ _log = logging.getLogger(__name__)
 
 
 class ScaleBar:
-    """Base class for EOmaps scalebars."""
+    """
+    Base class for EOmaps scalebars.
+
+    Note
+    ----
+    To add a new scalebar to a map, see
+    :py:meth:`Maps.add_scalebar <eomaps.eomaps.Maps.add_scalebar>`.
+
+    """
 
     def __init__(
         self,

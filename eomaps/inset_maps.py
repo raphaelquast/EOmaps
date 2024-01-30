@@ -14,7 +14,15 @@ from .grid import _intersect, _get_intersect
 
 
 class InsetMaps(Maps):
-    """Base class to create inset maps."""
+    """
+    Base class to create inset maps.
+
+    Note
+    ----
+    To create a new inset-map, see
+    :py:meth:`Maps.new_inset_map <eomaps.eomaps.Maps.new_inset_map>`.
+
+    """
 
     # a subclass of Maps that includes some special functions for inset maps
 

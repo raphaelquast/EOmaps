@@ -50,7 +50,15 @@ def _get_intersect(a1, a2, b1, b2):
 
 
 class GridLines:
-    """Class to draw grid-lines."""
+    """
+    Base class for EOmaps grid-lines (and associated grid-labels).
+
+    Note
+    ----
+    To add new grid-lines to a map, see
+    :py:meth:`Maps.add_gridlines <eomaps.eomaps.Maps.add_gridlines>`.
+
+    """
 
     def __init__(
         self, m, d=None, auto_n=10, layer=None, bounds=None, n=100, dynamic=False
