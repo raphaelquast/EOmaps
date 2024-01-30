@@ -36,6 +36,9 @@ def setup(app):
 
     app.add_css_file("custom_css.css")
 
+    # add handling for skip-member event
+    app.connect("autodoc-skip-member", autodoc_skip_member)
+
     # By default, autodoc will print 'alias of ...' for aliases.
     # This can be avoided by explicitly setting the __name__ property.
     # see https://stackoverflow.com/a/58982001/9703451
@@ -107,6 +110,13 @@ autosummary_generate = ["api/autodoc_additional_props.rst"]  # "full_reference.r
 autodoc_default_options = {
     "member-order": "alphabetical",
 }
+
+
+def autodoc_skip_member(app, what, name, obj, skip, options):
+    # explicitly skip __init__ methods (to ensure they don't show up as methods)
+    exclude = name in ("__init__",)
+    return True if exclude else None
+
 
 # Napoleon settings
 napoleon_numpy_docstring = True
