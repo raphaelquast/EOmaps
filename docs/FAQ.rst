@@ -380,7 +380,7 @@ Important changes between major versions
 
     - ❗ Starting with `v8.x` eomaps is licensed under a "BSD 3 clause" license!
 
-    - ⚠️ Some functions and classes have been re-named to better follow PEP8 naming conventions.
+    - ⚠️ Some functions and classes have been re-named/moved to better follow PEP8 naming conventions.
       While this should not interfere with the public API, more extensive customizations might need to be
       adjusted with respect to the new names.
 
