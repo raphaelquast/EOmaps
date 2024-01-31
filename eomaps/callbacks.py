@@ -792,7 +792,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
                 x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
                 w, h = abs(x1m - x0m), abs(y1m - y0m)
 
-                clip_path = self._get_clip_path(
+                clip_path = self.m.cb.click.attach._get_clip_path(
                     (x0m + x1m) / 2,
                     (y0m + y1m) / 2,
                     "out",
@@ -850,7 +850,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
             )
             w, h = abs(x1m - x0m), abs(y1m - y0m)
 
-            clip_path = self._get_clip_path(
+            clip_path = self.m.cb.click.attach._get_clip_path(
                 x1m, y1m, "out", (w / 2, h / 2), "out", shape, 100
             )
         else:
