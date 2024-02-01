@@ -273,14 +273,12 @@ class LayoutEditor:
             l = self._history.pop(-1)
             self._history_undone.append(l)
             self.m.apply_layout(l)
-            self.m.redraw()
 
     def _redo(self):
         if len(self._history_undone) > 0:
             l = self._history_undone.pop(-1)
             self._history.append(l)
             self.m.apply_layout(l)
-            self.m.redraw()
 
     def cb_release(self, event):
         self._set_startpos(event)
@@ -991,7 +989,10 @@ class LayoutEditor:
             else:
                 axes[i].set_position(val)
 
+        # force an immediate draw (rather than using draw_idle) to avoid issues with
+        # stacking order for tkagg backend
         self.m.redraw()
+        self.m.f.canvas.draw()
 
         # try to push the current view to the "home" toolbar button
         try:
