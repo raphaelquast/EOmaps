@@ -79,3 +79,11 @@ eomaps = "eomaps.scripts.open:cli"
 [project.urls]
 Documentation = "https://eomaps.readthedocs.io/"
 Repository = "https://github.com/raphaelquast/eomaps"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:DownloadWarning",
+    "ignore:Geometry is in a geographic CRS. Results from *:UserWarning",
+    "ignore:Back azimuth is being returned by default *:UserWarning",
+    "ignore:Conversion of an array with ndim > 0:DeprecationWarning"
+]
