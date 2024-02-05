@@ -82,8 +82,10 @@ Repository = "https://github.com/raphaelquast/eomaps"
 
 [tool.pytest.ini_options]
 filterwarnings = [
-    "ignore:cartopy.io.DownloadWarning",
-    "ignore:Pyarrow will become a required dependency of pandas:DeprecationWarning",
+    "ignore:Downloading*",
+    "ignore:Passing a SingleBlockManager to Series is deprecated *:DeprecationWarning",
+    "ignore:Passing a BlockManager to GeoDataFrame is deprecated *:DeprecationWarning",
+    "ignore:Pyarrow will become a required dependency of pandas *:DeprecationWarning",
     "ignore:Geometry is in a geographic CRS. Results from *:UserWarning",
     "ignore:Back azimuth is being returned by default *:UserWarning",
     "ignore:Conversion of an array with ndim > 0:DeprecationWarning"
