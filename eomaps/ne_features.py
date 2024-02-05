@@ -493,7 +493,7 @@ class NaturalEarthPresets:
 
         Parameters
         ----------
-        \*args : str
+        args : str
             The names of the features to add.
         scale : int or str
             Set the scale of the feature preset (10, 50, 110 or "auto")
@@ -505,7 +505,7 @@ class NaturalEarthPresets:
             - If None, the layer of the parent object is used.
 
             The default is None.
-        \*\*kwargs:
+        kwargs:
             Additional style kwargs passed to all features
             (e.g. alpha, facecolor, edgecolor, linewidth, ...)
         """
