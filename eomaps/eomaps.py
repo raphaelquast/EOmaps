@@ -4938,33 +4938,47 @@ class Maps(metaclass=_MapsMeta):
                     )
                     df = xar.Dataset(dict(val=df))
             else:
-                # first convert 1D inputs to 2D, then reproject the grid and use
-                # a curvilinear QuadMesh to display the data
-
-                # use pandas to convert to 2D
-                df = (
-                    pd.DataFrame(
-                        dict(
-                            x=x0.ravel(),
-                            y=y0.ravel(),
-                            val=zdata.ravel(),
-                        ),
-                        copy=False,
+                try:
+                    # try if reprojected coordinates can be used as 2d grid and if yes,
+                    # directly use a curvilinear QuadMesh based on the reprojected
+                    # coordinates to display the data
+                    idx = pd.MultiIndex.from_arrays(
+                        [x0.ravel(), y0.ravel()], names=["x", "y"]
                     )
-                    .set_index(["x", "y"])
-                    .to_xarray()
-                )
-                xg, yg = np.meshgrid(df.x, df.y)
 
-                # transform the grid from input-coordinates to the plot-coordinates
-                crs1 = CRS.from_user_input(self.data_specs.crs)
-                crs2 = CRS.from_user_input(self._crs_plot)
-                if crs1 != crs2:
-                    transformer = self._get_transformer(
-                        crs1,
-                        crs2,
+                    df = pd.DataFrame(
+                        data=dict(val=zdata.ravel()), index=idx, copy=False
                     )
-                    xg, yg = transformer.transform(xg, yg)
+                    df = df.to_xarray()
+                    xg, yg = np.meshgrid(df.x, df.y)
+                except Exception:
+                    # first convert original coordinates of the 1D inputs to 2D,
+                    # then reproject the grid and use a curvilinear QuadMesh to display
+                    # the data
+                    _log.warning(
+                        "EOmaps: 1D data is converted to 2D prior to reprojection... "
+                        "Consider using 'shade_points' as plot-shape instead!"
+                    )
+                    xorig = self._data_manager.xorig.ravel()
+                    yorig = self._data_manager.yorig.ravel()
+
+                    idx = pd.MultiIndex.from_arrays([xorig, yorig], names=["x", "y"])
+
+                    df = pd.DataFrame(
+                        data=dict(val=zdata.ravel()), index=idx, copy=False
+                    )
+                    df = df.to_xarray()
+                    xg, yg = np.meshgrid(df.x, df.y)
+
+                    # transform the grid from input-coordinates to the plot-coordinates
+                    crs1 = CRS.from_user_input(self.data_specs.crs)
+                    crs2 = CRS.from_user_input(self._crs_plot)
+                    if crs1 != crs2:
+                        transformer = self._get_transformer(
+                            crs1,
+                            crs2,
+                        )
+                        xg, yg = transformer.transform(xg, yg)
 
                 # use a curvilinear QuadMesh
                 if self.shape.name == "shade_raster":
