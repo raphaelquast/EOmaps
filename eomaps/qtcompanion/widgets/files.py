@@ -36,6 +36,11 @@ def _none_or_val(val):
         return val
 
 
+def _floatstr_to_int(val):
+    # pythons int() cannot convert float-strings to integer!
+    return int(float(val))
+
+
 def _identify_radius(r):
     r = r.replace(" ", "")
     try:
@@ -175,6 +180,7 @@ class ShapeSelector(QtWidgets.QFrame):
         mask_radius=_none_or_val,
         radius=_identify_radius,
         n=_none_or_val,
+        maxsize=_floatstr_to_int,
     )
 
     _argtypes = dict(
@@ -186,7 +192,6 @@ class ShapeSelector(QtWidgets.QFrame):
         mask_radius=(float,),
         flat=(str_to_bool,),
         aggregator=(str,),
-        maxsize=(int,),
     )
 
     def __init__(self, *args, m=None, default_shape="shade_raster", **kwargs):
