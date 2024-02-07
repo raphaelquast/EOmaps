@@ -130,7 +130,7 @@ class DataManager:
 
         # estimate the radius (used as margin on data selection)
         try:
-            self._r = self.m._shapes._estimate_radius(
+            self._r = self.m.set_shape._estimate_radius(
                 self.m, radius_crs="out", method=np.nanmax
             )
             if self._r is not None and all(np.isfinite(i) for i in self._r):
@@ -138,6 +138,8 @@ class DataManager:
             else:
                 self._radius_margin = None
         except Exception:
+            if _log.getEffectiveLevel() <= logging.DEBUG:
+                _log.debug("Estimation of data radius for data-margin failed!")
             self._r = None
             self._radius_margin = None
 
