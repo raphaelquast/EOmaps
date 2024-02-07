@@ -301,6 +301,8 @@ class ColorBarBase:
 
     def _plot_colorbar(self, **kwargs):
 
+        self._cb_kwargs = kwargs
+
         kwargs.setdefault("extendfrac", self._extend_frac)
         kwargs.setdefault("spacing", "proportional")
         kwargs.setdefault("extend", "both")
@@ -526,7 +528,7 @@ class ColorBarBase:
 
         self._set_hist_size()
 
-        self._plot_colorbar()
+        self._plot_colorbar(**self._cb_kwargs)
 
         self._plot_histogram(
             bins=self._hist_bins,
@@ -645,9 +647,10 @@ class ColorBar(ColorBarBase):
         parent_cb = None
         # check if there is already an existing colorbar for a Maps-object that shares
         # the same plot-axis. If yes, inherit the position of this colorbar!
-
-        if self._m.colorbar is not None and not self._inherit_position:
+        if self._m.colorbar is not None and self._inherit_position is False:
             parent_cb = None  # self._m.colorbar
+        elif isinstance(self._inherit_position, ColorBar):
+            parent_cb = self._inherit_position
         else:
             # check if self is actually just another layer of an existing Maps object
             # that already has a colorbar assigned
@@ -688,10 +691,7 @@ class ColorBar(ColorBarBase):
     def _set_map(self, m):
         self._m = m
 
-        if isinstance(self._inherit_position, ColorBarBase):
-            self._parent_cb = self._inherit_position
-        else:
-            self._parent_cb = self._identify_parent_cb()
+        self._parent_cb = self._identify_parent_cb()
 
         self._vmin = self._m.coll.norm.vmin
         self._vmax = self._m.coll.norm.vmax
@@ -1141,6 +1141,10 @@ class ColorBar(ColorBarBase):
         self._m.BM._refetch_layer(self.layer)
 
     def _set_tick_formatter(self):
+        if "format" in self._cb_kwargs:
+            self.cb.set_ticks(self.cb.get_ticks())
+            return
+
         if self._m._classified:
             self.cb.set_ticks(
                 np.unique(np.clip(self._m.classify_specs._bins, self._vmin, self._vmax))
@@ -1484,7 +1488,7 @@ class ColorBar(ColorBarBase):
 
         cb._set_hist_size(hist_size)
         cb.set_scale(log)
-        cb._plot_colorbar(extend=extend)
+        cb._plot_colorbar(extend=extend, **kwargs)
 
         bins = (
             m.classify_specs._bins
