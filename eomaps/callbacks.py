@@ -171,6 +171,8 @@ class _CallbacksBase:
                             ID = self._fmt(np.asanyarray(ID))
 
                 equal_crs = self.m.data_specs.crs == self.m._crs_plot
+                if len(parameter) > 15:
+                    parameter = parameter[:15] + " ..."
                 printstr = (
                     (f"# Picked {n_ids} points\n" if multipick else "")
                     + f"{xlabel} = {x}\n"
