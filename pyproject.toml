@@ -85,6 +85,7 @@ filterwarnings = [
     "ignore:Downloading*",
     "ignore:Passing a SingleBlockManager to Series is deprecated *:DeprecationWarning",
     "ignore:Passing a BlockManager to GeoDataFrame is deprecated *:DeprecationWarning",
+    "ignore:Passing a SingleBlockManager to GeoSeries is deprecated *:DeprecationWarning",
     "ignore:Pyarrow will become a required dependency of pandas *:DeprecationWarning",
     "ignore:Geometry is in a geographic CRS. Results from *:UserWarning",
     "ignore:Back azimuth is being returned by default *:UserWarning",
