@@ -279,7 +279,12 @@ class ColorBarBase:
             data = data.ravel()
 
         # make sure we only consider valid values in the histogram
-        data = data[np.isfinite(data)]
+        finitemask = np.isfinite(data)
+        data = data[finitemask]
+
+        # make sure that histogram weights are masked accordingly if provided
+        if "weights" in self._hist_kwargs:
+            self._hist_kwargs["weights"] = self._hist_kwargs["weights"][finitemask]
 
         if out_of_range_vals == "mask":
             data_range_mask = (data >= self._vmin) & (data <= self._vmax)
