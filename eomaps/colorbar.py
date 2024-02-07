@@ -196,6 +196,7 @@ class ColorBarBase:
         self.ax_cb_plot.spines["left"].set_visible(False)
 
         self._set_hist_size()
+        self._style_hist_ticks()
 
         self._attach_lim_cbs()
 
@@ -268,7 +269,6 @@ class ColorBarBase:
             l_hist_bounds = (l, b, w - s, h)
 
         self._set_axes_locators(l_cb_bounds, l_hist_bounds)
-        self._style_hist_ticks()
 
     def _preprocess_data(self, out_of_range_vals="keep"):
         data = self._get_data()
