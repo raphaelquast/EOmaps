@@ -331,7 +331,8 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         actionwidget = action.defaultWidget()
 
-        active_layers = self.m.BM._get_active_layers_alphas
+        # just split here to keep transparency-assignments in tact!
+        active_layers = self.m.BM.bg_layer.split("|")
 
         checked_layers = [l for l in active_layers if l != "_"]
         selected_layer = action.data()

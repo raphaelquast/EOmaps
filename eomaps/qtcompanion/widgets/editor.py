@@ -975,7 +975,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         currlayer = self.m.BM.bg_layer
         # only populate if the current layer is not part of the last set of layers
         # (e.g. to allow show/hide of selected layers without removing the tabs)
-        if not self.m.BM._layer_visible(lastlayer):
+        if not self.m.BM._layer_is_subset(currlayer, lastlayer):
             self.populate(*args, **kwargs)
             self._last_populated_layer = currlayer
         else:
