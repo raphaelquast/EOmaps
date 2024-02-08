@@ -107,7 +107,7 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
 
 
 class AutoUpdateLayerLabel(QtWidgets.QLabel):
-    def __init__(self, *args, m=None, max_length=100, **kwargs):
+    def __init__(self, *args, m=None, max_length=60, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
 
@@ -140,6 +140,9 @@ class AutoUpdateLayerLabel(QtWidgets.QLabel):
                 ls += " {" + f"{a*100:.0f}%" + "}"
 
             s += ls
+
+        if len(s) > self._max_length:
+            s = s[: self._max_length - 3] + "..."
 
         return prefix + s + suffix
 
