@@ -115,8 +115,11 @@ class PickMapDropdown(QtWidgets.QComboBox):
         super().__init__(*args, **kwargs)
 
         self.setStyleSheet("border-style:none;")
+
+        # set fixed width to avoid expanding window-width on startup for extremely
+        # long layer names... (full name is shown in dropdown)
         self.setMinimumWidth(150)
-        self.setMaximumWidth(400)
+        self.setMaximumWidth(150)
         self.setSizeAdjustPolicy(self.AdjustToContents)
 
     def enterEvent(self, e):
