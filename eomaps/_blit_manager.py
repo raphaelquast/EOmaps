@@ -634,7 +634,7 @@ class BlitManager(LayerParser):
             True if the layer is currently visible, False otherwise
 
         """
-        return layer in "all" or self._layer_is_subset(layer, self.bg_layer)
+        return layer == "all" or self._layer_is_subset(layer, self.bg_layer)
 
     @property
     def _get_active_layers_alphas(self):
