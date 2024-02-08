@@ -1002,7 +1002,7 @@ class LayerTabBar(QtWidgets.QTabBar):
                 )
                 LayerTabBar._n_layer_msg_shown = True
 
-            # if more than 200 layers are available, show only active tabs to
+            # if more than max_n_layers layers are available, show only active tabs to
             # avoid performance issues when too many tabs are created
             alllayers = [i for i in self.m.BM._bg_layer.split("|") if i in alllayers]
             for i in range(self.count(), -1, -1):
