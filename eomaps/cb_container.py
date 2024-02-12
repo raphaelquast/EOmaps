@@ -1357,6 +1357,9 @@ class PickContainer(_ClickContainer):
         else:
             self._picker = picker
 
+        # indicator how shared pick-events identify the relevant datapoint
+        self._ensure_same_pick_id = False
+
     class _attach(_ClickContainer._attach, PickCallbacks):
         __doc__ = _ClickContainer._attach.__doc__
         pass
@@ -1382,6 +1385,35 @@ class PickContainer(_ClickContainer):
             _log.error(
                 f"the picker {name} does not exist...", "use `m.cb.add_picker` first!"
             )
+
+    def share_events(self, *args, ensure_same_id=False):
+        """
+        Share callback-events between this Maps-object and all other Maps-objects.
+
+        (e.g. share events both ways)
+
+        Note
+        ----
+        For **pick-events**, you can use the additional keyword-argument
+        `ensure_same_id` to make sure that all events pick the exact same ID.
+
+        Parameters
+        ----------
+        args : eomaps.Maps
+            The Maps-objects that should execute the callback.
+
+        ensure_same_id : bool
+            If True, all pick-events are triggered by the same ID value.
+            (e.g. the ID of the datapoint that was actually picked)
+
+            If False, each map executes the pick-event with respect to the reprojected
+            mouse-position and identifies the closest datapoint to use.
+
+            The default is False
+        """
+        self._ensure_same_pick_id = ensure_same_id
+
+        super().share_events(*args)
 
     def set_props(
         self,
@@ -1710,15 +1742,44 @@ class PickContainer(_ClickContainer):
                 # picker_name=picker_name,
             )
 
-            pick = obj._picker(obj._artist, dummymouseevent)
-            if pick[1] is not None:
-                dummyevent.ID = pick[1].get("ID", None)
-                dummyevent.ind = pick[1].get("ind", None)
-                dummyevent.val = pick[1].get("val", None)
-                dummyevent.pos = pick[1].get("pos", None)
-                dummyevent.val_color = pick[1].get("val_color", None)
+            if self._ensure_same_pick_id is False:
+                # execute a new pick-event and use the identified point
+
+                pick = obj._picker(obj._artist, dummymouseevent)
+                if pick[1] is not None:
+                    dummyevent.ID = pick[1].get("ID", None)
+                    dummyevent.ind = pick[1].get("ind", None)
+                    dummyevent.val = pick[1].get("val", None)
+                    dummyevent.pos = pick[1].get("pos", None)
+                    dummyevent.val_color = pick[1].get("val_color", None)
+                else:
+                    dummyevent.ind = None
             else:
-                dummyevent.ind = None
+                # use the ID identified by the parent pick-event to obtain values etc.
+                ID = getattr(event, "ID", None)
+                if ID is not None:
+                    ind = m._data_manager._get_ind_from_ID(ID)
+                    if ind is not None:
+                        # TODO check why arrays with 1 entry need to be converted here
+                        if len(ind) == 1:
+                            ind = ind[0]
+
+                        val = m._data_manager._get_val_from_index(ind)
+                        pos = m._data_manager._get_xy_from_index(ind, reprojected=True)
+
+                        try:
+                            val_color = obj._artist.cmap(obj._artist.norm(val))
+                        except Exception:
+                            val_color = None
+
+                        dummyevent.ID = ID
+                        dummyevent.ind = ind
+                        dummyevent.val = val
+                        dummyevent.pos = pos
+                        dummyevent.val_color = val_color
+                    else:
+                        dummyevent.ID = None
+                        dummyevent.ind = None
 
             obj._onpick(dummyevent)
 

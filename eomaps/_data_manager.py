@@ -1070,6 +1070,40 @@ class DataManager:
             ID = None
         return ID
 
+    def _get_ind_from_ID(self, ID):
+        """
+        Get numerical indexes from a list of data IDs
+
+        Parameters
+        ----------
+        ID : single ID or list of IDs
+            The IDs to search for.
+
+        Returns
+        -------
+        inds : list of indexes or None
+        """
+        ids = self.ids
+
+        # find numerical index from ID
+        ID = np.atleast_1d(ID)
+        if isinstance(ids, range):
+            # if "ids" is range-like, so is "ind", therefore we can simply
+            # select the values.
+            inds = np.array([ids[i] for i in ID])
+        elif isinstance(ids, list):
+            # for lists, using .index to identify the index
+            inds = np.array([ids.index(i) for i in ID])
+        elif isinstance(ids, np.ndarray):
+            inds = np.flatnonzero(np.isin(ids, ID))
+        else:
+            inds = None
+
+        if len(inds) == 0:
+            inds = None
+
+        return inds
+
     def _get_xy_from_ID(self, ID, reprojected=False):
         """
         Get x and y coordinates from a list of data IDs
@@ -1083,22 +1117,8 @@ class DataManager:
         -------
         (x, y) : a tuple of x- and y- coordinate arrays
         """
-        ids = self.ids
 
-        # find numerical index from ID
-        ID = np.atleast_1d(ID)
-        if isinstance(ids, range):
-            # if "ids" is range-like, so is "ind", therefore we can simply
-            # select the values.
-            inds = np.array([ids[i] for i in ID])
-        if isinstance(ids, list):
-            # for lists, using .index to identify the index
-            inds = np.array([ids.index(i) for i in ID])
-        elif isinstance(ids, np.ndarray):
-            inds = np.flatnonzero(np.isin(ids, ID))
-        else:
-            inds = None
-
+        inds = self._get_ind_from_ID(ID)
         return self._get_xy_from_index(inds, reprojected=reprojected)
 
     def cleanup(self):
