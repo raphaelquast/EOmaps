@@ -221,7 +221,7 @@ class _CallbackContainer(object):
 
     def share_events(self, *args):
         """
-        Share callback-events between this Maps-object and all other Maps-objects.
+        Share callback-events between this Maps-object and other Maps-objects.
 
         (e.g. share events both ways)
 
@@ -1388,7 +1388,7 @@ class PickContainer(_ClickContainer):
 
     def share_events(self, *args, ensure_same_id=False):
         """
-        Share callback-events between this Maps-object and all other Maps-objects.
+        Share callback-events between this Maps-object and other Maps-objects.
 
         (e.g. share events both ways)
 
