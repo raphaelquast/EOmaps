@@ -332,13 +332,13 @@ class ColorBarBase:
         self._set_hist_size()
 
     def _plot_histogram(
-        self, bins=None, out_of_range_vals="keep", show_outline=False, **kwargs
+        self, bins=None, out_of_range_vals="keep", outline=False, **kwargs
     ):
 
         self._hist_kwargs = kwargs
         self._hist_bins = bins
         self._out_of_range_vals = out_of_range_vals
-        self._show_outline = show_outline
+        self._outline = outline
 
         if "range" not in self._hist_kwargs:
             self._hist_kwargs["range"] = (
@@ -354,11 +354,11 @@ class ColorBarBase:
             **self._hist_kwargs,
         )
 
-        if self._show_outline:
-            if self._show_outline is True:
+        if self._outline:
+            if self._outline is True:
                 outline_props = dict(color="k", lw=1)
             else:
-                outline_props = self._show_outline
+                outline_props = self._outline
 
             if self.orientation == "horizontal":
                 self.ax_cb_plot.step(
@@ -542,7 +542,7 @@ class ColorBarBase:
         self._plot_histogram(
             bins=self._hist_bins,
             out_of_range_vals=self._out_of_range_vals,
-            show_outline=self._show_outline,
+            outline=self._outline,
             **self._hist_kwargs,
         )
 
@@ -1325,9 +1325,9 @@ class ColorBar(ColorBarBase):
         extend_frac=0.025,
         log=False,
         label=None,
-        ylabel=None,
-        show_outline=False,
+        outline=False,
         hist_kwargs=None,
+        hist_label=None,
         margin=None,
         divider_linestyle=None,
         **kwargs,
@@ -1376,22 +1376,6 @@ class ColorBar(ColorBarBase):
               colorbar, use "inherit_position=True", else use "inherit_position=False".
 
             The default is None
-        hist_size : float or None
-            The fraction of the colorbar occupied by the histogram.
-
-            - None: no histogram will be drawn
-            - 0:
-            - 0.9: 90% histogram, 10% colorbar
-            - 1: only histogram
-
-        hist_bins : int, list, tuple, array or "bins", optional
-
-            - If int: The number of histogram-bins to use for the colorbar.
-            - If list, tuple or numpy-array: the bins to use
-            - If "bins": use the bins obtained from the classification
-              (ONLY possible if a classification scheme is used!)
-
-            The default is 256.
         extend : str or None, optional
             Set how extension-arrows should be added.
 
@@ -1420,7 +1404,7 @@ class ColorBar(ColorBarBase):
               the shaded pixel values within the current field of view.
 
             The default is False.
-        show_outline : bool or dict
+        outline : bool or dict
             Indicator if an outline should be added to the histogram.
             (e.g. a line encompassing the histogram)
             If a dict is provided, it is passed to `plt.step()` to style the line.
@@ -1447,16 +1431,32 @@ class ColorBar(ColorBarBase):
               min/max bins of the histogram)
 
             The default is "clip"
-        hist_kwargs : dict
-            A dictionary with keyword-arguments passed to the creation of the histogram
-            (e.g. passed to `plt.hist()` )
         label : str, optional
             The label used for the colorbar.
             Use `ColorBar.set_labels()` to set the labels (and styling) for the
             colorbar and the histogram.
             The default is None.
-        ylabel : str, optional
+        hist_size : float or None
+            The fraction of the colorbar occupied by the histogram.
+
+            - None: no histogram will be drawn
+            - 0:
+            - 0.9: 90% histogram, 10% colorbar
+            - 1: only histogram
+
+        hist_bins : int, list, tuple, array or "bins", optional
+
+            - If int: The number of histogram-bins to use for the colorbar.
+            - If list, tuple or numpy-array: the bins to use
+            - If "bins": use the bins obtained from the classification
+              (ONLY possible if a classification scheme is used!)
+
+            The default is 256.
+        hist_label : str, optional
             The label used for the y-axis of the colorbar. The default is None
+        hist_kwargs : dict
+            A dictionary with keyword-arguments passed to the creation of the histogram
+            (e.g. passed to `plt.hist()` )
         layer : str
             The layer at which the colorbar will be drawn.
             NOTE: In most cases you should NOT need to adjust the layer!
@@ -1493,6 +1493,33 @@ class ColorBar(ColorBarBase):
         >>> m.add_colorbar(hist_bins="bins", label="some data")
 
         """
+        if "show_outline" in kwargs:
+            import warnings
+
+            warnings.simplefilter("default", DeprecationWarning)
+            warnings.warn(
+                "EOmaps: The colorbar argument 'show_outline' is deprecated and will "
+                "be removed in EOmaps v8.1. Use 'outline' instead!",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
+            outline = kwargs.pop("show_outline")
+
+        if "ylabel" in kwargs:
+            import warnings
+
+            warnings.simplefilter("default", DeprecationWarning)
+            warnings.warn(
+                "EOmaps: The colorbar argument 'ylabel' is deprecated and will "
+                "be removed in EOmaps v8.1. Use 'hist_label' instead!",
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+
+            if hist_label is None:
+                hist_label = kwargs.pop("ylabel")
+
         if hist_kwargs is None:
             hist_kwargs = dict()
 
@@ -1521,13 +1548,13 @@ class ColorBar(ColorBarBase):
         cb._plot_histogram(
             bins=bins,
             out_of_range_vals=out_of_range_vals,
-            show_outline=show_outline,
+            outline=outline,
             **hist_kwargs,
         )
 
         cb._set_tick_formatter()
 
-        cb.set_labels(cb_label=label, hist_label=ylabel)
+        cb.set_labels(cb_label=label, hist_label=hist_label)
 
         if dynamic_shade_indicator:
             cb._make_dynamic()
