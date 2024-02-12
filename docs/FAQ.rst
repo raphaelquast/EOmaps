@@ -395,6 +395,8 @@ Important changes between major versions
 
     - scripts for the examples have been re-named and are now located in ``docs\examples``
 
+    - Colorbar kwargs ``show_outline`` and ``ylabel`` have been renamed to ``outline`` and ``hist_label``
+
     The following (previously deprecated) methods are now **removed**:
 
     - `m.set_data_specs` -> use ``m.set_data`` instead
