@@ -764,6 +764,13 @@ class ColorBar(ColorBarBase):
         self._last_ds_data = dsdata
 
     def _make_dynamic(self):
+        if "weights" in self._hist_kwargs:
+            _log.warn(
+                "EOmaps: Weighted histograms for 'dynamic-shade indicator' colorbars "
+                "are not supported! Histogram weights will be ignored!"
+            )
+            self._hist_kwargs.pop("weights")
+
         self._dynamic_shade_indicator = True
 
         if not hasattr(self._m.coll, "get_ds_data"):
