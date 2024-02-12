@@ -63,6 +63,7 @@ class ColorBarBase:
         extend_frac=0.025,
         tick_precision=2,
         margin=None,
+        divider_linestyle=None,
     ):
 
         self._hist_size = 0.9
@@ -79,6 +80,11 @@ class ColorBarBase:
         self._norm = None
         self._cmap = None
         self._data = None
+
+        if divider_linestyle is None:
+            self._divider_linestyle = dict(color="k", linestyle="--", alpha=0.5)
+        else:
+            self._divider_linestyle = divider_linestyle
 
     @property
     def _scm(self):
@@ -454,9 +460,8 @@ class ColorBarBase:
             self.ax_cb_plot.plot(
                 [0, 1],
                 [0, 0],
-                "k--",
-                alpha=0.5,
                 transform=self.ax_cb_plot.transAxes,
+                **self._divider_linestyle,
             )
             # make sure lower y-limit is 0
             if self.ax_cb_plot.get_yscale() != "log":
@@ -467,9 +472,8 @@ class ColorBarBase:
             self.ax_cb_plot.plot(
                 [1, 1],
                 [0, 1],
-                "k--",
-                alpha=0.5,
                 transform=self.ax_cb_plot.transAxes,
+                **self._divider_linestyle,
             )
             # make sure lower x-limit is 0
             if self.ax_cb_plot.get_xscale() is False:
@@ -1318,6 +1322,7 @@ class ColorBar(ColorBarBase):
         show_outline=False,
         hist_kwargs=None,
         margin=None,
+        divider_linestyle=None,
         **kwargs,
     ):
         """
@@ -1450,6 +1455,10 @@ class ColorBar(ColorBarBase):
             NOTE: In most cases you should NOT need to adjust the layer!
             The layer is automatically assigned to the layer at which the
             data was plotted and Colorbars are only visible on the assigned layer!
+        divider_linestyle : dict or None
+            A dictionary that specifies the style of the line between the histogram and
+            the colorbar. If None a black dashed line is drawn
+            (e.g. `{"color": "k", "linestyle":"--"}`). The default is None.
         kwargs :
             All additional kwargs are passed to the creation of the colorbar
             (e.g. `plt.colorbar()`)
@@ -1486,6 +1495,7 @@ class ColorBar(ColorBarBase):
             inherit_position=inherit_position,
             extend_frac=extend_frac,
             margin=margin,
+            divider_linestyle=divider_linestyle,
         )
         cb._set_map(m)
         cb._setup_axes(pos, m.ax)
