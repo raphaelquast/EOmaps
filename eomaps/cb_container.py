@@ -1414,6 +1414,9 @@ class PickContainer(_ClickContainer):
         """
         self._ensure_same_pick_id = ensure_same_id
 
+        for m in args:
+            self._getobj(m)._ensure_same_pick_id = ensure_same_id
+
         super().share_events(*args)
 
     def set_props(
