@@ -7,8 +7,9 @@
 
 import logging
 from types import SimpleNamespace
-from functools import update_wrapper, partial, wraps
+from functools import partial, wraps
 from itertools import chain
+from weakref import proxy
 
 from .callbacks import (
     ClickCallbacks,
@@ -1476,7 +1477,9 @@ class PickContainer(_ClickContainer):
             self._search_radius = search_radius
 
     def _set_artist(self, artist):
-        self._artist = artist
+        # use a weakref-proxy to make sure the artist can be garbage-collected
+        # if it is deleted (or if the figure is closed)
+        self._artist = proxy(artist)
         self._artist.set_picker(self._picker)
 
     def _init_cbs(self):
@@ -1484,7 +1487,6 @@ class PickContainer(_ClickContainer):
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
-
         # make sure that objects are only picked if we are on the right layer
         if not self._execute_cb(self._m.layer):
             return False, None
@@ -1659,7 +1661,8 @@ class PickContainer(_ClickContainer):
         self._cid_pick_event.clear()
 
     def _artist_picked(self, event):
-        if self._artist is event.artist:
+        # use == instead of "is" here since self._artist is a weakref proxy!
+        if self._artist == event.artist:
             return True
         else:
             # handle contour-plot artists explicitly
