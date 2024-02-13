@@ -3857,7 +3857,10 @@ class Maps(metaclass=_MapsMeta):
                         self.ax.callbacks.disconnect(self._cid_xlim)
                         del self._cid_xlim
                 except Exception:
-                    _log.error("EOmaps-cleanup: Problem while clearing xlim-cid")
+                    _log.error(
+                        "EOmaps-cleanup: Problem while clearing xlim-cid",
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    )
 
             # clear data-specs and all cached properties of the data
             try:
@@ -3868,7 +3871,10 @@ class Maps(metaclass=_MapsMeta):
                     del self.tree
                 self.data_specs.delete()
             except Exception:
-                _log.error("EOmaps-cleanup: Problem while clearing data specs")
+                _log.error(
+                    "EOmaps-cleanup: Problem while clearing data specs",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
 
             # disconnect all click, pick and keypress callbacks
             try:
@@ -3876,7 +3882,10 @@ class Maps(metaclass=_MapsMeta):
                 # cleanup callback-containers
                 self.cb._clear_callbacks()
             except Exception:
-                _log.error("EOmaps-cleanup: Problem while clearing callbacks")
+                _log.error(
+                    "EOmaps-cleanup: Problem while clearing callbacks",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
 
             # cleanup all artists and cached background-layers from the blit-manager
             if not self._is_sublayer:
