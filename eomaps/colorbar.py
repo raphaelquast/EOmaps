@@ -64,9 +64,10 @@ class ColorBarBase:
         tick_precision=2,
         margin=None,
         divider_linestyle=None,
+        hist_size=0.9,
     ):
-
-        self._hist_size = 0.9
+        self._parent_cb = None
+        self._hist_size_ = hist_size
 
         self._extend_frac = extend_frac
 
@@ -93,6 +94,21 @@ class ColorBarBase:
     @property
     def _hist_orientation(self):
         return "vertical" if self.orientation == "horizontal" else "horizontal"
+
+    @property
+    def _hist_size(self):
+        if self._parent_cb is None:
+            return self._hist_size_
+        else:
+            return self._parent_cb._hist_size_
+
+    @_hist_size.setter
+    def _hist_size(self, size):
+        if self._parent_cb is None:
+            self._hist_size_ = size
+        else:
+            self._hist_size_ = size
+            self._parent_cb._hist_size_ = size
 
     def _get_data(self):
         # TODO
@@ -535,8 +551,6 @@ class ColorBarBase:
 
         self._attach_lim_cbs()  # re-attach ylim callbacks
 
-        self._set_hist_size()
-
         self._plot_colorbar(**self._cb_kwargs)
 
         self._plot_histogram(
@@ -725,7 +739,6 @@ class ColorBar(ColorBarBase):
         # we need to re-draw since the background axis size has changed!
         BM._refetch_layer(self._layer)
         BM._refetch_layer("__SPINES__")
-        self._m.redraw("__SPINES__")
 
     def _set_hist_size(self, *args, **kwargs):
         super()._set_hist_size(*args, **kwargs)
@@ -1530,12 +1543,12 @@ class ColorBar(ColorBarBase):
             extend_frac=extend_frac,
             margin=margin,
             divider_linestyle=divider_linestyle,
+            hist_size=hist_size,
         )
         cb._set_map(m)
         cb._setup_axes(pos, m.ax)
         cb._add_axes_to_layer(dynamic=dynamic_shade_indicator)
 
-        cb._set_hist_size(hist_size)
         cb.set_scale(log)
         cb._plot_colorbar(extend=extend, **kwargs)
 
