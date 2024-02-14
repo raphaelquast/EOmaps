@@ -191,6 +191,7 @@ class BlitManager(LayerParser):
         self._disable_update = False
 
         self._m = m
+        self._bg_layer = self._m.layer
 
         self._artists = dict()
 
@@ -207,7 +208,6 @@ class BlitManager(LayerParser):
 
         self._after_update_actions = []
         self._after_restore_actions = []
-        self._bg_layer = "base"
 
         self._artists_to_clear = dict()
 
