@@ -132,6 +132,7 @@ class DataSpecs(object):
 
     @property
     def data(self):
+        """The data assigned to this Maps-object."""
         return self._data
 
     @data.setter
@@ -140,6 +141,7 @@ class DataSpecs(object):
 
     @property
     def crs(self):
+        """The projection of the data-coordinates."""
         return self._crs
 
     @crs.setter
@@ -148,6 +150,7 @@ class DataSpecs(object):
 
     @property
     def x(self):
+        """The x-coordinate values of the data (or the name of the column to use)."""
         return self._x
 
     @x.setter
@@ -156,6 +159,7 @@ class DataSpecs(object):
 
     @property
     def y(self):
+        """The y-coordinate values of the data (or the name of the column to use)."""
         return self._y
 
     @y.setter
@@ -164,6 +168,7 @@ class DataSpecs(object):
 
     @property
     def parameter(self):
+        """The name of the parameter (or the name of the column to use as parameter)."""
         return self._parameter
 
     @parameter.setter
@@ -196,6 +201,7 @@ class DataSpecs(object):
 
     @property
     def encoding(self):
+        """The encoding of the data-values."""
         return self._encoding
 
     @encoding.setter
@@ -206,6 +212,7 @@ class DataSpecs(object):
 
     @property
     def cpos(self):
+        """Indicator if the coordinates represent center- or corner-positions."""
         return self._cpos
 
     @cpos.setter
@@ -214,6 +221,7 @@ class DataSpecs(object):
 
     @property
     def cpos_radius(self):
+        """The pixel-extent used for determining corner-positions."""
         return self._cpos_radius
 
     @cpos_radius.setter
@@ -280,6 +288,7 @@ class ClassifySpecs(object):
 
     @property
     def scheme(self):
+        """The name of the used classification scheme"""
         return self._scheme
 
     @scheme.setter
