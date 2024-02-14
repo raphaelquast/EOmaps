@@ -3889,7 +3889,7 @@ class Maps(metaclass=_MapsMeta):
 
             # cleanup all artists and cached background-layers from the blit-manager
             if not self._is_sublayer:
-                self.BM.cleanup_layer(self.layer)
+                self.BM._cleanup_layer(self.layer)
 
             # remove the child from the parent Maps object
             if self in self.parent._children:

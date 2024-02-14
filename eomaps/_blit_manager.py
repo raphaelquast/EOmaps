@@ -1479,7 +1479,7 @@ class BlitManager(LayerParser):
 
         return action
 
-    def cleanup_layer(self, layer):
+    def _cleanup_layer(self, layer):
         """Trigger cleanup methods for a given layer."""
         self._cleanup_bg_artists(layer)
         self._cleanup_artists(layer)
