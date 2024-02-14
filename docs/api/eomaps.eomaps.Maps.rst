@@ -11,23 +11,6 @@
 
 .. autoclass:: Maps
 
-Class Methods
--------------
-
-.. autosummary::
-    :toctree: ../generated
-    :template: obj_with_attributes_no_toc.rst
-    :nosignatures:
-
-    Maps.config
-
-.. autosummary::
-    :toctree: ../generated
-    :template: obj_with_attributes_no_toc.rst
-    :nosignatures:
-
-    Maps.from_file
-
 Properties
 ----------
 
@@ -47,6 +30,8 @@ Properties
     :nosignatures:
 
     Maps.data
+    Maps.data_specs
+    Maps.classify_specs
     Maps.colorbar
 
 
@@ -62,13 +47,23 @@ Layers and Maps
     Maps.new_map
     Maps.new_inset_map
 
+
 .. autosummary::
     :toctree: ../generated
     :template: obj_with_attributes_no_toc.rst
     :nosignatures:
 
     Maps.new_layer
+
+
+.. autosummary::
+    :toctree: ../generated
+    :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
+
     Maps.new_layer_from_file
+    Maps.from_file
+
 
 .. autosummary::
     :toctree: ../generated
@@ -90,6 +85,7 @@ Map Features
 
     Maps.add_feature
     Maps.add_wms
+
 
 .. autosummary::
     :toctree: ../generated
@@ -123,6 +119,17 @@ Callbacks
     :nosignatures:
 
     Maps.cb
+
+
+.. autosummary::
+    :toctree: ../generated
+    :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
+
+    Maps.cb.click
+    Maps.cb.pick
+    Maps.cb.keypress
+    Maps.cb.move
 
 
 Data visualization
@@ -214,6 +221,14 @@ Utilities
 
 Miscellaneous
 -------------
+
+.. autosummary::
+    :toctree: ../generated
+    :template: obj_with_attributes_no_toc.rst
+    :nosignatures:
+
+    Maps.config
+    Maps.BM
 
 .. autosummary::
     :toctree: ../generated
