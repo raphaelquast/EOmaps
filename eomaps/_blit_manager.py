@@ -203,7 +203,7 @@ class BlitManager(LayerParser):
         self._unmanaged_artists_layer = "base"
 
         # grab the background on every draw
-        self.cid = self.canvas.mpl_connect("draw_event", self.on_draw)
+        self._cid_draw = self.canvas.mpl_connect("draw_event", self._on_draw_cb)
 
         self._after_update_actions = []
         self._after_restore_actions = []
@@ -814,16 +814,16 @@ class BlitManager(LayerParser):
     def _disconnect_draw(self):
         try:
             # temporarily disconnect draw-event callback to avoid recursion
-            if self.cid is not None:
-                self.canvas.mpl_disconnect(self.cid)
-                self.cid = None
+            if self._cid_draw is not None:
+                self.canvas.mpl_disconnect(self._cid_draw)
+                self._cid_draw = None
             yield
         finally:
             # reconnect draw event
-            if self.cid is None:
-                self.cid = self.canvas.mpl_connect("draw_event", self.on_draw)
+            if self._cid_draw is None:
+                self._cid_draw = self.canvas.mpl_connect("draw_event", self._on_draw_cb)
 
-    def on_draw(self, event):
+    def _on_draw_cb(self, event):
         """Callback to register with 'draw_event'."""
 
         if self._disable_draw:
@@ -836,10 +836,10 @@ class BlitManager(LayerParser):
 
             renderer = cv.get_renderer()
             if renderer is None:
-                # don't run on_draw if no renderer is available
+                # don't run if no renderer is available
                 return
         else:
-            # don't run on_draw if no renderer is available
+            # don't run if no renderer is available
             # (this is true for svg export where mpl export routines
             # are used to avoid issues)
             if loglevel <= 5:
