@@ -1552,7 +1552,12 @@ class PickContainer(_ClickContainer):
         return False, None
 
     def _get_pickdict(self, event):
-        event_ind = event.ind
+        event_ind = getattr(event, "ind", None)
+        if event_ind is None:
+            if _log.getEffectiveLevel() <= logging.DEBUG:
+                _log.debug(f"Pick-event without index encountered: {event}")
+            return
+
         n_inds = len(np.atleast_1d(event_ind))
         # mouseevent = event.mouseevent
         noval = [None] * n_inds if n_inds > 1 else None
@@ -1619,6 +1624,10 @@ class PickContainer(_ClickContainer):
 
         clickdict = self._get_pickdict(event)
 
+        # if no data was found, don't execute the callbacks
+        if clickdict is None:
+            return
+
         if event.mouseevent.dblclick:
             cbs = self.get.cbs.get("double", dict())
         else:
@@ -1647,12 +1656,11 @@ class PickContainer(_ClickContainer):
                     return
 
                 cb = bcbs[key]
-                if clickdict is not None:
-                    if self._consecutive_multipick is False:
-                        cb(**clickdict)
-                    else:
-                        for c in clickdict:
-                            cb(**c)
+                if self._consecutive_multipick is False:
+                    cb(**clickdict)
+                else:
+                    for c in clickdict:
+                        cb(**c)
 
     def _reset_cids(self):
         # clear all temporary artists
