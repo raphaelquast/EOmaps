@@ -4752,6 +4752,12 @@ class Maps(metaclass=_MapsMeta):
 
         # the shape is always set after _prepare data!
         if self.shape.name == "shade_points" and self._data_manager.x0_1D is None:
+            # fill masked-values with None to avoid issues with numba not being
+            # able to deal with numpy-arrays
+            # TODO report this to datashader to get it fixed properly?
+            if isinstance(zdata, np.ma.masked_array):
+                zdata = zdata.filled(None)
+
             df = pd.DataFrame(
                 dict(
                     x=x0.ravel(),
