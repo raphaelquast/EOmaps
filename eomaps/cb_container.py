@@ -164,10 +164,11 @@ class _CallbackContainer(object):
                     obj = self._getobj(m)
 
                     # only include objects that are on the same layer
+                    # (irrespective if a toolbar mode is active or not)
                     if (
                         obj is not None
                         and obj._execute_cb(obj._m.layer)
-                        and not obj._check_toolbar_mode()
+                        # and not obj._check_toolbar_mode()
                     ):
                         objs.append(obj)
             else:
@@ -177,6 +178,7 @@ class _CallbackContainer(object):
                     if event.inaxes == m.ax:
                         obj = self._getobj(m)
                         # only include objects that are on the same layer
+                        # (and only if no toolbar mode is active!)
                         if (
                             obj is not None
                             and obj._execute_cb(obj._m.layer)
