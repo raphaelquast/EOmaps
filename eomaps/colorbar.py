@@ -1567,6 +1567,9 @@ class ColorBar(ColorBarBase):
 
         cb._set_tick_formatter()
 
+        if label is None:
+            label = m.data_specs.parameter
+
         cb.set_labels(cb_label=label, hist_label=hist_label)
 
         if dynamic_shade_indicator:
