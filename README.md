@@ -24,7 +24,7 @@
 
 ## What can I do with EOmaps?
 
-**EOmaps** is built on top of [matplotlib](https://matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and integrates well with the scientific python infrastructure (e.g., `numpy`, `pandas`, `geopandas`, `xarray` etc.), allowing you to visualize point-, raster- or vector-datasets provided in almost any format you can imagine, no matter if you're dealing with just a few unsorted datapoints or multi-dimensional stacks of global high-resolution datasets.  
+**EOmaps** is built on top of [matplotlib](https://matplotlib.org/) and [cartopy](https://scitools.org.uk/cartopy/docs/latest/) and integrates well with the scientific python infrastructure (e.g., [numpy](https://numpy.org/), [pandas](https://pandas.pydata.org/), [geopandas](https://geopandas.org/), [xarray](https://xarray.dev/) etc.), allowing you to visualize point-, raster- or vector-datasets provided in almost any format you can imagine, no matter if you're dealing with just a few unsorted datapoints or multi-dimensional stacks of global high-resolution datasets.  
 
 Figures created with EOmaps are multi-layered, so you can (transparently) overlay and interactively compare your datasets with ease. With the accompanying GUI widget, you can quickly switch layers, change the layout, examine the large collection of features and web-map services, and explore the capabilities of EOmaps.
 Once you're map is ready, you can export it as high-resolution image or vector-graphic for further editing.
