@@ -578,7 +578,7 @@ class DataManager:
     def _remove_existing_coll(self):
         if self.m.coll is not None:
             try:
-                if self.m._coll_dynamic:
+                if getattr(self.m, "_coll_dynamic", False):
                     self.m.BM.remove_artist(self.m._coll)
                 else:
                     self.m.BM.remove_bg_artist(self.m._coll)
