@@ -779,6 +779,8 @@ class DataManager:
 
                 x1 = x1 - x1 % bs + bs
                 y1 = y1 - y1 % bs + bs
+            else:
+                bs = None
         else:
             bs = None
 
@@ -922,6 +924,8 @@ class DataManager:
 
         # only zoom if the shape provides a _maxsize attribute
         if self._current_data["z_data"] is None or maxsize is None:
+            return
+        elif blocksize is None:
             return
         elif self._current_data["z_data"].size < maxsize:
             return
