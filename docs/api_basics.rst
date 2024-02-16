@@ -19,16 +19,34 @@ The first :py:class:`Maps` object that is created will initialize a
 `cartopy.GeoAxes <https://scitools.org.uk/cartopy/docs/latest/reference/generated/cartopy.mpl.geoaxes.GeoAxes.html?highlight=geoaxes#cartopy.mpl.geoaxes.GeoAxes>`_
 for a map.
 
-.. code-block:: python
-    :name: test_init_map_objects
 
-    from eomaps import Maps
-    m = Maps(crs=4326,               # create a Maps-object with a map in lon/lat (epsg=4326) projection
-        layer="first layer",         # assign the layer "first_layer"
-        figsize=(7, 5))              # set the figure-size to 7x5
-    m.set_extent((-25, 35, 25, 70))  # set the extent of the map
-    m.add_feature.preset.coastline() # add coastlines to the map
-    m.add_title("my map")            # add a title above the map
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+        :columns: 12 12 12 8
+
+        .. code-block:: python
+            :name: test_init_map_objects
+
+            from eomaps import Maps
+            m = Maps(                        # Create a Maps-object
+                crs=4326,                    #     Use lon/lat (epsg=4326) projection
+                layer="base",                #     Assign the layer-name "base"
+                figsize=(6, 5))              #     Set the figure-size to 6x5
+
+            m.set_extent((-25, 35, 30, 70))  # Set the extent of the map
+            m.set_frame(linewidth=3)         # Set the linewidth of the frame
+
+            m.add_feature.preset.coastline() # Add coastlines
+            m.add_feature.preset.ocean()     # Add ocean-coloring
+            m.add_title("My first map",      # Add a title
+                        fontsize=16)         #     With a fontsize of 16pt
+
+    .. grid-item::
+        :columns: 8 8 8 4
+
+        .. image:: _static/minigifs/basics_first_map.png
+
 
 - ``crs`` represents the projection used for plotting
 - ``layer`` represents the name of the layer associated with the Maps-object (see :ref:`layers`).
@@ -379,6 +397,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 .. grid:: 1 1 1 2
 
     .. grid-item::
+        :columns: 12 12 12 8
 
          .. code-block:: python
              :name: test_gridpos_1
@@ -392,13 +411,14 @@ To position the map in a (virtual) grid, one of the following options are possib
              ax = m.f.add_subplot(2, 1, 2)
 
     .. grid-item-card::
-        :width: 50%
+        :columns: 6 6 6 4
         :img-background: _static/grids/grid1.png
 
 
 .. grid:: 1 1 1 2
 
     .. grid-item::
+        :columns: 12 12 12 8
 
         .. code-block:: python
             :name: test_gridpos_2
@@ -415,13 +435,14 @@ To position the map in a (virtual) grid, one of the following options are possib
             ax = m.f.add_subplot(1, 2, 2)
 
     .. grid-item-card::
-        :width: 50%
+        :columns: 6 6 6 4
         :img-background: _static/grids/grid2.png
 
 
 .. grid:: 1 1 1 2
 
     .. grid-item::
+        :columns: 12 12 12 8
 
         .. code-block:: python
             :name: test_gridpos_3
@@ -438,7 +459,7 @@ To position the map in a (virtual) grid, one of the following options are possib
             ax = m.f.add_subplot(1, 2, 2)
 
     .. grid-item-card::
-        :width: 50%
+        :columns: 6 6 6 4
         :img-background: _static/grids/grid3.png
 
 
@@ -453,6 +474,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 .. grid:: 1 1 1 2
 
     .. grid-item::
+        :columns: 12 12 12 8
 
         .. code-block:: python
             :name: test_gridpos_4
@@ -464,13 +486,14 @@ To position the map in a (virtual) grid, one of the following options are possib
             ax = m.f.add_subplot(212)
 
     .. grid-item-card::
-        :width: 50%
+        :columns: 6 6 6 4
         :img-background: _static/grids/grid4.png
 
 
 .. grid:: 1 1 1 2
 
     .. grid-item::
+        :columns: 12 12 12 8
 
         .. code-block:: python
             :name: test_gridpos_5
@@ -485,7 +508,7 @@ To position the map in a (virtual) grid, one of the following options are possib
             ax = m.f.add_subplot(224)
 
     .. grid-item-card::
-        :width: 50%
+        :columns: 6 6 6 4
         :img-background: _static/grids/grid5.png
 
 
@@ -495,6 +518,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 .. grid:: 1 1 1 2
 
     .. grid-item::
+        :columns: 12 12 12 8
 
         .. code-block:: python
             :name: test_gridpos_6
@@ -508,7 +532,7 @@ To position the map in a (virtual) grid, one of the following options are possib
             ax = m.f.add_subplot(gs[1,:])
 
     .. grid-item-card::
-        :width: 50%
+        :columns: 6 6 6 4
         :img-background: _static/grids/grid6.png
 
 
@@ -530,6 +554,7 @@ To set the absolute position of the map, provide a list of 4 floats representing
 .. grid:: 1 1 1 2
 
     .. grid-item::
+        :columns: 12 12 12 8
 
         .. code-block:: python
             :name: test_gridpos_abspos
@@ -541,7 +566,7 @@ To set the absolute position of the map, provide a list of 4 floats representing
             ax = m.f.add_axes((.35, .15, .6, .2))
 
     .. grid-item-card::
-        :width: 50%
+        :columns: 6 6 6 4
         :img-background: _static/grids/grid7.png
 
 
