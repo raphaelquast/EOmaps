@@ -34,8 +34,6 @@ def setup(app):
     # add rc role to avoid undefined role warnings from inherited docstrings.
     app.add_role("rc", mpl_rc_role_subst)
 
-    app.add_css_file("custom_css.css")
-
     # add handling for skip-member event
     app.connect("autodoc-skip-member", autodoc_skip_member)
 
@@ -106,6 +104,7 @@ epub_show_urls = "footnote"
 
 templates_path = ["_templates"]
 html_static_path = ["_static"]
+html_css_files = ["custom_css.css"]
 
 html_theme = "sphinx_rtd_theme"
 

@@ -54,16 +54,19 @@ for a map.
   (e.g.: ``figsize``, ``frameon``, ``edgecolor`` etc).
 
 
-Possible ways for specifying the ``crs`` for plotting are:
+.. dropdown:: Possible ways for specifying the ``crs`` for plotting
+    :open:
+    :icon: info
+    :color: info
 
-- If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.)
+    - If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.)
 
-  - 4326 defaults to `PlateCarree` projection
+      - 4326 defaults to `PlateCarree` projection
 
-- All other CRS usable for plotting are accessible via ``Maps.CRS``, e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.Equi7_EU``...
+    - All other CRS usable for plotting are accessible via ``Maps.CRS``, e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.Equi7_EU``...
 
-  - ``Maps.CRS`` is just an accessor for ``cartopy.crs``
-  - For a full list of available projections see: `Cartopy projections <https://scitools.org.uk/cartopy/docs/v0.15/crs/projections.html>`_
+      - ``Maps.CRS`` is just an accessor for ``cartopy.crs``
+      - For a full list of available projections see: `Cartopy projections <https://scitools.org.uk/cartopy/docs/v0.15/crs/projections.html>`_
 
 .. autosummary::
     :nosignatures:
@@ -79,48 +82,70 @@ Possible ways for specifying the ``crs`` for plotting are:
 Layer management
 ~~~~~~~~~~~~~~~~
 
+A :py:class:`Maps` object represents one (or more) of the following things **on the assigned layer**:
+
+- a collection of features, callbacks,..
+- a single dataset  (and associated callbacks)
+
+
+You can create as many layers as you need! The following image explains how it works in general:
+
 .. image:: _static/intro.png
    :width: 70%
 
+.. dropdown:: Creating new layers
+    :icon: info
+    :color: info
 
-A :py:class:`Maps` object represents a collection of features, callbacks,.. **on the assigned layer**.
+    To create **a NEW layer**, use :py:meth:`m.new_layer("layer-name") <Maps.new_layer>`.
 
-Once you have created a map, you can create **additional** :py:class:`Maps` **objects for the same map** by using :py:meth:`Maps.new_layer`.
-
-🌱  If no explicit layer-name is provided, the returned :py:class:`Maps` object will use the same layer as the parent :py:class:`Maps` object.
-
-  - This is especially useful if you want to plot **multiple datasets on the same map and layer**.
-
-🌱  To create **a NEW layer** named ``"my_layer"``, use ``m2 = m.new_layer("my_layer")``
-
-  - Features, Colorbars etc. added to a :py:class:`Maps` object are only visible if the associated layer is visible.
-  - Callbacks are only executed if the associated layer is visible.
-  - See :ref:`combine_layers` on how to select the currently visible layer(s).
+    - Features, Colorbars etc. added to a :py:class:`Maps` object are only visible if the associated layer is visible.
+    - Callbacks are only executed if the associated layer is visible.
+    - See :ref:`combine_layers` on how to select the currently visible layer(s).
 
 
-.. code-block:: python
-    :name: test_layers_01
+    .. code-block:: python
+        :name: test_layers_create_new_layer
 
-    from eomaps import Maps
-    m = Maps()                           # same as `m = Maps(crs=4326, layer="base")`
-    m.add_feature.preset.coastline()     # add coastlines to the "base" layer
+        from eomaps import Maps
+        m = Maps()                           # same as `m = Maps(crs=4326, layer="base")`
+        m.add_feature.preset.coastline()     # add coastlines to the "base" layer
 
-    m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
-    m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
+        m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
+        m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
 
-    m_ocean2 = m_ocean.new_layer()       # "m_ocean2" is just another Maps-object on the same layer as "m_ocean"!
-    m_ocean2.set_data(                   # assign a dataset to this Maps-object
-        data=[.14,.25,.38],
-        x=[1,2,3], y=[3,5,7],
-        crs=4326)
-    m_ocean2.set_shape.ellipses()        # set the shape that is used to represent the datapoints
-    m_ocean2.plot_map()                  # plot the data
-
-    m.show_layer("ocean")                # show the "ocean" layer
-    m.util.layer_selector()              # get a utility widget to quickly switch between existing layers
+        m.show_layer("ocean")                # show the "ocean" layer
+        m.util.layer_selector()              # get a utility widget to quickly switch between existing layers
 
 
-.. admonition:: The "all" layer
+.. dropdown:: Multiple ``Maps`` objects on the same layer
+    :icon: info
+    :color: info
+
+    If no explicit layer-name is provided, (e.g. :py:meth:`m.new_layer() <Maps.new_layer>`) the returned :py:class:`Maps` object will use the same layer as the parent :py:class:`Maps` object.
+
+    - This is especially useful if you want to plot **multiple datasets on the same map and layer**.
+
+
+    .. code-block:: python
+        :name: test_layers_on_same_layer
+
+        from eomaps import Maps
+        m = Maps()                           # same as `m = Maps(layer="base")`
+        m.add_feature.preset.coastline()     # add coastlines to the "base" layer
+
+        m2 = m.new_layer()                   # "m2" is just another Maps-object on the same layer as "m"!
+        m2.set_data(                         # assign a dataset to this Maps-object
+            data=[.14,.25,.38],
+            x=[1,2,3], y=[3,5,7],
+            crs=4326)
+        m2.plot_map()                        # plot the data
+        m2.cb.pick.attach.annotate()         # attach a callback that picks datapoints from the data assigned to "m2"
+
+
+.. dropdown:: The "all" layer
+    :icon: info
+    :color: info
 
     | There is one layer-name that has a special meaning... the ``"all"`` layer.
     | Any callbacks and features added to this layer will be **executed on ALL other layers** as well!
@@ -142,8 +167,10 @@ Once you have created a map, you can create **additional** :py:class:`Maps` **ob
         m_ocean.add_feature.preset.ocean()   # add ocean-coloring to the "ocean" layer
         m.show_layer("ocean")                # show the "ocean" layer (note that it has coastlines as well!)
 
+.. dropdown:: Artists added with methods **outside of EOmaps**
+    :icon: info
+    :color: info
 
-.. admonition:: Artists added with methods **outside of EOmaps**
 
     If you use methods that are **NOT provided by EOmaps**, the corresponding artists will always appear on the ``"base"`` layer by default!
     (e.g. ``cartopy`` or ``matplotlib`` methods accessible via ``m.ax.`` or ``m.f.`` like ``m.ax.plot(...)``)
@@ -177,7 +204,13 @@ Once you have created a map, you can create **additional** :py:class:`Maps` **ob
 🗗 Combine & compare multiple layers
 ************************************
 
-.. admonition:: Using the :ref:`companion_widget`
+All maps of a figure always show **the same visible layer**.
+
+The visible layer can be a **single layer-name**, or a **combination of multiple layer-names** in order to to transparently combine/overlay multiple layers.
+
+.. dropdown:: Using the :ref:`companion_widget` to switch/overlay layers
+    :icon: info
+    :color: info
 
     Usually it is most convenient to combine and compare layers via the :ref:`companion_widget`.
 
@@ -198,69 +231,76 @@ Once you have created a map, you can create **additional** :py:class:`Maps` **ob
 
     .. image:: _static/minigifs/rearrange_layers.gif
 
-
-To programmatically switch between layers or view a layer that represents a **combination of multiple existing layers**, use :py:meth:`Maps.show_layer`.
-
-🌱 If you provide a single layer-name, the map will show the corresponding layer, e.g. ``m.show_layer("my_layer")``
-
-🌱 To **(transparently) overlay multiple existing layers**, use one of the following options:
-
-- Provide **multiple layer names or tuples** of the form ``(< layer-name >, < transparency [0-1] >)``
-
-  - ``m.show_layer("A", "B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
-  - ``m.show_layer("A", ("B", 0.5))`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
-
-- Provide a **combined layer name** by separating the individual layer names you want to show with a ``"|"`` character.
-
-  - ``m.show_layer("A|B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
-  - To transparently overlay a layer, add the transparency to the layer-name in curly-brackets, e.g.: ``"<layer-name>{<transparency>}"``.
-
-    - ``m.show_layer("A|B{0.5}")`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
+.. dropdown:: Programmatically switch/overlay layers
+    :icon: info
+    :color: info
 
 
-.. code-block:: python
-    :name: test_transparent_layer_overlay
+    To programmatically switch between layers or view a layer that represents a **combination of multiple existing layers**, use :py:meth:`Maps.show_layer`.
 
-    from eomaps import Maps
-    m = Maps(layer="first")
-    m.add_feature.physical.land(fc="k")
+    If you provide a single layer-name, the map will show the corresponding layer, e.g. ``m.show_layer("my_layer")``
 
-    m2 = m.new_layer("second")                # create a new layer and plot some data
-    m2.add_feature.preset.ocean(zorder=2)
-    m2.set_data(data=[.14,.25,.38],
-                x=[10,20,30], y=[30,50,70],
-                crs=4326)
-    m2.plot_map(zorder=1)                     # plot the data "below" the ocean
+    To **(transparently) overlay multiple existing layers**, use one of the following options:
 
-    m.show_layer("first", ("second", .75))   # overlay the second layer with 25% transparency
+    - Provide **multiple layer names or tuples** of the form ``(< layer-name >, < transparency [0-1] >)``
 
+      - ``m.show_layer("A", "B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
+      - ``m.show_layer("A", ("B", 0.5))`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
 
-.. currentmodule:: eomaps.callbacks.ClickCallbacks
+    - Provide a **combined layer name** by separating the individual layer names you want to show with a ``"|"`` character.
 
-🌱 If you want to overlay a part of the screen with a different layer, have a look at :py:meth:`peek_layer` callbacks**!
+      - ``m.show_layer("A|B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
+      - To transparently overlay a layer, add the transparency to the layer-name in curly-brackets, e.g.: ``"<layer-name>{<transparency>}"``.
+
+        - ``m.show_layer("A|B{0.5}")`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
 
 
-.. autosummary::
-    :nosignatures:
+    .. code-block:: python
+        :name: test_transparent_layer_overlay
 
-    peek_layer
+        from eomaps import Maps
+        m = Maps(layer="first")
+        m.add_feature.physical.land(fc="k")
 
+        m2 = m.new_layer("second")                # create a new layer and plot some data
+        m2.add_feature.preset.ocean(zorder=2)
+        m2.set_data(data=[.14,.25,.38],
+                    x=[10,20,30], y=[30,50,70],
+                    crs=4326)
+        m2.plot_map(zorder=1)                     # plot the data "below" the ocean
 
-
-.. code-block:: python
-    :name: test_peek_layer_cb
-
-    from eomaps import Maps
-    m = Maps()
-    m.all.add_feature.preset.coastline()
-    m.add_feature.preset.urban_areas()
-
-    m.add_feature.preset.ocean(layer="ocean")
-    m.add_feature.physical.land(layer="land", fc="g")
-    m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)], shape="round", how=0.4)
+        m.show_layer("first", ("second", .75))   # overlay the second layer with 25% transparency
 
 
-.. admonition:: The "stacking order" of features and layers
+.. dropdown:: Interactively overlay layers
+    :icon: info
+    :color: info
+
+    .. currentmodule:: eomaps.callbacks.ClickCallbacks
+
+    If you want to interactively overlay a part of the screen with a different layer, have a look at :py:meth:`peek_layer` callbacks!
+
+    .. autosummary::
+        :nosignatures:
+
+        peek_layer
+
+    .. code-block:: python
+        :name: test_peek_layer_cb
+
+        from eomaps import Maps
+        m = Maps()
+        m.all.add_feature.preset.coastline()
+        m.add_feature.preset.urban_areas()
+
+        m.add_feature.preset.ocean(layer="ocean")
+        m.add_feature.physical.land(layer="land", fc="g")
+        m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)], shape="round", how=0.4)
+
+
+.. dropdown:: The "stacking order" of features and layers
+    :icon: info
+    :color: info
 
     The stacking order of features at the **same layer** is controlled by the ``zorder`` argument.
 
@@ -306,14 +346,18 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
     m = Maps()
     m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
 
-.. admonition:: Export to clipboard (``ctrl + c``)
+.. dropdown:: Export to clipboard (``ctrl + c``)
+    :icon: info
+    :color: info
 
     If you use ``PyQt5`` as matplotlib-backend, you can also press (``control`` + ``c``) to export the figure to the clipboard.
 
     The export will be performed using the **currently set export-parameters** in the :ref:`companion_widget` .
     Alternatively, you can also programmatically set the export-parameters via :py:meth:`Maps.set_clipboard_kwargs` .
 
-.. admonition:: Notes on exporting high-dpi figures
+.. dropdown:: Notes on exporting high-dpi figures
+    :icon: info
+    :color: info
 
     EOmaps tries its best to follow the WYSIWYG concept (e.g. *"What You See Is What You Get"*).
     However, if you export the map with a dpi-value other than ``100``, there are certain circumstances
