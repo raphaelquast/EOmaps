@@ -355,7 +355,6 @@ class Maps(metaclass=_MapsMeta):
     add_feature = NaturalEarthFeatures
     util = Utilities
     cb = CallbackContainer
-    BM = BlitManager
 
     classify_specs = ClassifySpecs
     data_specs = DataSpecs
@@ -471,14 +470,7 @@ class Maps(metaclass=_MapsMeta):
         self._layout_editor = None
 
         self.cb = self.cb(weakref.proxy(self))  # accessor for the callbacks
-
         self._init_figure(ax=ax, plot_crs=crs, **kwargs)
-
-        # Initialize the  Blit-Manager used to dynamically update the plots.
-        if self.parent == self:  # use == instead of "is" since the parent is a proxy!:
-            self.BM = BlitManager(weakref.proxy(self))
-        else:
-            self.BM = self.parent.BM
 
         if WebMapContainer is not None:
             self.add_wms = self.add_wms(weakref.proxy(self))
@@ -643,6 +635,15 @@ class Maps(metaclass=_MapsMeta):
             self._log_on_event_cids[event] = self.f.canvas.mpl_connect(
                 event, log_message
             )
+
+    @property
+    def BM(self):
+        """The Blit-Manager used to dynamically update the plots."""
+        m = weakref.proxy(self)
+        if self.parent._BM is None:
+            self.parent._BM = BlitManager(m)
+            self.parent._BM._bg_layer = m.parent.layer
+        return self.parent._BM
 
     @property
     def layer(self):
