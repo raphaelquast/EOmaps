@@ -84,10 +84,10 @@ class ScaleBar:
 
         Parameters
         ----------
-        lon, lat : float
+        pos : (float, float)
             The longitude and latitude of the starting point for the scalebar
             (If None, the center of the axis is used )
-        azim : float
+        rotation : float
             The azimuth-direction (in degrees) in which the scalebar points.
             The default is 90.
         preset : str
