@@ -81,7 +81,8 @@ class Compass:
 
             The default is "axes".
         scale : float, optional
-            A scale-factor for the size of the compass. The default is 10.
+            A scale-factor for the size of the compass in relation to the size of the
+            whole figure. The default is 10.
         style : str, optional
 
             - "north arrow" : draw only a north-arrow
