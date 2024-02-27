@@ -464,8 +464,23 @@ class read_file:
 
             data = usencfile[parameter]
             if coords is None:
-                coords = list(data.dims)
-                if len(coords) != 2:
+                dims = list(data.dims)
+
+                # check if coordinate variable-names can be identified
+                dims_lower = [i.casefold() for i in dims]
+                for c0, c1 in [
+                    ("x", "y"),
+                    ("lon", "lat"),
+                    ("longitude", "latitude"),
+                ]:
+                    if (c0.casefold() in dims_lower) and (c1.casefold() in dims_lower):
+                        coords = (
+                            dims[dims_lower.index(c0)],
+                            dims[dims_lower.index(c1)],
+                        )
+                        break
+
+                if coords is None:
                     raise AssertionError(
                         "EOmaps: could not identify the coordinate-dimensions! "
                         + "Please provide coordinate-names explicitly via the "

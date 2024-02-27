@@ -194,7 +194,7 @@ class ShapeSelector(QtWidgets.QFrame):
         aggregator=(str,),
     )
 
-    def __init__(self, *args, m=None, default_shape="shade_raster", **kwargs):
+    def __init__(self, *args, m=None, default_shape="shade_points", **kwargs):
         super().__init__(*args, **kwargs)
 
         self.m = m
@@ -319,7 +319,7 @@ class ShapeSelector(QtWidgets.QFrame):
 class PlotFileWidget(QtWidgets.QWidget):
 
     file_endings = None
-    default_shape = "shade_raster"
+    default_shape = "shade_points"
 
     def __init__(
         self,
@@ -884,19 +884,23 @@ class PlotNetCDFWidget(PlotXarrayWidget):
         self.x.set_complete_vals(cols)
         self.y.set_complete_vals(cols)
 
-        if "lon" in cols:
-            self.x.setText("lon")
-        elif "x" in cols:
-            self.x.setText("x")
-        else:
-            self.x.setText(cols[0])
+        self.x.setText("?")
+        self.y.setText("?")
 
-        if "lat" in cols:
-            self.y.setText("lat")
-        elif "y" in cols:
-            self.y.setText("y")
-        else:
-            self.x.setText(cols[1])
+        # check if coordinate variable-names can be identified
+        cols_lower = [i.casefold() for i in cols]
+        for c0, c1 in [
+            ("x", "y"),
+            ("lon", "lat"),
+            ("longitude", "latitude"),
+        ]:
+            if (c0.casefold() in cols_lower) and (c1.casefold() in cols_lower):
+                col0 = cols[cols_lower.index(c0)]
+                col1 = cols[cols_lower.index(c1)]
+
+                self.x.setText(col0)
+                self.y.setText(col1)
+                break
 
         self.parameter.set_complete_vals(cols)
         self.parameter.setText(
