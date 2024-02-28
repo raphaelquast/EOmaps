@@ -3414,6 +3414,7 @@ class Maps(metaclass=_MapsMeta):
         if layer is None:
             layer = self.layer
         self.BM.add_artist(a, layer=layer)
+        self.BM.update()
 
         return a
 
