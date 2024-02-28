@@ -4141,12 +4141,14 @@ class Maps(metaclass=_MapsMeta):
 
         for m in (self.parent, *self.parent._children):
             if m.coll is not None and m.shape.name.startswith("shade_"):
-                if dpi is None:
-                    m.coll.plot_width = int(w)
-                    m.coll.plot_height = int(h)
-                else:
+                # TODO for now, only handle numeric dpi-values to avoid issues.
+                # (savefig also seems to support strings like "figure" etc.)
+                if isinstance(dpi, (int, float, np.number)):
                     m.coll.plot_width = int(w / fig_dpi * dpi)
                     m.coll.plot_height = int(h / fig_dpi * dpi)
+                else:
+                    m.coll.plot_width = int(w)
+                    m.coll.plot_height = int(h)
 
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
