@@ -356,6 +356,22 @@ class ClickPrintToConsoleCheckbox(_CallbackCheckbox):
         return self._m.all.cb.click.attach.print_to_console(**kwargs)
 
 
+class ClickPeekLayerCheckbox(_CallbackCheckbox):
+    _description = "Peek Layer (Click)"
+
+    def __init__(self, *args, layer=None, **kwargs):
+        assert (
+            layer is not None
+        ), "EOmaps: You must specify the layer for the PeekLayerCheckbox!"
+
+        self._description = f"Peek Layer: '{layer}'"
+
+        super().__init__(*args, layer=layer, **kwargs)
+
+    def attach_callback(self, **kwargs):
+        return self._m.all.cb.click.attach.peek_layer(**kwargs)
+
+
 # NOTE: pick callbacks are attached to the provided Maps objects,
 #       click callback are attached to m.all!
 class PickAnnotateCheckbox(_CallbackCheckbox):
