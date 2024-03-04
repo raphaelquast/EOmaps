@@ -4102,11 +4102,6 @@ class Maps(metaclass=_MapsMeta):
             self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
 
         active_backend = plt.get_backend()
-        # we only need to call show if a new figure has been created!
-        if newfig and active_backend == "module://ipympl.backend_nbagg":
-            # make sure to call show only if we use an interactive backend...
-            # or within the ipympl backend (otherwise it will block subsequent code!)
-            plt.show()
 
         if active_backend == "module://matplotlib_inline.backend_inline":
             # close the figure to avoid duplicated (empty) plots created
