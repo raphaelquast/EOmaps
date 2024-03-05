@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from functools import wraps
+from contextlib import contextmanager
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,10 +24,24 @@ def _check_backend():
         )
 
 
+@contextmanager
+def _force_full(m):
+    """A contextmanager to force a full update of the figure (to avoid glitches)"""
+    force_full = getattr(m.BM, "_mpl_backend_force_full", False)
+
+    try:
+        m.BM._mpl_backend_force_full = True
+        yield
+    finally:
+        m.BM._mpl_backend_force_full = force_full
+
+
 # %% Layer Selector Widgets
 
 
 class _LayerSelectionWidget:
+    _description = "LayerSelectionWidget"
+
     def __init__(self, m, layers=None):
         """
         A widget to switch layers of a given Maps-object.
@@ -62,22 +77,28 @@ class _LayerSelectionWidget:
         _check_backend()
 
         self._m = m
-        self._set_layers(layers)
+        self._set_layers_options(layers)
 
-    def _set_layers(self, layers):
+    def _set_layers_options(self, layers):
+        # _layers is a list of the actual layer-names
+        # _options is a list of tuples (name, value) passed to the widget-init
+
         if layers is None:
             self._layers = self._m._get_layers()
+            self._options = [*self._layers]
         else:
-
-            self._layers = []
+            self._layers, self._options = [], []
             for l in layers:
                 if isinstance(l, str):
-                    self._layers.append((l, l))
+                    self._layers.append(l)
+                    self._options.append((l, l))
                 elif isinstance(l, tuple):
                     l = self._parse_layer(l)
-                    self._layers.append((l, l))
+                    self._layers.append(l)
+                    self._options.append((l, l))
                 elif isinstance(l, list):
-                    self._layers.append((l[0], self._parse_layer(l[1])))
+                    self._options.append((l[0], self._parse_layer(l[1])))
+                    self._layers.append(self._parse_layer(l[1]))
 
     @staticmethod
     def _parse_layer(l):
@@ -94,153 +115,94 @@ class _LayerSelectionWidget:
         else:
             return l
 
+
+class _SingleLayerSelectionWidget(_LayerSelectionWidget):
+    _description = "Layers"
+    _widget_cls = None
+
+    @wraps(_LayerSelectionWidget.__init__)
+    def __init__(self, m, layers=None, **kwargs):
+
+        _LayerSelectionWidget.__init__(self, m=m, layers=layers)
+
+        self._set_default_kwargs(kwargs)
+        self._widget_cls.__init__(self, options=self._options, **kwargs)
+
+        self.observe(self.handler)
+
+    def _set_default_kwargs(self, kwargs):
+        kwargs.setdefault("description", self._description)
+        if self._m.BM.bg_layer in self._layers:
+            kwargs.setdefault("value", self._m.BM.bg_layer)
+
     def handler(self, change):
         try:
             if self.value is not None:
-                self._m.show_layer(self.value)
-                self._m.BM.update()
+                with _force_full(self._m):
+                    self._m.show_layer(self.value)
+                    self._m.BM.update()
+
         except Exception:
             _log.error("Problem in LayerSelectionWidget handler...", exc_info=True)
 
 
-class LayerDropdown(ipywidgets.Dropdown, _LayerSelectionWidget):
-    _description = "Layers"
+class _MultiLayerSelectionWidget(_SingleLayerSelectionWidget):
+    def _set_default_kwargs(self, kwargs):
+        kwargs.setdefault("description", self._description)
 
-    @wraps(_LayerSelectionWidget.__init__)
-    def __init__(self, *args, description=None, **kwargs):
-
-        _LayerSelectionWidget.__init__(self, *args, **kwargs)
-
-        super().__init__(
-            options=self._layers,
-            description=self._description if description is None else description,
-            value=self._m.BM.bg_layer if self._m.BM.bg_layer in self._layers else None,
-        )
-
-        self.observe(self.handler)
+        if self._m.BM.bg_layer in self._layers:
+            kwargs.setdefault("value", (self._m.BM.bg_layer, self._m.BM.bg_layer))
+        else:
+            kwargs.setdefault("value", (self._layers[0][1],))
 
 
-class LayerSelect(ipywidgets.Select, _LayerSelectionWidget):
-    _description = "Layers"
-
-    @wraps(_LayerSelectionWidget.__init__)
-    def __init__(self, *args, description=None, **kwargs):
-
-        _LayerSelectionWidget.__init__(self, *args, **kwargs)
-
-        super().__init__(
-            options=self._layers,
-            description=self._description if description is None else description,
-            value=self._m.BM.bg_layer if self._m.BM.bg_layer in self._layers else None,
-        )
-
-        self.observe(self.handler)
+class LayerDropdown(_SingleLayerSelectionWidget, ipywidgets.Dropdown):
+    _widget_cls = ipywidgets.Dropdown
 
 
-class LayerSelectionSlider(ipywidgets.SelectionSlider, _LayerSelectionWidget):
-    _description = "Layers"
-
-    @wraps(_LayerSelectionWidget.__init__)
-    def __init__(self, *args, description=None, **kwargs):
-
-        _LayerSelectionWidget.__init__(self, *args, **kwargs)
-
-        super().__init__(
-            options=self._layers,
-            description=self._description if description is None else description,
-            value=self._m.BM.bg_layer if self._m.BM.bg_layer in self._layers else None,
-        )
-
-        self.observe(self.handler)
+class LayerSelect(_SingleLayerSelectionWidget, ipywidgets.Select):
+    _widget_cls = ipywidgets.Select
 
 
-class LayerToggleButtons(ipywidgets.ToggleButtons, _LayerSelectionWidget):
-    _description = "Layers"
-
-    @wraps(_LayerSelectionWidget.__init__)
-    def __init__(self, *args, description=None, **kwargs):
-
-        _LayerSelectionWidget.__init__(self, *args, **kwargs)
-
-        super().__init__(
-            options=self._layers,
-            description=self._description if description is None else description,
-            value=self._m.BM.bg_layer if self._m.BM.bg_layer in self._layers else None,
-        )
-
-        self.observe(self.handler)
+class LayerSelectionSlider(_SingleLayerSelectionWidget, ipywidgets.SelectionSlider):
+    _widget_cls = ipywidgets.SelectionSlider
 
 
-class LayerRadioButtons(ipywidgets.RadioButtons, _LayerSelectionWidget):
-    _description = "Layers"
-
-    @wraps(_LayerSelectionWidget.__init__)
-    def __init__(self, *args, description=None, **kwargs):
-
-        _LayerSelectionWidget.__init__(self, *args, **kwargs)
-
-        super().__init__(
-            options=self._layers,
-            description=self._description if description is None else description,
-            value=self._m.BM.bg_layer if self._m.BM.bg_layer in self._layers else None,
-        )
-
-        self.observe(self.handler)
+class LayerToggleButtons(_SingleLayerSelectionWidget, ipywidgets.ToggleButtons):
+    _widget_cls = ipywidgets.ToggleButtons
 
 
-class LayerSelectionRangeSlider(ipywidgets.SelectionRangeSlider, _LayerSelectionWidget):
-    _description = "Layers"
+class LayerRadioButtons(_SingleLayerSelectionWidget, ipywidgets.RadioButtons):
+    _widget_cls = ipywidgets.RadioButtons
 
-    @wraps(_LayerSelectionWidget.__init__)
-    def __init__(self, *args, description=None, **kwargs):
 
-        _LayerSelectionWidget.__init__(self, *args, **kwargs)
-
-        super().__init__(
-            options=self._layers,
-            description=self._description if description is None else description,
-            value=(self._m.BM.bg_layer, self._m.BM.bg_layer)
-            if self._m.BM.bg_layer in self._layers
-            else (self._layers[0][1],),
-        )
-
-        self.observe(self.handler)
+class LayerSelectionRangeSlider(
+    _MultiLayerSelectionWidget, ipywidgets.SelectionRangeSlider
+):
+    _widget_cls = ipywidgets.SelectionRangeSlider
 
     def handler(self, change):
         try:
             if self.value is not None:
                 i0 = self._layers.index(self.value[0])
                 i1 = self._layers.index(self.value[1])
-
-                if i0 == i1:
-                    self._m.show_layer(self.value[0])
-                else:
-                    self._m.show_layer(*self._layers[i0 : i1 + 1])
+                with _force_full(self._m):
+                    if i0 == i1:
+                        self._m.show_layer(self.value[0])
+                    else:
+                        self._m.show_layer(*self._layers[i0 : i1 + 1])
         except Exception:
             _log.error("Problem in MultiLayerSelectionWidget handler...", exc_info=True)
 
 
-class LayerSelectMultiple(ipywidgets.SelectMultiple, _LayerSelectionWidget):
-    _description = "Layers"
-
-    @wraps(_LayerSelectionWidget.__init__)
-    def __init__(self, *args, description=None, **kwargs):
-
-        _LayerSelectionWidget.__init__(self, *args, **kwargs)
-        super().__init__(
-            options=self._layers,
-            description=self._description if description is None else description,
-            value=(self._m.BM.bg_layer,)
-            if self._m.BM.bg_layer in self._layers
-            else (self._layers[0][1],),
-        )
-
-        self.observe(self.handler)
+class LayerSelectMultiple(_MultiLayerSelectionWidget, ipywidgets.SelectMultiple):
+    _widget_cls = ipywidgets.SelectMultiple
 
     def handler(self, change):
         try:
             if self.value is not None:
-                self._m.show_layer(*self.value)
+                with _force_full(self._m):
+                    self._m.show_layer(*self.value)
         except Exception:
             _log.error("Problem in MultiLayerSelectionWidget handler...", exc_info=True)
 
@@ -249,7 +211,7 @@ class LayerSelectMultiple(ipywidgets.SelectMultiple, _LayerSelectionWidget):
 
 
 class OverlaySlider(ipywidgets.FloatSlider):
-    def __init__(self, m, layer):
+    def __init__(self, m, layer, **kwargs):
         """
         A Slider to overlay a selected layer on top of other layers
 
@@ -259,6 +221,8 @@ class OverlaySlider(ipywidgets.FloatSlider):
             The Maps-object to use.
         layer : str
             The layer to overlay.
+        kwargs:
+            Additional kwargs passed to the used `ipywidgets.FloatSlider`.
 
         """
         self._m = m
@@ -266,9 +230,13 @@ class OverlaySlider(ipywidgets.FloatSlider):
 
         self._layer = layer
 
-        super().__init__(
-            value=0, min=0, max=1, step=0.01, description=f"Overlay\n'{layer}':"
-        )
+        kwargs.setdefault("value", 0)
+        kwargs.setdefault("min", 0)
+        kwargs.setdefault("max", 1)
+        kwargs.setdefault("step", 0.01)
+        kwargs.setdefault("description", f"Overlay\n'{layer}':")
+
+        super().__init__(**kwargs)
 
         self._last_value = self.value
 
@@ -287,10 +255,10 @@ class OverlaySlider(ipywidgets.FloatSlider):
             else:
                 base = self._m.BM.bg_layer
 
-            self._m.show_layer(base, (self._layer, self.value))
+            with _force_full(self._m):
+                self._m.show_layer(base, (self._layer, self.value))
 
             self._last_value = self.value
-            plt.pause(0.01)  # spin event-loop to avoid flickering for very fast updates
         except Exception:
             _log.error("Problem in OverlaySlider handler...", exc_info=True)
 
