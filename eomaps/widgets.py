@@ -36,44 +36,71 @@ def _force_full(m):
         m.BM._mpl_backend_force_full = force_full
 
 
+from textwrap import dedent, indent
+
+
+def _add_docstring(prefix="", suffix="", replace_with=None):
+    def _add_docstring(cls):
+
+        if replace_with is None and cls.__doc__ is not None:
+            doc = f"{prefix}\n{dedent(cls.__doc__)}\n{suffix}"
+        elif replace_with is not None:
+            doc = f"{prefix}\n{dedent(replace_with.__doc__)}\n{suffix}"
+        else:
+            doc = f"{prefix}\n{dedent(suffix)}"
+
+        doc = indent(doc, "    ")
+        cls.__doc__ = doc
+        cls.__init__.__doc__ = doc
+
+        return cls
+
+    return _add_docstring
+
+
 # %% Layer Selector Widgets
 
 
 class _LayerSelectionWidget:
+    # A widget to switch layers of a given Maps-object.
+
+    """
+
+    For more information on how to customize the widgets, have a look at the
+    documentation for Jupyter Widgets (https://ipywidgets.readthedocs.io).
+
+    Parameters
+    ----------
+    m : eomaps.Maps
+        The Maps-object to use.
+    layers : list, optional
+        A list of layer-names to use.
+        If None, all available layers of the provided Maps-object are used.
+
+        The following options are possible:
+
+        A list of layer-names
+
+        >>> ["layer1", "layer2", ...]
+
+        A list of layer-names and/or layer-names with transparency-assignments
+
+        >>> ["layer1", "layer2", ("layer", 0.4)]
+
+        To provide explict display-names for a layer, pass a list of the form
+        `[display-name, <layer-assignment>]`
+
+        >>> [["My Layer", "layer1"],
+        >>>  ["My secondl lyer", "layer2"],
+        >>>  ["Multiple layers", ("layer1",
+        >>>                       ("layer", 0.4))]
+        >>> ]
+
+    """
+
     _description = "LayerSelectionWidget"
 
     def __init__(self, m, layers=None):
-        """
-        A widget to switch layers of a given Maps-object.
-
-        Parameters
-        ----------
-        m : eomaps.Maps
-            The Maps-object to use.
-        layers : list, optional
-            A list of layer-names to use.
-            If None, all available layers of the provided Maps-object are used.
-
-            The following options are possible:
-
-            A list of layer-names
-
-            >>> ["layer1", "layer2", ...]
-
-            A list of layer-names and/or layer-names with transparency-assignments
-
-            >>> ["layer1", "layer2", ("layer", 0.4)]
-
-            To provide explict display-names for a layer, pass a list of the form
-            `[display-name, <layer-assignment>]`
-
-            >>> [["My Layer", "layer1"],
-            >>>  ["My secondl lyer", "layer2"],
-            >>>  ["Multiple layers", ("layer1",
-            >>>                       ("layer", 0.4))]
-            >>> ]
-
-        """
         _check_backend()
 
         self._m = m
@@ -156,26 +183,62 @@ class _MultiLayerSelectionWidget(_SingleLayerSelectionWidget):
             kwargs.setdefault("value", (self._layers[0][1],))
 
 
+@_add_docstring(
+    "A Dropdown list to select the visible layer.", replace_with=_LayerSelectionWidget
+)
 class LayerDropdown(_SingleLayerSelectionWidget, ipywidgets.Dropdown):
     _widget_cls = ipywidgets.Dropdown
 
 
+@_add_docstring(
+    "A list-box to select a single visible layer.", replace_with=_LayerSelectionWidget
+)
 class LayerSelect(_SingleLayerSelectionWidget, ipywidgets.Select):
     _widget_cls = ipywidgets.Select
 
 
-class LayerSelectionSlider(_SingleLayerSelectionWidget, ipywidgets.SelectionSlider):
-    _widget_cls = ipywidgets.SelectionSlider
+@_add_docstring(
+    "A list-box to select multiple visible layers.", replace_with=_LayerSelectionWidget
+)
+class LayerSelectMultiple(_MultiLayerSelectionWidget, ipywidgets.SelectMultiple):
+    _widget_cls = ipywidgets.SelectMultiple
+
+    def handler(self, change):
+        try:
+            if self.value is not None:
+                with _force_full(self._m):
+                    self._m.show_layer(*self.value)
+        except Exception:
+            _log.error("Problem in MultiLayerSelectionWidget handler...", exc_info=True)
 
 
+@_add_docstring(
+    "Toggle buttons to select a single visible layer.",
+    replace_with=_LayerSelectionWidget,
+)
 class LayerToggleButtons(_SingleLayerSelectionWidget, ipywidgets.ToggleButtons):
     _widget_cls = ipywidgets.ToggleButtons
 
 
+@_add_docstring(
+    "Radio buttons to select a single visible layer.",
+    replace_with=_LayerSelectionWidget,
+)
 class LayerRadioButtons(_SingleLayerSelectionWidget, ipywidgets.RadioButtons):
     _widget_cls = ipywidgets.RadioButtons
 
 
+@_add_docstring(
+    "A slider to select a single visible layer.", replace_with=_LayerSelectionWidget
+)
+class LayerSelectionSlider(_SingleLayerSelectionWidget, ipywidgets.SelectionSlider):
+    _widget_cls = ipywidgets.SelectionSlider
+
+
+@_add_docstring(
+    "A range-slider to view a combination of a range of layers.",
+    replace_with=_LayerSelectionWidget,
+)
 class LayerSelectionRangeSlider(
     _MultiLayerSelectionWidget, ipywidgets.SelectionRangeSlider
 ):
@@ -195,36 +258,25 @@ class LayerSelectionRangeSlider(
             _log.error("Problem in MultiLayerSelectionWidget handler...", exc_info=True)
 
 
-class LayerSelectMultiple(_MultiLayerSelectionWidget, ipywidgets.SelectMultiple):
-    _widget_cls = ipywidgets.SelectMultiple
-
-    def handler(self, change):
-        try:
-            if self.value is not None:
-                with _force_full(self._m):
-                    self._m.show_layer(*self.value)
-        except Exception:
-            _log.error("Problem in MultiLayerSelectionWidget handler...", exc_info=True)
+# %% Layer Overlay Widgets
 
 
-# %% Overlay Widgets
+class LayerOverlaySlider(ipywidgets.FloatSlider):
+    """
+    A Slider to overlay a selected layer on top of other layers.
 
+    Parameters
+    ----------
+    m : eomaps.Maps
+        The Maps-object to use.
+    layer : str
+        The layer to overlay.
+    kwargs:
+        Additional kwargs passed to the used `ipywidgets.FloatSlider`.
 
-class OverlaySlider(ipywidgets.FloatSlider):
+    """
+
     def __init__(self, m, layer, **kwargs):
-        """
-        A Slider to overlay a selected layer on top of other layers
-
-        Parameters
-        ----------
-        m : eomaps.Maps
-            The Maps-object to use.
-        layer : str
-            The layer to overlay.
-        kwargs:
-            Additional kwargs passed to the used `ipywidgets.FloatSlider`.
-
-        """
         self._m = m
         _check_backend()
 
@@ -267,6 +319,18 @@ class OverlaySlider(ipywidgets.FloatSlider):
 
 
 class _CallbackWidget:
+    """
+
+    For more information on how to customize the widgets, have a look at the
+    documentation for Jupyter Widgets (https://ipywidgets.readthedocs.io).
+
+    Parameters
+    ----------
+    m : eomaps.Maps
+        The Maps-object to use.
+
+    """
+
     def __init__(self, m, **kwargs):
         self._m = m
         _check_backend()
@@ -303,6 +367,9 @@ class _CallbackCheckbox(ipywidgets.Checkbox, _CallbackWidget):
         self.observe(self.handler)
 
 
+@_add_docstring(
+    "Checkbox to toggle the 'click.annotate' callback.", replace_with=_CallbackWidget
+)
 class ClickAnnotateCheckbox(_CallbackCheckbox):
     _description = "Annotate (Click)"
 
@@ -310,6 +377,9 @@ class ClickAnnotateCheckbox(_CallbackCheckbox):
         return self._m.all.cb.click.attach.annotate(**kwargs)
 
 
+@_add_docstring(
+    "Checkbox to toggle the 'click.mark' callback.", replace_with=_CallbackWidget
+)
 class ClickMarkCheckbox(_CallbackCheckbox):
     _description = "Mark (Click)"
 
@@ -317,6 +387,10 @@ class ClickMarkCheckbox(_CallbackCheckbox):
         return self._m.all.cb.click.attach.mark(**kwargs)
 
 
+@_add_docstring(
+    "Checkbox to toggle the 'click.print_to_console' callback.",
+    replace_with=_CallbackWidget,
+)
 class ClickPrintToConsoleCheckbox(_CallbackCheckbox):
     _description = "Print (Click)"
 
@@ -324,6 +398,9 @@ class ClickPrintToConsoleCheckbox(_CallbackCheckbox):
         return self._m.all.cb.click.attach.print_to_console(**kwargs)
 
 
+@_add_docstring(
+    "Checkbox to toggle the 'click.peek_layer' callback.", replace_with=_CallbackWidget
+)
 class ClickPeekLayerCheckbox(_CallbackCheckbox):
     _description = "Peek Layer (Click)"
 
@@ -342,6 +419,9 @@ class ClickPeekLayerCheckbox(_CallbackCheckbox):
 
 # NOTE: pick callbacks are attached to the provided Maps objects,
 #       click callback are attached to m.all!
+@_add_docstring(
+    "Checkbox to toggle the 'pick.annotate' callback.", replace_with=_CallbackWidget
+)
 class PickAnnotateCheckbox(_CallbackCheckbox):
     _description = "Annotate (Pick)"
 
@@ -349,6 +429,9 @@ class PickAnnotateCheckbox(_CallbackCheckbox):
         return self._m.cb.pick.attach.annotate(**kwargs)
 
 
+@_add_docstring(
+    "Checkbox to toggle the 'pick.mark' callback.", replace_with=_CallbackWidget
+)
 class PickMarkCheckbox(_CallbackCheckbox):
     _description = "Mark (Pick)"
 
@@ -356,6 +439,10 @@ class PickMarkCheckbox(_CallbackCheckbox):
         return self._m.cb.pick.attach.mark(**kwargs)
 
 
+@_add_docstring(
+    "Checkbox to toggle the 'pick.print_to_console' callback.",
+    replace_with=_CallbackWidget,
+)
 class PickPrintToConsoleCheckbox(_CallbackCheckbox):
     _description = "Print (Pick)"
 
