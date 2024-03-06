@@ -212,6 +212,16 @@ With a few lines of code, you can turn your maps into interactive data-analysis 
 
         A collection of utility widgets (layer-sliders, layer-selectors)
 
+    .. grid-item-card:: :doc:`notebooks/widgets`
+        :link: notebooks/widgets
+        :link-type: doc
+        :shadow: none
+
+        A collection of Jupyter Widgets (for Jupyter Notebooks)
+
+
+
+
 
 Miscellaneous
 ~~~~~~~~~~~~~
@@ -316,6 +326,7 @@ Make sure to check out the :doc:`Examples <EOmaps_examples>` for an overview of 
     api_companion_widget
     api_layout_editor
     api_draw
+    notebooks/widgets.ipynb
     api_utils
 
 

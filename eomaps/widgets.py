@@ -11,7 +11,7 @@ from ._blit_manager import LayerParser
 try:
     import ipywidgets
 except ImportError:
-    _log.exception("EOmaps-widgets are missing the required dependency 'ipywidgets'!")
+    _log.warning("EOmaps-widgets are missing the required dependency 'ipywidgets'!")
 
 
 def _check_backend():

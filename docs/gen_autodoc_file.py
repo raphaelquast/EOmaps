@@ -2,7 +2,7 @@ from pathlib import Path
 from operator import attrgetter
 from itertools import chain
 
-from eomaps import Maps
+from eomaps import Maps, widgets
 
 # TODO there must be a better way than this...
 # BM needs to be a property otherwise there are problems with jupyter notebooks
@@ -118,6 +118,11 @@ def make_feature_toctree_file():
             "InsetMaps.add_indicator_line",
         ],
         "obj_with_attributes_no_toc",
+    )
+
+    s += get_autosummary(
+        "eomaps.widgets",
+        [i for i in get_members(widgets) if not i.rsplit(".", 1)[-1][0].islower()],
     )
 
     basepath = Path(__file__).parent
