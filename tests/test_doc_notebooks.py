@@ -7,6 +7,9 @@ single pyhton-script that is executed in one go!
 
 This is done to avoid issues with cells that are not "standalone"
 (e.g. that require previous cells to be executed)
+
+> Cells with a cell-tag: "ignore_in_unittest"  will be ignored!
+
 """
 
 from pathlib import Path
@@ -21,6 +24,18 @@ basepath = Path(__file__).parent.parent / "docs" / "notebooks"
 
 
 class TestDocNotebooks:
+    def _use_cell(self, cell):
+        # select cells that should be used for testing
+        # - cell must be a code-cell
+        # - cell tags must not contain a tag called "ignore_in_unittest"
+
+        checks = (
+            cell.get("cell_type", "") == "code",
+            "ignore_in_unittest" not in cell.get("metadata", {}).get("tags", []),
+        )
+
+        return all(checks)
+
     @pytest.mark.parametrize(
         "notebook",
         filter(lambda x: x.suffix == ".ipynb", basepath.iterdir()),
@@ -30,7 +45,7 @@ class TestDocNotebooks:
         with open(notebook, encoding="utf-8") as f:
             nb = nbformat.read(f, as_version=4)
             # parse all code-cells from notebook
-            code_cells = [i["source"] for i in nb["cells"] if i["cell_type"] == "code"]
+            code_cells = [i["source"] for i in nb["cells"] if self._use_cell(i)]
             # make sure plt.ion() is called before each test!
             code = "import matplotlib.pyplot as plt\n" "plt.ion()\n" "\n"
 
