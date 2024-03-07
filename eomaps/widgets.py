@@ -17,7 +17,7 @@ except ImportError:
 def _check_backend():
     backend = plt.get_backend()
     if "ipympl" not in backend.lower():
-        raise AssertionError(
+        _log.warning(
             "EOmaps-widgets only work with the 'ipympl (widget)' backend! "
             "Make sure you have 'ipympl' installed and use the magic-command "
             "'%matplotlib widget' to switch to the interactive jupyter backend!"
@@ -331,12 +331,13 @@ class _CallbackWidget:
 
     """
 
+    _cid = None
+
     def __init__(self, m, **kwargs):
         self._m = m
         _check_backend()
 
         self._kwargs = kwargs
-        self._cid = None
 
     @abstractmethod
     def attach_callback(self, **kwargs):
@@ -349,28 +350,40 @@ class _CallbackWidget:
                 self._cid = self.attach_callback(**self._kwargs)
 
             if self.value is False and self._cid is not None:
-                self._cid = self._m.all.cb.click.remove(self._cid)
+                self.remove_callback()
         except Exception:
             _log.error("Problem in Checkbox handler...", exc_info=True)
 
 
-class _CallbackCheckbox(ipywidgets.Checkbox, _CallbackWidget):
+class _CallbackCheckbox(_CallbackWidget, ipywidgets.Checkbox):
     _description = "Callback Checkbox"
 
     @wraps(_CallbackWidget.__init__)
     def __init__(self, *args, value=False, description=None, **kwargs):
         _CallbackWidget.__init__(self, *args, **kwargs)
-        super().__init__(
+
+        ipywidgets.Checkbox.__init__(
+            self,
             value=value,
             description=description if description is not None else self._description,
         )
         self.observe(self.handler)
 
 
+class _ClickCallbackCheckbox(_CallbackCheckbox):
+    def remove_callback(self, **kwargs):
+        self._m.all.cb.click.remove(self._cid)
+
+
+class _PickCallbackCheckbox(_CallbackCheckbox):
+    def remove_callback(self, **kwargs):
+        self._m.cb.pick.remove(self._cid)
+
+
 @_add_docstring(
     "Checkbox to toggle the 'click.annotate' callback.", replace_with=_CallbackWidget
 )
-class ClickAnnotateCheckbox(_CallbackCheckbox):
+class ClickAnnotateCheckbox(_ClickCallbackCheckbox):
     _description = "Annotate (Click)"
 
     def attach_callback(self, **kwargs):
@@ -380,7 +393,7 @@ class ClickAnnotateCheckbox(_CallbackCheckbox):
 @_add_docstring(
     "Checkbox to toggle the 'click.mark' callback.", replace_with=_CallbackWidget
 )
-class ClickMarkCheckbox(_CallbackCheckbox):
+class ClickMarkCheckbox(_ClickCallbackCheckbox):
     _description = "Mark (Click)"
 
     def attach_callback(self, **kwargs):
@@ -391,7 +404,7 @@ class ClickMarkCheckbox(_CallbackCheckbox):
     "Checkbox to toggle the 'click.print_to_console' callback.",
     replace_with=_CallbackWidget,
 )
-class ClickPrintToConsoleCheckbox(_CallbackCheckbox):
+class ClickPrintToConsoleCheckbox(_ClickCallbackCheckbox):
     _description = "Print (Click)"
 
     def attach_callback(self, **kwargs):
@@ -401,7 +414,7 @@ class ClickPrintToConsoleCheckbox(_CallbackCheckbox):
 @_add_docstring(
     "Checkbox to toggle the 'click.peek_layer' callback.", replace_with=_CallbackWidget
 )
-class ClickPeekLayerCheckbox(_CallbackCheckbox):
+class ClickPeekLayerCheckbox(_ClickCallbackCheckbox):
     _description = "Peek Layer (Click)"
 
     def __init__(self, *args, layer=None, **kwargs):
@@ -422,7 +435,7 @@ class ClickPeekLayerCheckbox(_CallbackCheckbox):
 @_add_docstring(
     "Checkbox to toggle the 'pick.annotate' callback.", replace_with=_CallbackWidget
 )
-class PickAnnotateCheckbox(_CallbackCheckbox):
+class PickAnnotateCheckbox(_PickCallbackCheckbox):
     _description = "Annotate (Pick)"
 
     def attach_callback(self, **kwargs):
@@ -432,7 +445,7 @@ class PickAnnotateCheckbox(_CallbackCheckbox):
 @_add_docstring(
     "Checkbox to toggle the 'pick.mark' callback.", replace_with=_CallbackWidget
 )
-class PickMarkCheckbox(_CallbackCheckbox):
+class PickMarkCheckbox(_PickCallbackCheckbox):
     _description = "Mark (Pick)"
 
     def attach_callback(self, **kwargs):
@@ -443,7 +456,7 @@ class PickMarkCheckbox(_CallbackCheckbox):
     "Checkbox to toggle the 'pick.print_to_console' callback.",
     replace_with=_CallbackWidget,
 )
-class PickPrintToConsoleCheckbox(_CallbackCheckbox):
+class PickPrintToConsoleCheckbox(_PickCallbackCheckbox):
     _description = "Print (Pick)"
 
     def attach_callback(self, **kwargs):
