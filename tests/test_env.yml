@@ -27,6 +27,8 @@ dependencies:
   - requests
   # --------------to support multiple Qt versions
   - qtpy
+  # --------------for jupyter widgets
+  - ipywidgets
 
   ### To run the tests
   - coveralls
