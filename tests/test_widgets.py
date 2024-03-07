@@ -140,3 +140,19 @@ def test_overlay_widgets(widget):
         assert m.BM.bg_layer == m.BM._get_combined_layer_name(
             "coast", ("ocean", val)
         ), "Overlay not properly assigned"
+
+
+@pytest.mark.parametrize(
+    "layer",
+    ["ocean", "coast", ["ocean", ("coast", 0.5)], ("coast", 0.5)],
+)
+def test_layer_button(layer):
+    m = Maps(layer="all")
+    m.add_feature.preset.coastline(layer="coast")
+    m.add_feature.preset.ocean(layer="ocean")
+    m.show_layer("coast")
+
+    b = widgets.LayerButton(m, layer=layer)
+    layername = b._parse_layer(layer)
+    b.click()
+    assert m.BM.bg_layer == layername, "layer not correctly switched"

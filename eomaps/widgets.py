@@ -259,6 +259,61 @@ class LayerSelectionRangeSlider(
 # %% Layer Overlay Widgets
 
 
+class LayerButton(ipywidgets.Button):
+    """
+    A Button to show a selected layer.
+
+    Parameters
+    ----------
+    m : eomaps.Maps
+        The Maps-object to use.
+    layer : str, list or tuple
+        The layer to overlay.
+        Can be eiter a string, a tuple of a layer and a transparency or a list
+        of the aforementioned types.
+
+        See :py:meth:`Maps.show_layer` for more details.
+
+    kwargs:
+        Additional kwargs passed to the used `ipywidgets.FloatSlider`.
+
+    """
+
+    def __init__(self, m, layer, **kwargs):
+        self._m = m
+        _check_backend()
+
+        self._layer = self._parse_layer(layer)
+
+        kwargs.setdefault("description", self._layer)
+
+        super().__init__(**kwargs)
+        self.on_click(self.click_handler)
+
+    @staticmethod
+    def _parse_layer(l):
+        # check if a single transparent layer is provided
+        if isinstance(l, tuple):
+            if (
+                len(l) == 2
+                and isinstance(l[0], str)
+                and isinstance(l[1], (int, float, np.number))
+            ):
+                return LayerParser._get_combined_layer_name(l)
+            else:
+                return LayerParser._get_combined_layer_name(*l)
+        elif isinstance(l, list):
+            return LayerParser._get_combined_layer_name(*l)
+        else:
+            return l
+
+    def click_handler(self, b):
+        try:
+            self._m.show_layer(self._layer)
+        except Exception:
+            _log.error("Problem in LayerButton handler...", exc_info=True)
+
+
 class LayerOverlaySlider(ipywidgets.FloatSlider):
     """
     A Slider to overlay a selected layer on top of other layers.
