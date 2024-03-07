@@ -844,6 +844,18 @@ class LayoutEditor:
         """
         Get the positions of all axes within the current plot.
 
+        The returned layout has the following structure:
+
+            >>> {"figsize":     [width, height],          # figure size
+            >>>  "0_map":       [x0, y0, width, height],  # map position
+            >>>  "1_inset_map": [x0, y0, width, height],  # inset-map position
+            >>>  "2_logo":      [x0, y0, width, height],  # logo position
+            >>>  "3_cb":        [x0, y0, width, height],  # colorbar position
+            >>>  "3_cb_histogram_size": 0.5,  # histogram size of colorbar
+            >>>  ...
+            >>>  }
+
+
         To re-apply a layout, use:
 
             >>> l = m.get_layout()
@@ -851,9 +863,15 @@ class LayoutEditor:
 
         Note
         ----
-        The returned list is only a snapshot of the current layout.
+        The layout is dependent on the order at which the axes ahve been created!
         It can only be re-applied to a given figure if the order at which the axes are
         created remains the same!
+
+        Maps aways preserve the aspect ratio.
+        If you provide values for width/height that do not match the aspect-ratio
+        of the map, the values will be adjusted accordingly. By default, smaller values
+        take precedence. To fix one value and adjust the other accordingly, use `-1`
+        for width or height! (e.g. `{"0_map": [0.1, 0.1, 0.8, -1]}`)
 
         Parameters
         ----------
@@ -923,23 +941,47 @@ class LayoutEditor:
 
     def apply_layout(self, layout):
         """
-        Set the positions of all axes within the current plot based on a previously
-        defined layout.
+        Set the positions of all axes of the current figure based on a given layout.
+
+        The layout has the following structure:
+
+            >>> {"figsize":     [width, height],          # figure size
+            >>>  "0_map":       [x0, y0, width, height],  # map position
+            >>>  "1_inset_map": [x0, y0, width, height],  # inset-map position
+            >>>  "2_logo":      [x0, y0, width, height],  # logo position
+            >>>  "3_cb":        [x0, y0, width, height],  # colorbar position
+            >>>  "3_cb_histogram_size": 0.5,  # histogram size of colorbar
+            >>>  ...
+            >>>  }
+
+        - The positions are hereby specified in relative figure-units (0-1)
+            - If `width` or `height` is set to -1, its value will be determined such
+              that the current aspect-ratio of the axes remains the same.
+
+        To get the current layout, use:
+
+            >>> layout = m.get_layout()
 
         To apply a layout, use:
 
-            >>> l = m.get_layout()
-            >>> m.set_layout(l)
+            >>> m.apply_layout(layout)
 
         To save a layout to disc and apply it at a later stage, use
             >>> m.get_layout(filepath=<FILEPATH>)
-            >>> m.set_layout(<FILEPATH>)
+            >>> m.apply_layout(<FILEPATH>)
 
         Note
         ----
-        The returned list is only a snapshot of the current layout.
+        The layout is dependent on the order at which the axes ahve been created!
         It can only be re-applied to a given figure if the order at which the axes are
         created remains the same!
+
+        Maps aways preserve the aspect ratio.
+        If you provide values for width/height that do not match the aspect-ratio
+        of the map, the values will be adjusted accordingly. By default, smaller values
+        take precedence. To fix one value and adjust the other accordingly, use `-1`
+        for width or height! (e.g. `{"0_map": [0.1, 0.1, 0.8, -1]}`)
+
 
         Parameters
         ----------
@@ -987,7 +1029,28 @@ class LayoutEditor:
             if key.endswith("_histogram_size"):
                 cbs[i]._set_hist_size(val)
             else:
-                axes[i].set_position(val)
+                ax = axes[i]
+                bbox = ax.get_position()
+                aspect = bbox.width / bbox.height
+
+                # if any value is passed as -1, set it to the corresponding aspect
+                if val[2] == -1 and val[3] == -1:
+                    raise TypeError(
+                        "EOmaps: You can only set width or height to -1, not both... "
+                        f"Check the values for '{key}' in your layout!"
+                    )
+
+                if val[2] == -1:
+                    val[2] = val[3] * aspect
+                elif val[3] == -1:
+                    val[3] = val[2] / aspect
+
+                # To ensure x0 and y0 are fixed to the provided values,
+                # we set the position and then set it again using the actual
+                # width and height from the new position.
+                ax.set_position(val)
+                bbox = ax.get_position()
+                ax.set_position((*val[:2], bbox.width, bbox.height))
 
         # force an immediate draw (rather than using draw_idle) to avoid issues with
         # stacking order for tkagg backend
