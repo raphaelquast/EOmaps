@@ -179,8 +179,6 @@ class _MultiLayerSelectionWidget(_SingleLayerSelectionWidget):
 
         if self._m.BM.bg_layer in self._layers:
             kwargs.setdefault("value", (self._m.BM.bg_layer, self._m.BM.bg_layer))
-        else:
-            kwargs.setdefault("value", (self._layers[0][1],))
 
 
 @_add_docstring(
