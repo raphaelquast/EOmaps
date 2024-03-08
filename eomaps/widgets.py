@@ -436,23 +436,38 @@ class _CallbackWidget:
     ----------
     m : eomaps.Maps
         The Maps-object to use.
+    widget_kwargs : dict
+        A dict of kwargs passed to the creation of the Jupyter widget.
+    kwargs:
+        All remaining kwargs are passed to the callback.
+        (e.g. m.cb.<method>.<name>(...kwargs...))
 
     """
 
     _cid = None
+    _widget_cls = None
 
-    def __init__(self, m, **kwargs):
+    def __init__(self, m, widget_kwargs=None, **kwargs):
         self._m = m
         _check_backend()
 
         self._kwargs = kwargs
 
-    @abstractmethod
+        if widget_kwargs is None:
+            widget_kwargs = dict()
+
+        widget_kwargs.setdefault("value", False)
+        widget_kwargs.setdefault("description", self._description)
+
+        self._widget_cls.__init__(self, **widget_kwargs)
+
+        self.observe(self.change_handler, names="value", type="change")
+
     def attach_callback(self, **kwargs):
         """Attach the callback to the map and return the cid."""
-        return "cid"
+        raise NotImplementedError()
 
-    def handler(self, change):
+    def change_handler(self, change):
         try:
             if self.value is True and self._cid is None:
                 self._cid = self.attach_callback(**self._kwargs)
@@ -465,27 +480,19 @@ class _CallbackWidget:
 
 class _CallbackCheckbox(_CallbackWidget, ipywidgets.Checkbox):
     _description = "Callback Checkbox"
-
-    @wraps(_CallbackWidget.__init__)
-    def __init__(self, *args, value=False, description=None, **kwargs):
-        _CallbackWidget.__init__(self, *args, **kwargs)
-
-        ipywidgets.Checkbox.__init__(
-            self,
-            value=value,
-            description=description if description is not None else self._description,
-        )
-        self.observe(self.handler)
+    _widget_cls = ipywidgets.Checkbox
 
 
 class _ClickCallbackCheckbox(_CallbackCheckbox):
     def remove_callback(self, **kwargs):
         self._m.all.cb.click.remove(self._cid)
+        self._cid = None
 
 
 class _PickCallbackCheckbox(_CallbackCheckbox):
     def remove_callback(self, **kwargs):
         self._m.cb.pick.remove(self._cid)
+        self._cid = None
 
 
 @_add_docstring(
