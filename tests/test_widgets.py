@@ -26,8 +26,8 @@ def test_selector_widgets(widget, use_layers):
     m = Maps(layer="all")
     m.add_feature.preset.coastline(layer="coast")
     m.add_feature.preset.ocean(layer="ocean")
+    # show a layer that is part of the available visible layers
     m.show_layer("coast")
-
     w = widget(m, layers=use_layers)
     layers = w._layers
 
@@ -62,7 +62,12 @@ def test_selector_widgets(widget, use_layers):
         found_layer = m.BM.bg_layer
 
         if widget in (widgets.LayerSelectMultiple,):
-            expected_layer = m.BM._get_combined_layer_name(layers[0], layers[i])
+            if layers[i] == found_layer:
+                # TODO if the layer is already active, it will not be changed and
+                # so the expected layer is NOT an overlay!
+                expected_layer = layers[i]
+            else:
+                expected_layer = m.BM._get_combined_layer_name(layers[0], layers[i])
         elif widget in (widgets.LayerSelectionRangeSlider,):
             expected_layer = m.BM._get_combined_layer_name(*layers[0 : i + 1])
         else:
@@ -136,10 +141,14 @@ def test_overlay_widgets(widget):
     for val in [0.0, 0.25, 0.5, 0.75, 1.0]:
         state["value"] = val
         w.set_state(state)
-
-        assert m.BM.bg_layer == m.BM._get_combined_layer_name(
-            "coast", ("ocean", val)
-        ), "Overlay not properly assigned"
+        if val > 0:
+            expected = m.BM._get_combined_layer_name("coast", ("ocean", val))
+        else:
+            expected = "coast"
+        found = m.BM.bg_layer
+        assert (
+            found == expected
+        ), f"Overlay not properly assigned, expected {expected}, found {found}"
 
 
 @pytest.mark.parametrize(
