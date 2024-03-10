@@ -595,7 +595,7 @@ class TestBasicPlotting(unittest.TestCase):
             out_of_range_vals="mask",
             hist_bins=5,
             extend_frac=0.4,
-            show_outline=dict(color="r", lw=4),
+            outline=dict(color="r", lw=4),
         )
         self.assertTrue(len(m._colorbars) == 5)
         self.assertTrue(m.colorbar is cb4)

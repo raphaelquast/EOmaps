@@ -20,6 +20,11 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 from matplotlib.transforms import Bbox, TransformedBbox
 from matplotlib.backend_bases import KeyEvent
 
+import importlib.metadata
+from packaging import version
+
+mpl_version = version.parse(importlib.metadata.version("matplotlib"))
+
 _log = logging.getLogger(__name__)
 
 

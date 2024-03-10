@@ -11,6 +11,9 @@ from matplotlib.widgets import Slider
 from functools import wraps
 from matplotlib.pyplot import Artist, rcParams
 
+from packaging import version
+from .helpers import mpl_version
+
 
 class SelectorButtons(Artist):
     # A custom button implementation that uses a legend as container-artist
@@ -72,7 +75,11 @@ class SelectorButtons(Artist):
 
         self.leg = f.legend(circles, self.labels, **kwargs)
 
-        self.circles = self.leg.legendHandles
+        # TODO remove once support for matplotlib <3.7 is dropped
+        if mpl_version >= version.Version("3.7"):
+            self.circles = self.leg.legend_handles
+        else:
+            self.circles = self.leg.legendHandles
 
         for c in self.circles:
             c.set_picker(10)
