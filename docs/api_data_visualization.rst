@@ -82,6 +82,197 @@ A dataset is fully specified by setting the following properties:
 - ``cpos``, ``cpos_radius`` (optional): the pixel offset
 
 
+The following data-types are currently accepted as input:
+
+.. dropdown:: **pandas.DataFrames**
+    :icon: square-fill
+    :color: info
+
+    .. tab-set::
+
+        .. tab-item:: Assignments
+
+            - ``data``: pandas.DataFrame
+            - ``x``, ``y``: The column-names to use as coordinates (``string``)
+            - ``parameter``: The column-name to use as data-values (``string``)
+
+        .. tab-item:: basic DataFrame
+
+            .. code-block:: python
+                :name: test_assign_pandas_01
+
+                from eomaps import Maps
+                import pandas as pd
+
+                df = pd.DataFrame(dict(lon=[1,2,3], lat=[2,5,4], data=[12, 43, 2]))
+                m = Maps()
+                m.set_data(df, x="lon", y="lat", crs=4326, parameter="data")
+                m.plot_map()
+
+        .. tab-item:: multiindex DataFrame
+
+            .. code-block:: python
+                :name: test_assign_pandas_02
+
+                from eomaps import Maps
+                import pandas as pd
+
+                data = dict(param=[10, 29, 39])
+                index = pd.MultiIndex.from_arrays([[10,20,30], [10,20,30]], names=("lon", "lat"))
+                df = pd.DataFrame(data=data, index=index)
+
+                m = Maps()
+                m.set_data(df, x="lon", y="lat", crs=4326, parameter="param")
+                m.plot_map()
+
+
+
+.. dropdown:: **numpy.Array** | **pandas.Series** | **list**
+    :icon: square-fill
+    :color: info
+
+    .. tab-set::
+
+        .. tab-item:: Assignments
+
+            - ``data``, ``x``, ``y``: ``numpy.array``, ``pandas.Series`` or ``list``
+
+              - either data and coordinates have the same 1D/2D shape or
+              - 2D ``data=(m, n)`` and 1D coordinates ``x=(m,)``, ``y=(n,)``
+
+            - ``parameter``: (optional) parameter name (``string``)
+
+        .. tab-item:: 1D list
+
+            .. code-block:: python
+                :name: test_assign_list
+
+                from eomaps import Maps
+
+                x, y, data = [1,2,3], [2, 5, 4], [12, 43, 2]
+                m = Maps()
+                m.set_data(data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+        .. tab-item:: 1D numpy
+
+            .. code-block:: python
+                :name: test_assign_numpy_1d
+
+                from eomaps import Maps
+                import numpy as np
+
+                x, y, data = np.array([1,2,3]), np.array([5, 7, 9]), np.array([1, 2, 3])
+                m = Maps()
+                m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+
+        .. tab-item:: 2D numpy
+
+            .. code-block:: python
+                :name: test_assign_numpy_2d
+
+                from eomaps import Maps
+                import numpy as np
+
+                x, y = np.meshgrid(np.array([1,2,3]), np.array([5, 7, 9]))
+                data = np.random.randint(0, 10, x.shape)
+                m = Maps()
+                m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+
+        .. tab-item:: 2D + 1D numpy
+
+            .. code-block:: python
+                :name: test_assign_numpy_1d2d
+
+                from eomaps import Maps
+                import numpy as np
+
+                x, y = np.linspace(-20, 20, 100), np.linspace(15, 34, 50)
+                data = np.random.randint(0, 100, size=(100, 50)
+                m = Maps()
+                m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+
+        .. tab-item:: pandas Series
+
+            .. code-block:: python
+                :name: test_assign_series
+
+                from eomaps import Maps
+                import pandas as pd
+
+                x, y, data = pd.Series([1,2,3]), pd.Series([2, 5, 4]), pd.Series([12, 43, 2])
+                m = Maps()
+                m.set_data(data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+
+.. dropdown:: **xarray.Dataset**
+    :icon: square-fill
+    :color: info
+
+    .. tab-set::
+
+        .. tab-item:: Assignments
+
+            - ``data``: xarray.Dataset
+            - ``x``, ``y``: The variables to use as coordinates (``string``)
+            - ``parameter``: The variable to use as data-values (``string``)
+
+        .. tab-item:: 2D data and coords
+
+            .. code-block:: python
+                :name: test_assign_xarray_2d
+
+                from eomaps import Maps
+                import xarray as xar
+                import numpy as np
+
+                param = np.random.randint(0, 10, (2,2,3))
+                lon = [[-20, 20], [23, 54]]
+                lat = [[-10, 20], [-10, 20]]
+                time = [1,2,3]
+
+                ds = xar.Dataset(
+                    data_vars=dict(my_param=(["x", "y", "time"], param)),
+                    coords=dict(lon=(["x", "y"], lon), lat=(["x", "y"], lat), time=time),
+                )
+
+                m = Maps()
+                m.set_data(data=ds.sel(time=1), x="lon", y="lat", parameter="my_param", crs=4326)
+                m.plot_map()
+
+        .. tab-item:: 1D coords 2D data
+
+            .. code-block:: python
+                :name: test_assign_xarray_1d2d
+
+                from eomaps import Maps
+                import xarray as xar
+                import numpy as np
+
+                param = np.random.randint(0, 10, (2,2,3))
+                lon = [-20, 20]
+                lat = [30, 60]
+                time = [1,2,3]
+
+                ds = xar.Dataset(
+                    data_vars=dict(my_param=(["lon", "lat", "time"], param)),
+                    coords=dict(lon=lon, lat=lat, time=time),
+                )
+
+                m = Maps()
+                m.set_data(data=ds.sel(time=1), x="lon", y="lat", parameter="my_param", crs=4326)
+                m.plot_map()
+
+
+
+
 .. note::
 
     Make sure to use a individual :py:class:`Maps` object (e.g. with ``m2 = m.new_layer()``) for each dataset!
@@ -98,59 +289,6 @@ A dataset is fully specified by setting the following properties:
 
        - 1D coordinate vectors will be broadcasted using matrix-indexing! (e.g. ``x[nx], y[ny] -> data[nx, ny]``)
        - Note that reprojecting 1D coordinate vectors to a different crs will result in (possibly very large) 2D coordinate arrays!
-
-
-The following data-types are accepted as input:
-
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
-| **pandas DataFrames**                                               | .. code-block:: python                                                             |
-|                                                                     |     :name: test_pandas_data_01                                                     |
-|                                                                     |                                                                                    |
-| - ``data``: ``pandas.DataFrame``                                    |     from eomaps import Maps                                                        |
-| - ``x``, ``y``: The column-names to use as coordinates (``string``) |     import pandas as pd                                                            |
-| - ``parameter``: The column-name to use as data-values (``string``) |                                                                                    |
-|                                                                     |     df = pd.DataFrame(dict(lon=[1,2,3], lat=[2,5,4], data=[12, 43, 2]))            |
-|                                                                     |     m = Maps()                                                                     |
-|                                                                     |     m.set_data(df, x="lon", y="lat", crs=4326, parameter="data")                   |
-|                                                                     |     m.plot_map()                                                                   |
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
-| **pandas Series**                                                   | .. code-block:: python                                                             |
-|                                                                     |     :name: test_pandas_data_02                                                     |
-|                                                                     |                                                                                    |
-| - ``data``, ``x``, ``y``: ``pandas.Series``                         |     from eomaps import Maps                                                        |
-| - ``parameter``: (optional) parameter name (``string``)             |     import pandas as pd                                                            |
-|                                                                     |                                                                                    |
-|                                                                     |     x, y, data = pd.Series([1,2,3]), pd.Series([2, 5, 4]), pd.Series([12, 43, 2])  |
-|                                                                     |     m = Maps()                                                                     |
-|                                                                     |     m.set_data(data, x=x, y=y, crs=4326, parameter="param_name")                   |
-|                                                                     |     m.plot_map()                                                                   |
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
-| **1D** or **2D** data **and** coordinates                           | .. code-block:: python                                                             |
-|                                                                     |     :name: test_numpy_data_01                                                      |
-|                                                                     |                                                                                    |
-| - ``data``, ``x``, ``y``: equal-size ``numpy.array`` (or ``list``)  |     from eomaps import Maps                                                        |
-| - ``parameter``: (optional) parameter name (``string``)             |     import numpy as np                                                             |
-|                                                                     |                                                                                    |
-|                                                                     |     x, y = np.mgrid[-20:20, -40:40]                                                |
-|                                                                     |     data = x + y                                                                   |
-|                                                                     |     m = Maps()                                                                     |
-|                                                                     |     m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")              |
-|                                                                     |     m.plot_map()                                                                   |
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
-| **1D** coordinates and **2D** data                                  | .. code-block:: python                                                             |
-|                                                                     |     :name: test_numpy_data_02                                                      |
-|                                                                     |                                                                                    |
-| - ``data``: ``numpy.array`` (or ``list``) with shape ``(n, m)``     |     from eomaps import Maps                                                        |
-| - ``x``: ``numpy.array`` (or ``list``) with shape ``(n,)``          |     import numpy as np                                                             |
-| - ``y``: ``numpy.array`` (or ``list``) with shape ``(m,)``          |                                                                                    |
-| - ``parameter``: (optional) parameter name (``string``)             |     x = np.linspace(10, 50, 100)                                                   |
-|                                                                     |     y = np.linspace(10, 50, 50)                                                    |
-|                                                                     |     data = np.random.normal(size=(100, 50))                                        |
-|                                                                     |                                                                                    |
-|                                                                     |     m = Maps()                                                                     |
-|                                                                     |     m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")              |
-|                                                                     |     m.plot_map()                                                                   |
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
 
 
 .. _set_the_shape:
@@ -202,15 +340,15 @@ Available shapes (see bleow for details on each plot-shape!):
     The suggested "suitable datasizes" mentioned below always refer to the number of datapoints that are
     visible in the desired plot-extent.
 
-    .. currentmodule:: eomaps.shapes.Shapes
+    .. currentmodule:: eomaps.eomaps
 
-    For very large datasets, make sure to have a look at the :py:class:`raster`, :py:class:`shade_raster`, and :py:class:`shade_points` shapes
+    For very large datasets, make sure to have a look at the :py:class:`raster <Maps.set_shape.raster>`, :py:class:`shade_raster <Maps.set_shape.shade_raster>`, and :py:class:`shade_points <Maps.set_shape.shade_points>` shapes
     which use fast aggregation techniques to resample the data prior to plotting. This way datasets with billions of datapoints can be
     visualized fast.
 
 .. admonition:: Optional dependencies
 
-    :py:class:`shade_raster`, and :py:class:`shade_points` require the `datashader <https://datashader.org/>`_ package!
+    :py:class:`shade_raster <Maps.set_shape.shade_raster>`, and :py:class:`shade_points <Maps.set_shape.shade_points>` require the `datashader <https://datashader.org/>`_ package!
     You can install it via:
 
     .. code-block:: python
@@ -221,9 +359,9 @@ Available shapes (see bleow for details on each plot-shape!):
 
     By default, the plot-shape is assigned based on the associated dataset.
 
-    - For datasets with less than 500 000 pixels, ``m.set_shape.ellipses()`` is used.
-    - | For larger 2D datasets ``m.set_shape.raster()`` is used
-      | ... and ``m.set_shape.shade_points()`` is attempted to be used for the rest.
+    - For datasets with less than 500 000 pixels, :py:class:`ellipses <Maps.set_shape.ellipses>` is used.
+    - | For larger 2D datasets :py:class:`raster <m.set_shape.raster>` is used
+      | ... and :py:class:`shade_points <Maps.set_shape.shade_points` is attempted to be used for the rest.
 
 
 .. _shp_ellipses:
@@ -231,8 +369,10 @@ Available shapes (see bleow for details on each plot-shape!):
 Ellipses
 ********
 
-.. image:: _static/shape_imgs/ellipses.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.ellipses
 
 .. list-table::
    :header-rows: 1
@@ -242,10 +382,8 @@ Ellipses
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-.. autosummary::
-    :nosignatures:
-
-    ellipses
+.. image:: _static/shape_imgs/ellipses.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -259,8 +397,10 @@ Ellipses
 Rectangles
 **********
 
-.. image:: _static/shape_imgs/rectangles.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.rectangles
 
 .. list-table::
    :header-rows: 1
@@ -270,11 +410,8 @@ Rectangles
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-
-.. autosummary::
-    :nosignatures:
-
-    rectangles
+.. image:: _static/shape_imgs/rectangles.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -289,8 +426,10 @@ Rectangles
 Geodesic Circles
 ****************
 
-.. image:: _static/shape_imgs/geod_circles.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.geod_circles
 
 .. list-table::
    :header-rows: 1
@@ -300,11 +439,8 @@ Geodesic Circles
    * - up to ~500k
      - 1D, 2D or mixed
 
-
-.. autosummary::
-    :nosignatures:
-
-    geod_circles
+.. image:: _static/shape_imgs/geod_circles.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -317,9 +453,10 @@ Geodesic Circles
 Voronoi Diagram
 ***************
 
-.. image:: _static/shape_imgs/voronoi_diagram.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
 
+    Maps.set_shape.voronoi_diagram
 
 .. list-table::
    :header-rows: 1
@@ -329,11 +466,8 @@ Voronoi Diagram
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-
-.. autosummary::
-    :nosignatures:
-
-    voronoi_diagram
+.. image:: _static/shape_imgs/voronoi_diagram.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -347,11 +481,10 @@ Voronoi Diagram
 Delaunay Triangulation
 **********************
 
-.. image:: _static/shape_imgs/delaunay_triangulation.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
 
-.. image:: _static/shape_imgs/delaunay_triangulation_flat.png
-    :width: 50%
+    Maps.set_shape.delaunay_triangulation
 
 .. list-table::
    :header-rows: 1
@@ -361,10 +494,11 @@ Delaunay Triangulation
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-.. autosummary::
-    :nosignatures:
+.. image:: _static/shape_imgs/delaunay_triangulation.png
+    :width: 50%
 
-    voronoi_diagram
+.. image:: _static/shape_imgs/delaunay_triangulation_flat.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -379,11 +513,10 @@ Delaunay Triangulation
 Contour plots
 *************
 
-.. image:: _static/shape_imgs/contour_filled.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
 
-.. image:: _static/shape_imgs/contour.png
-    :width: 50%
+    Maps.set_shape.contour
 
 .. list-table::
    :header-rows: 1
@@ -393,11 +526,11 @@ Contour plots
    * - up to a few million datapoints
      - 1D, 2D or mixed
 
+.. image:: _static/shape_imgs/contour_filled.png
+    :width: 50%
 
-.. autosummary::
-    :nosignatures:
-
-    contour
+.. image:: _static/shape_imgs/contour.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -408,8 +541,10 @@ Contour plots
 Scatter Points
 **************
 
-.. image:: _static/shape_imgs/scatter_points.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.scatter_points
 
 .. list-table::
    :header-rows: 1
@@ -419,11 +554,8 @@ Scatter Points
    * - ~500k datapoints
      - 1D, 2D or mixed
 
-
-.. autosummary::
-    :nosignatures:
-
-    scatter_points
+.. image:: _static/shape_imgs/scatter_points.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -436,8 +568,10 @@ Scatter Points
 Raster
 ******
 
-.. image:: _static/shape_imgs/raster.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.raster
 
 .. list-table::
    :header-rows: 1
@@ -447,11 +581,8 @@ Raster
    * - billions of datapoints (large datasets are pre-aggregated)
      - 2D or 1D coordinates + 2D data
 
-
-.. autosummary::
-    :nosignatures:
-
-    raster
+.. image:: _static/shape_imgs/raster.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -465,8 +596,10 @@ Raster
 Shade Raster
 ************
 
-.. image:: _static/shape_imgs/shade_raster.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.shade_raster
 
 .. list-table::
    :header-rows: 1
@@ -478,11 +611,8 @@ Shade Raster
      - 2D or 1D coordinates + 2D data
      - `datashader <https://datashader.org/>`_
 
-
-.. autosummary::
-    :nosignatures:
-
-    shade_raster
+.. image:: _static/shape_imgs/shade_raster.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -496,8 +626,10 @@ Shade Raster
 Shade Points
 ************
 
-.. image:: _static/shape_imgs/shade_points.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.shade_raster
 
 .. list-table::
    :header-rows: 1
@@ -509,11 +641,8 @@ Shade Points
      - 1D, 2D or mixed
      - `datashader <https://datashader.org/>`_
 
-
-.. autosummary::
-    :nosignatures:
-
-    shade_raster
+.. image:: _static/shape_imgs/shade_points.png
+    :width: 50%
 
 .. code-block:: python
 
