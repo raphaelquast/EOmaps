@@ -454,7 +454,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(
             m2.data_specs[["x", "y", "parameter", "crs"]]
-            == {"x": "lon", "y": "lat", "parameter": None, "crs": 4326}
+            == {"x": None, "y": None, "parameter": None, "crs": 4326}
         )
         self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
         self.assertTrue(m2.data == None)

@@ -59,7 +59,8 @@ class TestLayoutEditor(unittest.TestCase):
     def test_layout_editor(self):
         # %%
         lon, lat = np.meshgrid(np.linspace(20, 50, 50), np.linspace(20, 50, 50))
-        data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, value=1))
+        data = pd.DataFrame(dict(lon=lon.flat, lat=lat.flat, value=lon.flat))
+        data.set_index(["lon", "lat"], inplace=True)
 
         mg = MapsGrid()
         mg.set_data(data)

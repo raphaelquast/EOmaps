@@ -165,79 +165,150 @@ class DataManager:
         if self.on_fetch_bg in self.m.BM._before_update_actions:
             self.m.BM._before_update_actions.remove(self.on_fetch_bg)
 
-    def _identify_data(self, data=None, x=None, y=None, parameter=None):
-        # identify the way how the data has been provided and convert to the internal
-        # structure
+    def _identify_pandas(self, data=None, x=None, y=None, parameter=None):
+        (pd,) = register_modules("pandas", raise_exception=False)
 
-        if data is None:
-            data = self.m.data_specs.data
-        if x is None:
-            x = self.m.data_specs.x
-        if y is None:
-            y = self.m.data_specs.y
-        if parameter is None:
-            parameter = self.m.data_specs.parameter
+        if pd is None or not isinstance(data, pd.DataFrame):
+            return None
 
-        # check other types before pandas to avoid unnecessary import
-        if data is not None and not isinstance(data, (list, tuple, np.ndarray)):
-            (pd,) = register_modules("pandas", raise_exception=False)
+        if parameter is not None:
+            # get the data-values
+            z_data = data[parameter].values
+        else:
+            # use the first found numeric column of the DataFrame if possible.
+            numeric_columns = data.select_dtypes("number").columns
+            if len(numeric_columns) > 0:
+                z_data = data[numeric_columns[0]].values
+            else:
+                # TODO remove this and raise an error?
+                z_data = np.repeat(np.nan, len(data))
 
-            if pd is None:
+        # get the index-values
+        ids = data.index.values
+
+        if isinstance(x, str) and isinstance(y, str):
+            if (x in data) and (y in data):
+                # get the coordinates from columns
+                xorig = data[x].values
+                yorig = data[y].values
+            elif (x in data.index.names) and (y in data.index.names):
+                # get the coordinates from index-values
+                xorig = data.index.get_level_values(x)
+                yorig = data.index.get_level_values(y)
+            else:
                 raise TypeError(
-                    f"EOmaps: Unable to handle the input-data type: {type(data)}"
+                    "EOmaps: unable to identify coordinate values for " f"x={x}, y={y}"
                 )
+        elif (x is None) and (y is None):
+            if data.index.nlevels == 2:
+                # get the coordinates from index-values
+                xorig = data.index.get_level_values(0)
+                yorig = data.index.get_level_values(1)
+            else:
+                raise TypeError(
+                    "EOmaps: Either specify explicit column-names to use "
+                    "for `x` and `y` or pass a multi-index DataFrame "
+                    "with exactly 2 index-levels!"
+                )
+        else:
+            assert isinstance(x, (list, np.ndarray, pd.Series)), (
+                "'x' must be either a column-name, or explicit values "
+                " specified as a list, a numpy-array or a pandas.Series "
+                + f"if you provide the data as '{type(data)}'"
+            )
+            assert isinstance(y, (list, np.ndarray, pd.Series)), (
+                "'y' must be either a column-name, or explicit values "
+                " specified as a list, a numpy-array or a pandas.Series "
+                + f"object if you provide the data as '{type(data)}'"
+            )
 
-            if isinstance(data, pd.DataFrame):
-                if parameter is not None:
-                    # get the data-values
-                    z_data = data[parameter].values
-                else:
-                    z_data = np.repeat(np.nan, len(data))
+            xorig = np.asanyarray(x)
+            yorig = np.asanyarray(y)
 
-                # get the index-values
-                ids = data.index.values
+        return z_data, xorig, yorig, ids, parameter
 
-                if isinstance(x, str) and isinstance(y, str):
-                    # get the data-coordinates
-                    xorig = data[x].values
-                    yorig = data[y].values
-                else:
-                    assert isinstance(x, (list, np.ndarray, pd.Series)), (
-                        "'x' must be either a column-name, or explicit values "
-                        " specified as a list, a numpy-array or a pandas"
-                        + f" Series object if you provide the data as '{type(data)}'"
-                    )
-                    assert isinstance(y, (list, np.ndarray, pd.Series)), (
-                        "'y' must be either a column-name, or explicit values "
-                        " specified as a list, a numpy-array or a pandas"
-                        + f" Series object if you provide the data as '{type(data)}'"
-                    )
+    def _identify_xarray(self, data=None, x=None, y=None, parameter=None):
+        (xar,) = register_modules("xarray", raise_exception=False)
 
-                    xorig = np.asanyarray(x)
-                    yorig = np.asanyarray(y)
+        if xar is None or not isinstance(data, (xar.Dataset, xar.DataArray)):
+            return None
 
-                return z_data, xorig, yorig, ids, parameter
+        if isinstance(data, xar.Dataset):
+            if parameter is None:
+                # use the first variable of the Dataset
+                cols = list(data)
+                parameter = cols[0]
 
-        # identify all other types except for pandas.DataFrames
-        # lazily check if pandas was used
-        pandas_series_data = False
-        for iname, i in zip(("x", "y", "data"), (x, y, data)):
-            if iname == "data" and i is None:
-                # allow empty datasets
-                continue
+            assert len(data[parameter].dims) <= 2, (
+                "EOmaps: provided dataset has more than 2 dimensions..."
+                f"({data[parameter].dims})."
+            )
+            z_data = data[parameter].values
+        else:
+            assert len(data.dims) <= 2, (
+                "EOmaps: provided dataset has more than 2 dimensions..."
+                f"({data.dims})."
+            )
 
-            if not isinstance(i, (list, tuple, np.ndarray)):
-                (pd,) = register_modules("pandas", raise_exception=False)
+            z_data = data.values
+            parameter = data.name
 
-                if pd and not isinstance(i, pd.Series):
-                    raise AssertionError(
-                        f"{iname} values must be a list, numpy-array or pandas.Series"
-                    )
-                else:
-                    if iname == "data":
-                        pandas_series_data = True
+        # use numeric index values
+        ids = range(z_data.size)
 
-        # set coordinates by extent
+        if isinstance(x, str) and isinstance(y, str):
+            coords = list(data.coords)
+            if (x in coords) and (y in coords):
+                # get the coordinates from coordinates
+                xorig = data.coords[x].values
+                yorig = data.coords[y].values
+                # transpose dat in case x is before y
+                # (to account for matrix indexing order)
+                if coords.index(x) > coords.index(y):
+                    z_data = z_data.T
+
+            elif (x in data) and (y in data):
+                xorig = data[x].values
+                yorig = data[y].values
+
+        elif (x is None) and (y is None):
+            coords = list(data.coords)
+
+            if len(coords) == 2:
+                # get the coordinates from index-values
+                xorig = data[coords[0]].values
+                yorig = data[coords[1]].values
+            else:
+                raise TypeError(
+                    "EOmaps: Either specify explicit coordinate-names to use "
+                    "for `x` and `y` or pass a Dataset with exactly 2 "
+                    "coordinates!"
+                )
+        return z_data, xorig, yorig, ids, parameter
+
+    def _identify_array_like(self, data=None, x=None, y=None, parameter=None):
+        def check_dtype(val):
+            if val is None:
+                return True
+
+            if isinstance(val, (list, tuple, np.ndarray)):
+                return True
+
+            # lazily check if pandas was used
+            (pd,) = register_modules("pandas", raise_exception=False)
+            if pd and isinstance(val, pd.Series):
+                return "pandas"
+
+            return False
+
+        data_q = check_dtype(data)
+        if not data_q:
+            return None
+
+        if not (check_dtype(x) and check_dtype(y)):
+            return None
+
+        # set coordinates by extent-tuples (x0, x1) and (y0, y1)
         if isinstance(x, tuple) and isinstance(y, tuple):
             assert data is not None, (
                 "EOmaps: If x- and y are provided as tuples, the data must be a 2D list"
@@ -273,7 +344,7 @@ class DataManager:
                 z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
 
         # get the index-values
-        if pandas_series_data is True:
+        if data_q == "pandas":
             # use actual index values if pd.Series was passed as "data"
             ids = data.index.values
         else:
@@ -297,6 +368,35 @@ class DataManager:
             )
 
         return z_data, np.asanyarray(xorig), np.asanyarray(yorig), ids, parameter
+
+    def _identify_data(self, data=None, x=None, y=None, parameter=None):
+        # identify the way how the data has been provided and convert to the internal
+        # structure
+
+        if data is None:
+            data = self.m.data_specs.data
+        if x is None:
+            x = self.m.data_specs.x
+        if y is None:
+            y = self.m.data_specs.y
+        if parameter is None:
+            parameter = self.m.data_specs.parameter
+
+        # check supported data-types
+        for identify_func in (
+            self._identify_array_like,
+            self._identify_pandas,
+            self._identify_xarray,
+        ):
+            ret = identify_func(data=data, x=x, y=y, parameter=parameter)
+
+            if ret is not None:
+                return ret
+
+        raise TypeError(
+            "EOmaps: Unable to handle the input-data types: \n"
+            f"data={type(data)}, x={type(x)}, y={type(y)}"
+        )
 
     def _prepare_data(self, assume_sorted=True):
         in_crs = self.m.data_specs.crs

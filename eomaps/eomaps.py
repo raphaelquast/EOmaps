@@ -457,8 +457,8 @@ class Maps(metaclass=_MapsMeta):
 
         self.data_specs = DataSpecs(
             weakref.proxy(self),
-            x="lon",
-            y="lat",
+            x=None,
+            y=None,
             crs=4326,
         )
 
@@ -4359,9 +4359,11 @@ class Maps(metaclass=_MapsMeta):
 
     def _set_default_shape(self):
         if self.data is not None:
-            size = np.size(self.data)
+            # size = np.size(self.data)
+            size = np.size(self._data_manager.z_data)
+            shape = np.shape(self._data_manager.z_data)
 
-            if len(np.shape(self.data)) == 2 and size > 200_000:
+            if len(shape) == 2 and size > 200_000:
                 self.set_shape.raster()
             else:
                 if size > 500_000:
