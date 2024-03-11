@@ -273,17 +273,6 @@ class read_file:
             # Using masked-arrays ensures that we can deal with integers as well!
             if mask_and_scale is False:
                 encoding = usencfile.attrs
-                fill_value = encoding.get("_FillValue", None)
-
-                if fill_value and fill_values == "mask":
-                    data = np.ma.MaskedArray(
-                        data=data,
-                        mask=data == fill_value,
-                        copy=False,
-                        fill_value=fill_value,
-                        hard_mask=True,
-                    )
-
             else:
                 encoding = None
 
@@ -555,16 +544,6 @@ class read_file:
                     add_offset=getattr(usencfile[parameter], "add_offset", 0),
                     _FillValue=getattr(usencfile[parameter], "_FillValue", None),
                 )
-                fill_value = encoding.get("_FillValue", None)
-                if fill_value and fill_values == "mask":
-                    data = np.ma.MaskedArray(
-                        data=data,
-                        mask=data == fill_value,
-                        copy=False,
-                        fill_value=fill_value,
-                        hard_mask=True,
-                    )
-
             else:
                 encoding = None
 

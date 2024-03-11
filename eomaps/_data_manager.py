@@ -413,6 +413,18 @@ class DataManager:
         # identify the provided data and get it in the internal format
         z_data, xorig, yorig, ids, parameter = self._identify_data()
 
+        # check if Fill-value is provided, and mask the data accordingly
+        if self.m.data_specs.encoding:
+            fill_value = self.m.data_specs.encoding.get("_FillValue", None)
+            if fill_value:
+                z_data = np.ma.MaskedArray(
+                    data=z_data,
+                    mask=z_data == fill_value,
+                    copy=False,
+                    fill_value=fill_value,
+                    hard_mask=True,
+                )
+
         if cpos is not None and cpos != "c":
             # fix position of pixel-center in the input-crs
             assert (
