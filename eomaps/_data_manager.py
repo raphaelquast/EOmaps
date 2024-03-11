@@ -244,6 +244,7 @@ class DataManager:
                 f"({data[parameter].dims})."
             )
             z_data = data[parameter].values
+            data_dims = data[parameter].dims
         else:
             assert len(data.dims) <= 2, (
                 "EOmaps: provided dataset has more than 2 dimensions..."
@@ -251,25 +252,26 @@ class DataManager:
             )
 
             z_data = data.values
+            data_dims = data.dims
             parameter = data.name
 
         # use numeric index values
         ids = range(z_data.size)
 
-        if isinstance(x, str) and isinstance(y, str):
+        if isinstance(x, str) and isinstance(y, str):  #
             coords = list(data.coords)
             if (x in coords) and (y in coords):
                 # get the coordinates from coordinates
                 xorig = data.coords[x].values
                 yorig = data.coords[y].values
-                # transpose dat in case x is before y
-                # (to account for matrix indexing order)
-                if coords.index(x) > coords.index(y):
-                    z_data = z_data.T
+                x_dims = data.coords[x].dims
+                y_dims = data.coords[y].dims
 
             elif (x in data) and (y in data):
                 xorig = data[x].values
                 yorig = data[y].values
+                x_dims = data[x].dims
+                y_dims = data[y].dims
 
         elif (x is None) and (y is None):
             coords = list(data.coords)
@@ -278,12 +280,26 @@ class DataManager:
                 # get the coordinates from index-values
                 xorig = data[coords[0]].values
                 yorig = data[coords[1]].values
+                x_dims = data[coords[0]].dims
+                y_dims = data[coords[1]].dims
             else:
                 raise TypeError(
                     "EOmaps: Either specify explicit coordinate-names to use "
                     "for `x` and `y` or pass a Dataset with exactly 2 "
                     "coordinates!"
                 )
+
+        # transpose dat in case data is transposed
+        # (to account for matrix indexing order)
+        # TODO make this prperly
+        if not (data_dims == x_dims and data_dims == y_dims):
+            if len(x_dims) == 2 and len(y_dims) == 2:
+                if data_dims == x_dims[::-1]:
+                    z_data = z_data.T
+            elif len(x_dims) == 1 and len(y_dims) == 1:
+                if data_dims.index(x_dims[0]) > data_dims.index(y_dims[0]):
+                    z_data = z_data.T
+
         return z_data, xorig, yorig, ids, parameter
 
     def _identify_array_like(self, data=None, x=None, y=None, parameter=None):
