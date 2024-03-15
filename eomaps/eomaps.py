@@ -4609,6 +4609,53 @@ class Maps(metaclass=_MapsMeta):
 
         return color
 
+    @staticmethod
+    def _convert_1d_to_2d(data, x, y, fill_value=np.nan):
+        """A function to convert 1D vectors + data into 2D."""
+
+        if _log.getEffectiveLevel() <= logging.DEBUG:
+            _log.debug(
+                "EOmaps: Required conversion of 1D arrays to 2D for 'raster'"
+                "shape might be slow and consume a lot of memory!"
+            )
+
+        x, y, data = map(np.asanyarray, (x, y, data))
+        assert (
+            x.size == y.size == data.size
+        ), "EOmaps: You cannot use 1D arrays with different sizes for x, y and data"
+
+        x_vals, x_idx = np.unique(x, return_inverse=True)
+        y_vals, y_idx = np.unique(y, return_inverse=True)
+        # Get output array shape
+        m, n = (x_vals.size, y_vals.size)
+
+        # Get linear indices to be used as IDs with bincount
+        lidx = np.ravel_multi_index(np.vstack((x_idx, y_idx)), (m, n))
+        idx2d = np.unravel_index(lidx, (m, n))
+
+        # Distribute data to 2D
+
+        if not np.issubdtype(data.dtype, np.integer):
+            # Integer-dtypes do not support None!
+            data2d = np.full((m, n), fill_value=fill_value, dtype=data.dtype)
+            data2d[idx2d] = data
+
+        else:
+            # use smallest possible value as fill-value
+            fill_value = np.iinfo(data.dtype).min
+            data2d = np.full((m, n), fill_value=fill_value, dtype=data.dtype)
+            data2d[idx2d] = data
+
+            mask2d = np.full((m, n), fill_value=True, dtype=bool)
+            mask2d[idx2d] = False
+
+            data2d = np.ma.masked_array(data2d, mask2d)
+
+        # Distribute coordinates to 2D
+        x_vals, y_vals = np.meshgrid(x_vals, y_vals, indexing="ij")
+
+        return data2d, x_vals, y_vals
+
     def _get_coll(self, props, **kwargs):
         # handle selection of explicitly provided facecolors
         # (e.g. for rgb composites)
@@ -4651,34 +4698,17 @@ class Maps(metaclass=_MapsMeta):
             if len(self._xshape) == 2 and len(self._yshape) == 2:
                 coll = self.shape.get_coll(props["xorig"], props["yorig"], "in", **args)
             else:
-                (pd,) = register_modules("pandas")
-                # TODO avoid having pandas as a dependency here
-                if pd:
-                    if (
-                        (len(self._xshape) == 1)
-                        and (len(self._yshape) == 1)
-                        and (len(self._zshape) == 1)
-                        and (props["x0"].size == props["y0"].size)
-                        and (props["x0"].size == props["z_data"].size)
-                    ):
+                data2d, x2d, y2d = self._convert_1d_to_2d(
+                    data=props["z_data"].ravel(),
+                    x=props["x0"].ravel(),
+                    y=props["y0"].ravel(),
+                )
 
-                        df = (
-                            pd.DataFrame(
-                                dict(
-                                    x=props["x0"].ravel(),
-                                    y=props["y0"].ravel(),
-                                    val=props["z_data"].ravel(),
-                                ),
-                                copy=False,
-                            ).set_index(["x", "y"])
-                        )["val"].unstack("y")
+                if args["array"] is not None:
+                    args["array"] = data2d
 
-                        xg, yg = np.meshgrid(df.index.values, df.columns.values)
+                coll = self.shape.get_coll(x2d, y2d, "out", **args)
 
-                        if args["array"] is not None:
-                            args["array"] = df.values.T
-
-                        coll = self.shape.get_coll(xg, yg, "out", **args)
         else:
             # convert to 1D for further processing
             if args["array"] is not None:
