@@ -66,7 +66,10 @@ wms = [
     "requests",
 ]
 
-shade = ["datashader"]
+shade = [
+    "datashader",
+    "dask[dataframe]",  # to address https://github.com/dask/dask/issues/10995
+]
 
 gui = [
     "PyQt5",
