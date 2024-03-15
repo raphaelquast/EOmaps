@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["eomaps", "eomaps.scripts", "eomaps.qtcompanion"]
+include = ["eomaps", "eomaps.scripts", "eomaps.qtcompanion", "eomaps.qtcompanion.widgets"]
 
 [tool.setuptools.package-data]
 eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
@@ -11,7 +11,7 @@ eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
 
 [project]
 name = "eomaps"
-version = "8.0.1"
+version = "8.0.2"
 description = "A library to create interactive maps of geographical datasets."
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -66,7 +66,10 @@ wms = [
     "requests",
 ]
 
-shade = ["datashader"]
+shade = [
+    "datashader",
+    "dask[dataframe]",  # to address https://github.com/dask/dask/issues/10995
+]
 
 gui = [
     "PyQt5",
