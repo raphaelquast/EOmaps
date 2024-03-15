@@ -3,11 +3,19 @@ channels:
   - conda-forge
 
 dependencies:
-  - eomaps
+
+  - python =3.11
+
   # --------------for building the docs
-  - sphinx-copybutton
-  - sphinx
-  - docutils
+  - docutils =0.20.1
+  - sphinx =7.2.6
+  - sphinx-copybutton =0.5.2
+  - myst-nb =1.0.0
+  - sphinx-design =0.5.0
+  - sphinx_rtd_theme =2.0.0
+
+  # install minimal dependencies to import eomaps
   - pip
   - pip:
-    - sphinx_rtd_theme
+    - ../.
+    - ipywidgets  # for widgets docs

@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 import sys
 import os
 import click
@@ -18,7 +23,7 @@ def _identify_crs(crs):
     if crs == "web":
         crs = "google_mercator"
 
-    # if crs can be idenified as integer, return it
+    # if crs can be identified as integer, return it
     try:
         return int(crs)
     except ValueError:
@@ -207,9 +212,9 @@ def cli(crs=None, file=None, ne=None, wms=None, location=None, loglevel=None):
         elif wms in ["terrain_light"]:
             m.add_wms.S2_cloudless.add_layer.terrain_light_3857()
         elif wms in ["basemap"]:
-            m.add_wms.DLR_basemaps.add_layer.basemap()
+            m.add_wms.DLR.basemap.add_layer.basemap()
         elif wms in ["basemap_light"]:
-            m.add_wms.DLR_basemaps.add_layer.litemap()
+            m.add_wms.DLR.basemap.add_layer.litemap()
         elif wms in ["s1_vv"]:
             m.add_wms.S1GBM.add_layer.vv()
 

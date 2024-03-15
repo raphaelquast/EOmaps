@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Plot shape classes (for data visualization)."""
 
 import logging
@@ -423,7 +428,7 @@ class Shapes(object):
             if not self._m._data_manager._current_data:
                 return self.radius
 
-            # check if mutiple individual x-y radius was provided
+            # check if multiple individual x-y radius was provided
             q1 = isinstance(self.radius, tuple) and isinstance(
                 self.radius[0], np.ndarray
             )
@@ -1346,6 +1351,178 @@ class Shapes(object):
         def radius_crs(self):
             return "in"
 
+    class _SphericalVoronoiDiagram(object):
+        name = "spherical_voronoi_diagram"
+
+        def __init__(self, m):
+            self._m = m
+            self._mask_radius = None
+
+        def __call__(self, masked=True, mask_radius=None):
+            """
+            Draw a Spherical Voronoi-Diagram of the data.
+
+            Parameters
+            ----------
+            masked : bool
+                Indicator if the voronoi-diagram should be masked or not
+
+            mask_radius : float, optional
+                The radius used for masking the voronoi-diagram
+                (in units of the plot-crs)
+                The default is 4 times the estimated data-radius.
+            """
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+
+                shape.mask_radius = mask_radius
+                shape.masked = masked
+
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(mask_radius=self.mask_radius, masked=self.masked)
+
+        def __repr__(self):
+            try:
+                s = f"voronoi_diagram(mask_radius={self.mask_radius}, masked={self.masked})"
+            except AttributeError:
+                s = "voronoi_diagram(mask_radius, masked)"
+
+            return s
+
+        @property
+        def mask_radius(self):
+            r = Shapes._get_radius(self._m, self._mask_radius, "out")
+            if self._mask_radius is None:
+                return [i * 4 for i in r]
+            else:
+                return r
+
+        @mask_radius.setter
+        def mask_radius(self, val):
+            self._mask_radius = val
+
+        def _get_voronoi_verts_and_mask(self, x, y, crs, radius, masked=True):
+            try:
+                from scipy.spatial import SphericalVoronoi
+                from itertools import zip_longest
+            except ImportError:
+                raise ImportError("'scipy' is required for 'voronoi'!")
+
+            # transform from crs to the lon/lat
+
+            t_in_lonlat = self._m._get_transformer(
+                self._m.get_crs(crs), self._m.get_crs(crs).geodetic_crs
+            )
+
+            t_lonlat_plot = self._m._get_transformer(
+                self._m.get_crs(crs).geodetic_crs, self._m.crs_plot
+            )
+
+            xy_orig = np.column_stack((x, y))  # remember orig input coords
+
+            x0, y0 = t_in_lonlat.transform(x, y)
+
+            x0 = (x0 + 360) % 360
+            y0 = (y0 + 180) % 180
+
+            datamask = np.isfinite(x0) & np.isfinite(y0)
+            [radiusx, radiusy] = radius
+
+            maxdist = 2 * np.mean(np.sqrt(radiusx**2 + radiusy**2))
+
+            xy = np.column_stack((x0[datamask], y0[datamask]))
+
+            # plot the unit sphere for reference (optional)
+            r = 1
+
+            theta, phi = np.deg2rad(xy.T)
+            x = r * np.cos(theta) * np.sin(phi)
+            y = r * np.sin(theta) * np.sin(phi)
+            z = r * np.cos(phi)
+
+            vor = SphericalVoronoi(np.column_stack((x, y, z)), r, [0, 0, 0])
+            vor.sort_vertices_of_regions()
+
+            rect_regions = np.array(list(zip_longest(*vor.regions, fillvalue=-2))).T
+            # (use -2 instead of None to make np.take work as expected)
+
+            # rect_regions = rect_regions[vor.point_region]
+            # exclude all points at infinity
+            mask = np.all(np.not_equal(rect_regions, -1), axis=1)
+
+            # get the mask for the artificially added vertices
+            rect_mask = rect_regions == -2
+
+            x_s = np.ma.masked_array(
+                np.take(vor.vertices[:, 0], rect_regions), mask=rect_mask
+            )
+            y_s = np.ma.masked_array(
+                np.take(vor.vertices[:, 1], rect_regions), mask=rect_mask
+            )
+            z_s = np.ma.masked_array(
+                np.take(vor.vertices[:, 2], rect_regions), mask=rect_mask
+            )
+
+            # convert back to lon/lat
+            x = np.rad2deg(np.arctan2(y_s, x_s))
+            y = np.rad2deg(np.arccos(z_s / r))
+
+            # convert back to the -180, 180 and -90, 90 range
+            x = (x + 180) % 360 - 180
+            y = (y + 90) % 180 - 90
+
+            x, y = t_lonlat_plot.transform(x, y)
+
+            rect_verts = np.ma.stack((x, y)).swapaxes(0, 1).swapaxes(1, 2)
+
+            if masked:
+                # exclude any polygon whose defining point is farther away than maxdist
+                cdist = np.sqrt(np.sum((rect_verts - xy_orig[:, None]) ** 2, axis=2))
+                polymask = np.all(cdist < maxdist, axis=1)
+                mask = np.logical_and(mask, polymask)
+
+            verts = list(i.compressed().reshape(-1, 2) for i in rect_verts[mask])
+            return verts, mask, datamask
+
+        def get_coll(self, x, y, crs, **kwargs):
+
+            verts, mask, datamask = self._get_voronoi_verts_and_mask(
+                x, y, crs, self.mask_radius, masked=self.masked
+            )
+
+            # find the masked points that are not masked by the datamask
+            mask2 = ~datamask.copy()
+            mask2[np.where(datamask)[0][mask]] = True
+            # remember the mask
+            self._m._data_mask = mask2
+
+            color_and_array = Shapes._get_colors_and_array(
+                kwargs, np.logical_and(datamask, mask)
+            )
+
+            coll = PolyCollection(
+                verts=verts,
+                **color_and_array,
+                # transOffset=self._m.ax.transData,
+                **kwargs,
+            )
+
+            return coll
+
+        @property
+        def radius(self):
+            radius = Shapes._get_radius(self._m, "estimate", "in")
+            return radius
+
+        @property
+        def radius_crs(self):
+            return "in"
+
     class _DelaunayTriangulation(object):
         name = "delaunay_triangulation"
 
@@ -2106,6 +2283,15 @@ class Shapes(object):
     @wraps(_VoronoiDiagram.__call__)
     def voronoi_diagram(self, *args, **kwargs):
         shp = self._VoronoiDiagram(m=self._m)
+        # increase radius margins for voronoi diagrams since
+        # outer points are otherwise always masked!
+        self._m._data_manager.set_margin_factors(20, 0.1)
+
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_SphericalVoronoiDiagram.__call__)
+    def spherical_voronoi_diagram(self, *args, **kwargs):
+        shp = self._SphericalVoronoiDiagram(m=self._m)
         # increase radius margins for voronoi diagrams since
         # outer points are otherwise always masked!
         self._m._data_manager.set_margin_factors(20, 0.1)

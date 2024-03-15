@@ -76,9 +76,14 @@ class TestPlotShapes(unittest.TestCase):
                 ),
             )
 
-            arts = m3_1.ax.clabel(m3_1.coll.contour_set)
-            for a in arts:
-                m3_1.BM.add_bg_artist(a, layer=m3_1.layer)
+            # TODO using 'clabel' causes collections to be re-drawn
+            # which puts the new contours on the default layer and leaves
+            # the old contours as "artists without a figure" in the blit-manager!
+            # see https://github.com/raphaelquast/EOmaps/issues/218
+
+            # arts = m3_1.ax.clabel(m3_1.coll.contour_set)
+            # for a in arts:
+            #     m3_1.BM.add_bg_artist(a, layer=m3_1.layer)
 
             m.show_layer("base", "contours")
             plt.close("all")

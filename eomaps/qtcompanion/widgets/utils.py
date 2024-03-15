@@ -1,5 +1,10 @@
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, QRectF, QSize, pyqtSlot, pyqtSignal
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
+from qtpy import QtWidgets, QtGui
+from qtpy.QtCore import Qt, QRectF, QSize, Slot, Signal
 from eomaps import Maps
 from functools import lru_cache
 
@@ -264,8 +269,9 @@ class GetColorWidget(QtWidgets.QFrame):
     def paintEvent(self, e):
         super().paintEvent(e)
         painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        painter.setRenderHint(QtGui.QPainter.SmoothPixmapTransform, True)
 
-        painter.setRenderHints(QtGui.QPainter.HighQualityAntialiasing)
         size = self.size()
 
         if self.linewidth > 0.01:
@@ -424,7 +430,7 @@ class AlphaSlider(QtWidgets.QSlider):
         elif self._style == "alpha":
             self.set_alpha_stylesheet()
 
-    @pyqtSlot(int)
+    @Slot(int)
     def value_changed(self, i):
         self.alpha = i / 100
         self.set_stylesheet()
@@ -484,7 +490,7 @@ class AlphaSlider(QtWidgets.QSlider):
 
 
 class ColorWithSlidersWidget(QtWidgets.QWidget):
-    colorSelected = pyqtSignal()
+    colorSelected = Signal()
     alpha_slider_scale = 100
     linewidth_slider_scale = 10
 
@@ -541,12 +547,12 @@ class ColorWithSlidersWidget(QtWidgets.QWidget):
     def alpha(self):
         return self.color.alpha
 
-    @pyqtSlot(int)
+    @Slot(int)
     def set_alpha_with_slider(self, i):
         self.color.set_alpha(i / self.alpha_slider_scale)
         self.colorSelected.emit()
 
-    @pyqtSlot(int)
+    @Slot(int)
     def set_linewidth_with_slider(self, i):
         self.color.set_linewidth(i / self.linewidth_slider_scale)
         self.colorSelected.emit()

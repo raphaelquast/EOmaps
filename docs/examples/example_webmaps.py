@@ -1,4 +1,4 @@
-# EOmaps example 6: WebMap services and layer-switching
+# EOmaps example: WebMap services and layer-switching
 
 from eomaps import Maps
 import numpy as np

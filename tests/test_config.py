@@ -1,7 +1,7 @@
 import unittest
 import matplotlib.pyplot as plt
 from eomaps import Maps, _log
-from eomaps.helpers import BlitManager
+from eomaps._blit_manager import BlitManager
 
 
 class TestConfig(unittest.TestCase):

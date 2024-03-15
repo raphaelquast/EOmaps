@@ -8,24 +8,10 @@
 ... a collection of examples that show how to create beautiful interactive maps.
 
 
-.. table::
-  :width: 100%
-
-  +-----------+-----------+-----------+-----------+-----------+
-  | |eximg01| | |eximg02| | |eximg03| | |eximg04| | |eximg05| |
-  +-----------+-----------+-----------+-----------+-----------+
-  | |eximg06| | |eximg07| | |eximg08| | |eximg09| | |eximg10| |
-  +-----------+-----------+-----------+-----------+-----------+
-  | |eximg11| | |eximg12| | |eximg13| | |eximg14| | |eximg15| |
-  +-----------+-----------+-----------+-----------+-----------+
+.. include:: example_galery.rst
 
 
-.. contents:: Contents:
-  :local:
-  :depth: 1
-
-
-.. _ex_1:
+.. _example_basics:
 
 Basic data visualization
 -------------------------
@@ -33,19 +19,20 @@ Basic data visualization
 There are 3 basic steps required to visualize your data:
 
 1. Initialize a Maps-object with ``m = Maps()``
-2. Set the data and its specifications via ``m.set_data`` (or ``m.set_data_specs``)
+2. Set the data and its specifications via ``m.set_data``
 3. Call ``m.plot_map()`` to generate the map!
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example1.py
+.. literalinclude:: examples/example_basics.py
 
 |toggleEnd|
 
-.. image:: _static/fig1.gif
+.. image:: _static/example_images/example_basics.gif
   :width: 75%
 
-.. _ex_2:
+
+.. _example_customization:
 
 Customize the appearance of the plot
 ------------------------------------
@@ -60,15 +47,15 @@ Customize the appearance of the plot
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example2.py
+.. literalinclude:: examples/example_customization.py
 
 |toggleEnd|
 
-.. image:: _static/fig2.png
+.. image:: _static/example_images/example_customization.png
   :width: 75%
 
 
-.. _ex_3:
+.. _example_multiple_maps:
 
 Data-classification and multiple Maps in a figure
 -------------------------------------------------
@@ -84,15 +71,15 @@ Data-classification and multiple Maps in a figure
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example3.py
+.. literalinclude:: examples/example_multiple_maps.py
 
 |toggleEnd|
 
-.. image:: _static/fig3.gif
+.. image:: _static/example_images/example_multiple_maps.gif
   :width: 75%
 
 
-.. _ex_4:
+.. _example_callbacks:
 
 Callbacks - turn your maps into interactive widgets
 ---------------------------------------------------
@@ -100,7 +87,7 @@ Callbacks - turn your maps into interactive widgets
 -  **Callback functions** can easily be attached to the plot to turn it
    into an interactive plot-widget!
 
-   - | there’s a nice list of (customizeable) pre-defined callbacks accessible via:
+   - | there’s a nice list of (customizable) pre-defined callbacks accessible via:
      | ``m.cb.click``, ``m.cb.pick``, ``m.cb.keypress`` and ``m.cb.dynamic``
 
       -  use ``annotate`` (and ``clear_annotations``) to create text-annotations
@@ -113,15 +100,15 @@ Callbacks - turn your maps into interactive widgets
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example4.py
+.. literalinclude:: examples/example_callbacks.py
 
 |toggleEnd|
 
-.. image:: _static/fig4.gif
+.. image:: _static/example_images/example_callbacks.gif
   :width: 75%
 
 
-.. _ex_5:
+.. _example_overlays:
 
 Overlays, markers and annotations
 ---------------------------------
@@ -134,18 +121,18 @@ Overlays, markers and annotations
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example5.py
+.. literalinclude:: examples/example_overlays.py
 
 |toggleEnd|
 
-.. image:: _static/fig5.gif
+.. image:: _static/example_images/example_overlays.gif
   :width: 75%
 
 The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
 
 
-.. _ex_6:
+.. _example_webmaps:
 
 WebMap services and layer-switching
 -----------------------------------
@@ -155,11 +142,11 @@ WebMap services and layer-switching
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example6.py
+.. literalinclude:: examples/example_webmaps.py
 
 |toggleEnd|
 
-.. image:: _static/fig6.gif
+.. image:: _static/example_images/example_webmaps.gif
   :width: 75%
 
 The data displayed in the above gif is taken from:
@@ -167,9 +154,9 @@ The data displayed in the above gif is taken from:
     - OpenStreetMap hosted by Mundialis (https://www.mundialis.de/en/ows-mundialis/)
 
 
-.. _ex_7:
+.. _example_vector_data:
 
-Vektor data - interactive geometries
+Vector data - interactive geometries
 -------------------------------------
 
 EOmaps can be used to assign callbacks to vektor-data (e.g. ``geopandas.GeoDataFrames``).
@@ -192,11 +179,11 @@ EOmaps can be used to assign callbacks to vektor-data (e.g. ``geopandas.GeoDataF
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example7.py
+.. literalinclude:: examples/example_vector_data.py
 
 |toggleEnd|
 
-.. image:: _static/fig7.gif
+.. image:: _static/example_images/example_vector_data.gif
   :width: 75%
 
 
@@ -204,7 +191,7 @@ The data displayed in the above gif is taken from:
     - NaturalEarth (https://www.naturalearthdata.com/)
 
 
-.. _ex_8:
+.. _example_scalebars:
 
 Using Scalebars
 ---------------
@@ -233,11 +220,11 @@ EOmaps has a nice customizable scalebar feature!
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example8.py
+.. literalinclude:: examples/example_scalebars.py
 
 |toggleEnd|
 
-.. image:: _static/fig8.gif
+.. image:: _static/example_images/example_scalebars.gif
   :width: 75%
 
 The data displayed in the above gif is taken from:
@@ -245,7 +232,7 @@ The data displayed in the above gif is taken from:
 
 
 
-.. _ex_9:
+.. _example_timeseries:
 
 Data analysis widgets - Timeseries and histograms
 -------------------------------------------------
@@ -259,16 +246,16 @@ This example shows how to use EOmaps to analyze a database that is associated wi
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example9.py
+.. literalinclude:: examples/example_timeseries.py
 
 |toggleEnd|
 
 
-.. image:: _static/fig9.gif
+.. image:: _static/example_images/example_timeseries.gif
   :width: 75%
 
 
-.. _ex_10:
+.. _example_row_col_selector:
 
 Data analysis widgets - Select 1D slices of a 2D dataset
 --------------------------------------------------------
@@ -282,16 +269,16 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example_row_col_selector.py
+.. literalinclude:: examples/example_row_col_selector.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_row_col_selector.gif
+.. image:: _static/example_images/example_row_col_selector.gif
   :width: 75%
 
 
-.. _ex_11:
+.. _example_inset_maps:
 
 Inset-maps - get a zoomed-in view on selected areas
 ---------------------------------------------------
@@ -308,16 +295,16 @@ Quickly create nice inset-maps to show details for specific regions.
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example_inset_maps.py
+.. literalinclude:: examples/example_inset_maps.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_inset_maps.png
+.. image:: _static/example_images/example_inset_maps.png
   :width: 75%
 
 
-.. _ex_12:
+.. _example_lines:
 
 Lines and Annotations
 ---------------------
@@ -335,16 +322,16 @@ Connect the anchor-points via:
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example_lines.py
+.. literalinclude:: examples/example_lines.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_lines.png
+.. image:: _static/example_images/example_lines.png
   :width: 75%
 
 
-.. _ex_13:
+.. _example_gridlines:
 
 Gridlines and Grid Labels
 -------------------------
@@ -355,15 +342,15 @@ Draw custom grids and add grid labels.
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example_gridlines.py
+.. literalinclude:: examples/example_gridlines.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_gridlines.png
+.. image:: _static/example_images/example_gridlines.png
   :width: 75%
 
-.. _ex_14:
+.. _example_contour:
 
 Contour plots and Contour Levels
 --------------------------------
@@ -375,10 +362,10 @@ or to indicate contour-levels on top of other plots.
 
 |toggleStart|
 
-.. literalinclude:: ../tests/example_contour.py
+.. literalinclude:: examples/example_contour.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_contour.png
+.. image:: _static/example_images/example_contour.png
   :width: 75%

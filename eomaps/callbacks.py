@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Collection of pre-defined click/pick/move/keypress callbacks."""
 
 import numpy as np
@@ -6,70 +11,19 @@ from matplotlib.patches import PathPatch
 from matplotlib.transforms import TransformedPath
 import warnings
 import logging
+import sys
 
 _log = logging.getLogger(__name__)
 
 
-class _ClickCallbacks(object):
-    """
-    A collection of callback-functions.
-
-    to attach a callback, use:
-        >>> cid = m.cb.click.attach.annotate(**kwargs)
-        or
-        >>> cid = m.cb.pick.attach.annotate(**kwargs)
-
-    to remove an already attached callback, use:
-        >>> m.cb.click.remove(cid)
-        or
-        >>> m.cb.pick.remove(cid)
+def _removesuffix(s, suffix):
+    if s.endswith(suffix):
+        return s[: -len(suffix)]
+    else:
+        return s[:]
 
 
-    you can also define custom callback functions as follows:
-
-        >>> def some_callback(self, **kwargs):
-        >>>     print("hello world")
-        >>>     print("the position of the clicked pixel", kwargs["pos"])
-        >>>     print("the data-index of the clicked pixel", kwargs["ID"])
-        >>>     print("data-value of the clicked pixel", kwargs["val"])
-    and attach them via:
-        >>> cid = m.cb.click.attach(some_callback)
-        or
-        >>> cid = m.cb.click.attach(some_callback)
-    (... and remove them in the same way as pre-defined callbacks)
-    """
-
-    # the naming-convention of the functions is as follows:
-    #
-    # _<NAME>_cleanup : a function that is executed if the callback
-    #                   is removed from the plot
-    #
-
-    # ID : any
-    #     The index-value of the pixel in the data.
-    # pos : tuple
-    #     A tuple of the position of the pixel in plot-coordinates.
-    #     (ONLY relevant if ID is NOT provided!)
-    # val : int or float
-    #     The parameter-value of the pixel.
-    # ind : int
-    #     The index of the clicked pixel
-    #     (ONLY relevant if ID is NOT provided!)
-
-    # this list determines the order at which callbacks are executed!
-    # (custom callbacks are always added to the end)
-    _cb_list = [
-        "get_values",
-        "load",
-        "print_to_console",
-        "annotate",
-        "mark",
-        "plot",
-        "peek_layer",
-        "clear_annotations",
-        "clear_markers",
-    ]
-
+class _CallbacksBase:
     def __init__(self, m, temp_artists):
         self.m = m
 
@@ -101,64 +55,6 @@ class _ClickCallbacks(object):
             return np.array2string(np.asanyarray(x), **kwargs)
         except Exception:
             return str(x)
-
-    def print_to_console(
-        self,
-        pos_precision=4,
-        val_precision=4,
-        text=None,
-        show_all_values=True,
-        **kwargs,
-    ):
-        """
-        Print details on the clicked pixel to the console.
-
-        Parameters
-        ----------
-
-        pos_precision : int
-            The floating-point precision of the coordinates.
-            The default is 4.
-        val_precision : int
-            The floating-point precision of the parameter-values (only used if
-            "val_fmt=None"). The default is 4.
-        text : callable or str, optional
-            if str: the string to print
-            if callable: A function that returns the string that should be
-            printed in the annotation with the following call-signature:
-
-                >>> def text(m, ID, val, pos, ind):
-                >>>     # m   ... the Maps object
-                >>>     # ID  ... the ID in the dataframe
-                >>>     # pos ... the position
-                >>>     # val ... the value
-                >>>     # ind ... the index
-                >>>
-                >>>     return "the string to print"
-
-            The default is None.
-        show_all_values : bool, optional
-            If True, show all values and coordinates of picked points.
-            If False, only (min...max) values are shown if multiple datapoints are
-            picked. The default is True.
-        """
-        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
-
-        printstr = self._get_annotation_text(
-            ID=ID,
-            pos=pos,
-            val=val,
-            ind=ind,
-            pos_precision=pos_precision,
-            val_precision=val_precision,
-            text=text,
-            show_all_values=show_all_values,
-        )
-
-        if text is None:
-            print("\n# ---------------\n" + printstr)
-        else:
-            print(printstr)
 
     def _get_annotation_text(
         self,
@@ -275,6 +171,8 @@ class _ClickCallbacks(object):
                             ID = self._fmt(np.asanyarray(ID))
 
                 equal_crs = self.m.data_specs.crs == self.m._crs_plot
+                if len(parameter) > 15:
+                    parameter = parameter[:15] + " ..."
                 printstr = (
                     (f"# Picked {n_ids} points\n" if multipick else "")
                     + f"{xlabel} = {x}\n"
@@ -317,6 +215,70 @@ class _ClickCallbacks(object):
             printstr = None
 
         return printstr
+
+
+class _MoveClickPickCallbacks(_CallbacksBase):
+    # callbacks usable with move (and also click and pick)
+    def __init__(self, m, temp_artists):
+        _CallbacksBase.__init__(self, m, temp_artists)
+
+    def print_to_console(
+        self,
+        pos_precision=4,
+        val_precision=4,
+        text=None,
+        show_all_values=True,
+        **kwargs,
+    ):
+        """
+        Print details on the clicked pixel to the console.
+
+        Parameters
+        ----------
+
+        pos_precision : int
+            The floating-point precision of the coordinates.
+            The default is 4.
+        val_precision : int
+            The floating-point precision of the parameter-values (only used if
+            "val_fmt=None"). The default is 4.
+        text : callable or str, optional
+            if str: the string to print
+            if callable: A function that returns the string that should be
+            printed in the annotation with the following call-signature:
+
+                >>> def text(m, ID, val, pos, ind):
+                >>>     # m   ... the Maps object
+                >>>     # ID  ... the ID in the dataframe
+                >>>     # pos ... the position
+                >>>     # val ... the value
+                >>>     # ind ... the index
+                >>>
+                >>>     return "the string to print"
+
+            The default is None.
+        show_all_values : bool, optional
+            If True, show all values and coordinates of picked points.
+            If False, only (min...max) values are shown if multiple datapoints are
+            picked. The default is True.
+        """
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
+
+        printstr = self._get_annotation_text(
+            ID=ID,
+            pos=pos,
+            val=val,
+            ind=ind,
+            pos_precision=pos_precision,
+            val_precision=val_precision,
+            text=text,
+            show_all_values=show_all_values,
+        )
+
+        if text is None:
+            print("\n# ---------------\n" + printstr)
+        else:
+            print(printstr)
 
     def annotate(
         self,
@@ -488,47 +450,6 @@ class _ClickCallbacks(object):
             annotation.set_label(f"Annotation {pos}")
 
             return annotation
-
-    def clear_annotations(self, **kwargs):
-        """Remove all temporary and permanent annotations from the plot."""
-        if hasattr(self, "permanent_annotations"):
-            while len(self.permanent_annotations) > 0:
-                ann = self.permanent_annotations.pop(0)
-                self.m.BM.remove_artist(ann)
-                ann.remove()
-
-    # def _annotate_cleanup(self):
-    #     self.clear_annotations()
-
-    def get_values(self, **kwargs):
-        """
-        Successively collect return-values in a dict.
-
-        The dict is accessible via `m.cb.[click/pick].get.picked_vals`
-
-        The structure of the picked_vals dict is as follows:
-        (lists are appended as you click on more pixels)
-
-            >>> dict(
-            >>>     pos=[... center-position tuples in plot_crs ...],
-            >>>     ID=[... the corresponding IDs in the dataframe...],
-            >>>     val=[... the corresponding values ...]
-            >>> )
-
-        removing the callback will also remove the associated value-dictionary!
-        """
-        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
-
-        if not hasattr(self, "picked_vals"):
-            self.picked_vals = dict()
-
-        for key, val in zip(["pos", "ID", "val"], [pos, ID, val]):
-            self.picked_vals.setdefault(key, []).append(val)
-
-    def _get_values_cleanup(self):
-        # cleanup method for get_values callback
-        if hasattr(self, "picked_vals"):
-            del self.picked_vals
 
     def mark(
         self,
@@ -741,57 +662,6 @@ class _ClickCallbacks(object):
 
         return marker
 
-    def clear_markers(self, **kwargs):
-        """Remove all temporary and permanent annotations from the plot."""
-        if hasattr(self, "permanent_markers"):
-            while len(self.permanent_markers) > 0:
-                marker = self.permanent_markers.pop(0)
-                self.m.BM.remove_artist(marker)
-                marker.remove()
-            del self.permanent_markers
-
-    # def _mark_cleanup(self):
-    #     self.clear_markers()
-
-    def _get_clip_path(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
-        shp = self.m.set_shape._get(shape)
-
-        if shape == "ellipses":
-            shp_pts = shp._get_ellipse_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
-
-        elif shape == "rectangles":
-            shp_pts = shp._get_rectangle_verts(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = shp_pts[0][0]
-
-        elif shape == "geod_circles":
-            shp_pts = shp._get_geod_circle_points(
-                x=np.atleast_1d(x),
-                y=np.atleast_1d(y),
-                crs=xy_crs,
-                radius=radius,
-                # radius_crs=radius_crs,
-                n=n,
-            )
-            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
-        from matplotlib.path import Path
-
-        return Path(bnd_verts)
-
     def peek_layer(
         self, layer="1", how=(0.4, 0.4), alpha=1, shape="rectangular", **kwargs
     ):
@@ -802,7 +672,7 @@ class _ClickCallbacks(object):
         of the currently visible layer if you click on the map.
 
         You can show a rectangular or circular area of the "peek-layer" centered at
-        the mouse-position or swipe beween layers (e.g. from left/right/top or bottom).
+        the mouse-position or swipe between layers (e.g. from left/right/top or bottom).
 
 
         Parameters
@@ -873,7 +743,7 @@ class _ClickCallbacks(object):
         shape = "ellipses" if shape == "round" else "rectangles"
 
         if not isinstance(layer, str):
-            layer = self.m._get_combined_layer_name(*layer)
+            layer = self.m.BM._get_combined_layer_name(*layer)
 
         # add spines and relevant inset-map layers to the specified peek-layer
         layer = self.m.BM._get_showlayer_name(layer, transparent=True)
@@ -924,7 +794,7 @@ class _ClickCallbacks(object):
                 x1m, y1m = ax.transData.inverted().transform((x0 + blitw, y0 + blith))
                 w, h = abs(x1m - x0m), abs(y1m - y0m)
 
-                clip_path = self._get_clip_path(
+                clip_path = self.m.cb.click.attach._get_clip_path(
                     (x0m + x1m) / 2,
                     (y0m + y1m) / 2,
                     "out",
@@ -982,7 +852,7 @@ class _ClickCallbacks(object):
             )
             w, h = abs(x1m - x0m), abs(y1m - y0m)
 
-            clip_path = self._get_clip_path(
+            clip_path = self.m.cb.click.attach._get_clip_path(
                 x1m, y1m, "out", (w / 2, h / 2), "out", shape, 100
             )
         else:
@@ -1007,7 +877,7 @@ class _ClickCallbacks(object):
 
         self.m.BM._after_restore_actions.append(
             self.m.BM._get_restore_bg_action(
-                "|".join([self.m.BM.bg_layer, layer]),
+                self.m.BM._get_combined_layer_name(self.m.BM.bg_layer, layer),
                 (x0, y0, blitw, blith),
                 alpha=alpha,
                 clip_path=clip_path,
@@ -1015,51 +885,144 @@ class _ClickCallbacks(object):
             )
         )
 
-    def load(
-        self, database=None, load_method="load_fit", load_multiple=False, **kwargs
-    ):
+
+class _ClickCallbacks(_CallbacksBase):
+    """
+    A collection of callback-functions.
+
+    to attach a callback, use:
+        >>> cid = m.cb.click.attach.annotate(**kwargs)
+        or
+        >>> cid = m.cb.pick.attach.annotate(**kwargs)
+
+    to remove an already attached callback, use:
+        >>> m.cb.click.remove(cid)
+        or
+        >>> m.cb.pick.remove(cid)
+
+
+    you can also define custom callback functions as follows:
+
+        >>> def some_callback(self, **kwargs):
+        >>>     print("hello world")
+        >>>     print("the position of the clicked pixel", kwargs["pos"])
+        >>>     print("the data-index of the clicked pixel", kwargs["ID"])
+        >>>     print("data-value of the clicked pixel", kwargs["val"])
+    and attach them via:
+        >>> cid = m.cb.click.attach(some_callback)
+        or
+        >>> cid = m.cb.click.attach(some_callback)
+    (... and remove them in the same way as pre-defined callbacks)
+    """
+
+    # the naming-convention of the functions is as follows:
+    #
+    # _<NAME>_cleanup : a function that is executed if the callback
+    #                   is removed from the plot
+    #
+
+    # ID : any
+    #     The index-value of the pixel in the data.
+    # pos : tuple
+    #     A tuple of the position of the pixel in plot-coordinates.
+    #     (ONLY relevant if ID is NOT provided!)
+    # val : int or float
+    #     The parameter-value of the pixel.
+    # ind : int
+    #     The index of the clicked pixel
+    #     (ONLY relevant if ID is NOT provided!)
+
+    # this list determines the order at which callbacks are executed!
+    # (custom callbacks are always added to the end)
+
+    def __init__(self, m, temp_artists):
+        _CallbacksBase.__init__(self, m, temp_artists)
+
+    def clear_annotations(self, **kwargs):
+        """Remove all temporary and permanent annotations from the plot."""
+        if hasattr(self, "permanent_annotations"):
+            while len(self.permanent_annotations) > 0:
+                ann = self.permanent_annotations.pop(0)
+                self.m.BM.remove_artist(ann)
+                ann.remove()
+
+    def clear_markers(self, **kwargs):
+        """Remove all temporary and permanent annotations from the plot."""
+        if hasattr(self, "permanent_markers"):
+            while len(self.permanent_markers) > 0:
+                marker = self.permanent_markers.pop(0)
+                self.m.BM.remove_artist(marker)
+                marker.remove()
+            del self.permanent_markers
+
+    def get_values(self, **kwargs):
         """
-        Load objects from a given database using the ID of the picked pixel.
+        Successively collect return-values in a dict.
 
-        The returned object(s) are accessible via `m.cb.pick.get.picked_object`.
+        The dict is accessible via `m.cb.[click/pick].get.picked_vals`
 
-        Parameters
-        ----------
-        database : any
-            The database object to use for loading the object
-        load_method : str or callable
-            If str: The name of the method to use for loading objects from the provided
-                    database (the call-signature used is `database.load_method(ID)`)
-            If callable: A callable that will be executed on the database with the
-                         following call-signature: `load_method(database, ID)`
-        load_multiple : bool
-            True: A single-object is returned, replacing `m.cb.picked_object` on each pick.
-            False: A list of objects is returned that is extended with each pick.
+        The structure of the picked_vals dict is as follows:
+        (lists are appended as you click on more pixels)
+
+            >>> dict(
+            >>>     pos=[... center-position tuples in plot_crs ...],
+            >>>     ID=[... the corresponding IDs in the dataframe...],
+            >>>     val=[... the corresponding values ...]
+            >>> )
+
+        removing the callback will also remove the associated value-dictionary!
         """
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
-        assert database is not None, "you must provide a database object!"
-        try:
-            if isinstance(load_method, str):
-                assert hasattr(
-                    database, load_method
-                ), "The provided database has no method '{load_method}'"
-                pick = getattr(database, load_method)(ID)
-            elif callable(load_method):
-                pick = load_method(database, ID)
-            else:
-                raise TypeError("load_method must be a string or a callable!")
-        except Exception:
-            _log.error(
-                f"EOmaps: Unable to load object with ID:  '{ID}' from {database}"
-            )
-        if load_multiple is True:
-            self.picked_object = getattr(self, "picked_object", list()) + [pick]
-        else:
-            self.picked_object = pick
 
-    def _load_cleanup(self):
-        if hasattr(self, "picked_object"):
-            del self.picked_object
+        if not hasattr(self, "picked_vals"):
+            self.picked_vals = dict()
+
+        for key, val in zip(["pos", "ID", "val"], [pos, ID, val]):
+            self.picked_vals.setdefault(key, []).append(val)
+
+    def _get_values_cleanup(self):
+        # cleanup method for get_values callback
+        if hasattr(self, "picked_vals"):
+            del self.picked_vals
+
+    def _get_clip_path(self, x, y, xy_crs, radius, radius_crs, shape, n=100):
+        shp = self.m.set_shape._get(shape)
+
+        if shape == "ellipses":
+            shp_pts = shp._get_ellipse_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2)[0]
+
+        elif shape == "rectangles":
+            shp_pts = shp._get_rectangle_verts(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = shp_pts[0][0]
+
+        elif shape == "geod_circles":
+            shp_pts = shp._get_geod_circle_points(
+                x=np.atleast_1d(x),
+                y=np.atleast_1d(y),
+                crs=xy_crs,
+                radius=radius,
+                # radius_crs=radius_crs,
+                n=n,
+            )
+            bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
+        from matplotlib.path import Path
+
+        return Path(bnd_verts)
 
     def plot(
         self,
@@ -1146,23 +1109,9 @@ class _ClickCallbacks(object):
             del self._pick_l
 
 
-class PickCallbacks(_ClickCallbacks):
-    """A collection of callbacks that are executed if you click on a datapoint."""
-
-    _cb_list = [
-        "get_values",
-        "load",
-        "print_to_console",
-        "annotate",
-        "mark",
-        "plot",
-        "clear_annotations",
-        "clear_markers",
-        "highlight_geometry",
-    ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class _PickCallbacks:
+    def __init__(self, m, temp_artists):
+        _CallbacksBase.__init__(self, m, temp_artists)
 
     def highlight_geometry(self, permanent=False, **kwargs):
         """
@@ -1186,53 +1135,76 @@ class PickCallbacks(_ClickCallbacks):
             else:
                 self.m.add_gdf(geom, permanent=permanent, **kwargs)
 
+    def load(
+        self, database=None, load_method="load_fit", load_multiple=False, **kwargs
+    ):
+        """
+        Load objects from a given database using the ID of the picked pixel.
 
-class ClickCallbacks(_ClickCallbacks):
+        The returned object(s) are accessible via `m.cb.pick.get.picked_object`.
+
+        Parameters
+        ----------
+        database : any
+            The database object to use for loading the object
+        load_method : str or callable
+            If str: The name of the method to use for loading objects from the provided
+                    database (the call-signature used is `database.load_method(ID)`)
+            If callable: A callable that will be executed on the database with the
+                         following call-signature: `load_method(database, ID)`
+        load_multiple : bool
+            True: A single-object is returned, replacing `m.cb.picked_object` on each pick.
+            False: A list of objects is returned that is extended with each pick.
+        """
+        ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
+        assert database is not None, "you must provide a database object!"
+        try:
+            if isinstance(load_method, str):
+                assert hasattr(
+                    database, load_method
+                ), "The provided database has no method '{load_method}'"
+                pick = getattr(database, load_method)(ID)
+            elif callable(load_method):
+                pick = load_method(database, ID)
+            else:
+                raise TypeError("load_method must be a string or a callable!")
+        except Exception:
+            _log.error(
+                f"EOmaps: Unable to load object with ID:  '{ID}' from {database}"
+            )
+        if load_multiple is True:
+            self.picked_object = getattr(self, "picked_object", list()) + [pick]
+        else:
+            self.picked_object = pick
+
+    def _load_cleanup(self):
+        if hasattr(self, "picked_object"):
+            del self.picked_object
+
+
+class PickCallbacks(_ClickCallbacks, _PickCallbacks, _MoveClickPickCallbacks):
+    """A collection of callbacks that are executed if you click on a datapoint."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class ClickCallbacks(_ClickCallbacks, _MoveClickPickCallbacks):
     """Collection of callbacks that are executed if you click anywhere on the map."""
 
-    _cb_list = [
-        "get_values",
-        "print_to_console",
-        "annotate",
-        "mark",
-        "peek_layer",
-        "clear_annotations",
-        "clear_markers",
-    ]
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
-class MoveCallbacks(_ClickCallbacks):
+class MoveCallbacks(_MoveClickPickCallbacks):
     """Collection of callbacks that are executed on mouse-movement."""
 
-    _cb_list = [
-        "print_to_console",
-        "annotate",
-        "mark",
-        "peek_layer",
-    ]
-
-    def _decorate(self, f):
-        def inner(*args, **kwargs):
-            f(*args, **kwargs)
-            self.m.BM.update()
-
-        return inner
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        for cb in self._cb_list:
-            if cb not in ["print_to_console"]:
-                setattr(self, cb, self._decorate(getattr(super(), cb)))
 
 
 class KeypressCallbacks:
     """Collection of callbacks that are executed if you press a key on the keyboard."""
-
-    _cb_list = ["switch_layer", "fetch_layers"]
 
     def __init__(self, m, temp_artists):
         self._temporary_artists = temp_artists
@@ -1240,16 +1212,14 @@ class KeypressCallbacks:
 
     def switch_layer(self, layer, key="x"):
         """
-        Change the default layer of the map.
-
-        Use the keyboard events to set the default layer (e.g. the visible layer)
-        displayed in the plot.
+        Set the currently visible layer of the map.
 
         Parameters
         ----------
-        layer : str
-            The layer-name to use.
-            If a non-string value is provided, it will be converted to string!
+        layer : str or list
+            The layer-name to use (or a list of layer-names to combine).
+
+            For details on how to specify layer-names, see :py:meth:`Maps.show_layer`
 
         Additional Parameters
         ---------------------
@@ -1258,8 +1228,103 @@ class KeypressCallbacks:
             Modifiers are indicated with a "+", e.g. "alt+x".
             The default is "x".
 
+        Examples
+        --------
+        Show layer A:
+
+        >>> m.cb.keypress.attach.overlay_layer(layer="A", key="x")
+
+        Show layer B with 50% transparency on top of layer A
+
+        >>> m.cb.keypress.attach.overlay_layer(layer="A|B{0.5}", key="x")
+
+        Show layer B on top of layer A:
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=["A", "B"], key="x")
+
+        Show layer B with 50% transparency on top of layer A
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=["A", ("B", 0.5)], key="x")
+
+
         """
-        self._m.show_layer(layer)
+        if isinstance(layer, (list, tuple)):
+            self._m.show_layer(*layer)
+        elif isinstance(layer, str):
+            self._m.show_layer(layer)
+
+    def overlay_layer(self, layer, key="x"):
+        """
+        Toggle displaying a layer on top of the currently visible layers.
+
+        This callback is useful to quickly show/hide a data-layer on top
+        of a basemap by pressing a key on the keyboard.
+
+        Parameters
+        ----------
+        layer : str, tuple or list
+            The layer-name to use, a tuple (layer, transparency) or a list of
+            the aforementioned types to combine.
+
+            For details on how to specify layer-names, see :py:meth:`Maps.show_layer`
+
+        Additional Parameters
+        ---------------------
+        key : str, optional
+            The key to use for triggering the callback.
+            Modifiers are indicated with a "+", e.g. "alt+x".
+            The default is "x".
+
+        Note
+        ----
+        If the visible layer changes **while the overlay-layer is active**,
+        triggering the callback again might not properly remove the previous overlay!
+        (e.g. the overlay is only removed if the top-layer corresponds exactly to
+        the overlay-layer specifications)
+
+        Examples
+        --------
+        Toggle overlaying layer A:
+
+        >>> m.cb.keypress.attach.overlay_layer(layer="A", key="x")
+
+        Toggle overlaying layer A with 50% transparency:
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=("A", 0.5), key="x")
+
+        Toggle overlaying a combined layer (showing layer B with 50% transparency
+        on top of layer A)
+
+        >>> m.cb.keypress.attach.overlay_layer(layer="A|B{0.5}", key="x")
+
+        Toggle overlaying a combined layer (showing layer B on top of layer A)
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=["A", "B"], key="x")
+
+        Toggle overlaying a combined layer (showing layer B with 50% transparency
+        on top of layer A)
+
+        >>> m.cb.keypress.attach.overlay_layer(layer=["A", ("B", 0.5)], key="x")
+
+        """
+
+        if isinstance(layer, list):
+            layer = self._m.BM._get_combined_layer_name(*layer)
+        elif isinstance(layer, tuple):
+            # e.g. (layer-name, layer-transparency)
+            layer = self._m.BM._get_combined_layer_name(layer)
+
+        # in case the layer is currently on top, remove it
+        if not self._m.BM.bg_layer.endswith(f"|{layer}"):
+            self._m.show_layer(self._m.BM.bg_layer, layer)
+        else:
+            if sys.version_info >= (3, 9):
+                newlayer = self._m.BM.bg_layer.removesuffix(f"|{layer}")
+            else:
+                newlayer = _removesuffix(self._m.BM.bg_layer, f"|{layer}")
+
+            if len(newlayer) > 0:
+                self._m.show_layer(newlayer)
 
     def fetch_layers(self, layers=None, verbose=True, key="x"):
         """

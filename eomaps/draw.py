@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """
 Functionalities to draw shapes on maps created with EOmaps.
 
@@ -248,7 +253,7 @@ class ShapeDrawer:
         for cb in self._on_poly_remove:
             cb()
 
-        self._m.BM.on_draw(None)
+        self._m.BM._on_draw_cb(None)
 
     def _init_draw_line(self):
         if self._line is None:
@@ -286,7 +291,7 @@ class ShapeDrawer:
         """Trigger re-drawing shapes."""
         # NOTE: If a drawer is active, this function is also called on any ordinary
         # draw-event (e.g. zoom/pan/resize) to keep the indicators visible.
-        # see "m.BM.on_draw()"
+        # see "m.BM._on_draw_cb()"
 
         artists = self._indicator_artists
 
@@ -610,7 +615,7 @@ class ShapeDrawer:
 
     def polygon(self, smooth=False, draw_on_drag=True, **kwargs):
         """
-        Draw arbitarary polygons
+        Draw arbitrary polygons
 
         - RIGHT click to add points
           (or drag while holding RIGHT mouse button)
@@ -651,7 +656,7 @@ class ShapeDrawer:
                     self._m.BM.add_artist(ph, layer=self.layer)
                 else:
                     self._m.BM.add_bg_artist(ph, layer=self.layer)
-                    self._m.BM.on_draw(None)
+                    self._m.BM._on_draw_cb(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
@@ -743,7 +748,7 @@ class ShapeDrawer:
                     self._m.BM.add_artist(ph, layer=self.layer)
                 else:
                     self._m.BM.add_bg_artist(ph, layer=self.layer)
-                    self._m.BM.on_draw(None)
+                    self._m.BM._on_draw_cb(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph
@@ -828,7 +833,7 @@ class ShapeDrawer:
                     self._m.BM.add_artist(ph, layer=self.layer)
                 else:
                     self._m.BM.add_bg_artist(ph, layer=self.layer)
-                    self._m.BM.on_draw(None)
+                    self._m.BM._on_draw_cb(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
                 self._artists[ID] = ph

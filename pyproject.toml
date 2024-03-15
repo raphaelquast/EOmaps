@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["eomaps", "eomaps.scripts", "eomaps.qtcompanion"]
+
+[tool.setuptools.package-data]
+eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
+
+
+[project]
+name = "eomaps"
+version = "8.0.1"
+description = "A library to create interactive maps of geographical datasets."
+readme = "README.md"
+license = {file = "LICENSE"}
+
+requires-python = ">=3.8"
+
+authors = [
+  { name="Raphael Quast", email="raphael.quast@geo.tuwien.ac.at" },
+]
+
+keywords = ["Visualization", "Plotting", "Maps", "Geographical Data"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Framework :: Matplotlib",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib>=3.4",
+    "cartopy>=0.20.0",
+    "descartes",
+    "pyproj",
+    "packaging",
+    "click"
+]
+
+[project.optional-dependencies]
+
+all = ["eomaps[io, classify, wms, shade, gui]"]
+
+all_nogui = ["eomaps[io, classify, wms, shade]"]
+
+io = [
+    "pandas",
+    "geopandas",
+    "xarray",
+    "netcdf4",
+    "rioxarray"
+]
+
+classify = ["mapclassify"]
+
+wms = [
+    "owslib",
+    "requests",
+]
+
+shade = ["datashader"]
+
+gui = [
+    "PyQt5",
+    "qtpy"
+    ]
+
+[project.scripts]
+eomaps = "eomaps.scripts.open:cli"
+
+[project.urls]
+Documentation = "https://eomaps.readthedocs.io/"
+Repository = "https://github.com/raphaelquast/eomaps"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:Downloading*",
+    "ignore:Passing a SingleBlockManager to Series is deprecated *:DeprecationWarning",
+    "ignore:Passing a BlockManager to GeoDataFrame is deprecated *:DeprecationWarning",
+    "ignore:Passing a SingleBlockManager to GeoSeries is deprecated *:DeprecationWarning",
+    "ignore:Pyarrow will become a required dependency of pandas *:DeprecationWarning",
+    "ignore:Geometry is in a geographic CRS. Results from *:UserWarning",
+    "ignore:Back azimuth is being returned by default *:UserWarning",
+    "ignore:Conversion of an array with ndim > 0:DeprecationWarning"
+]

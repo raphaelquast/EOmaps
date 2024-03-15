@@ -1,7 +1,12 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSlot
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt, Slot
 from ..common import iconpath
-from PyQt5 import QtGui
+from qtpy import QtGui
 
 
 class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
@@ -45,7 +50,7 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
                 "select the peek-method as well as the transparency of the overlay.",
             )
 
-    @pyqtSlot()
+    @Slot()
     def set_last_active(self):
         self._last_active = self.currentText()
 
@@ -102,7 +107,7 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
 
 
 class AutoUpdateLayerLabel(QtWidgets.QLabel):
-    def __init__(self, *args, m=None, max_length=100, **kwargs):
+    def __init__(self, *args, m=None, max_length=60, **kwargs):
         super().__init__(*args, **kwargs)
         self.m = m
 
@@ -116,7 +121,7 @@ class AutoUpdateLayerLabel(QtWidgets.QLabel):
         self.setTextInteractionFlags(Qt.NoTextInteraction)
 
     def get_text(self):
-        layers, alphas = self.m.BM._get_layers_alphas()
+        layers, alphas = self.m.BM._get_active_layers_alphas
 
         prefix = "&nbsp;&nbsp;&nbsp;&nbsp;" "<font color=gray>"
         suffix = "<\font>"
@@ -135,6 +140,9 @@ class AutoUpdateLayerLabel(QtWidgets.QLabel):
                 ls += " {" + f"{a*100:.0f}%" + "}"
 
             s += ls
+
+        if len(s) > self._max_length:
+            s = s[: self._max_length - 3] + "..."
 
         return prefix + s + suffix
 
@@ -264,7 +272,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         uselayer = "???"
 
         if len(active_layers) > 1:
-            uselayer = "|".join(active_layers)
+            uselayer = self.m.BM._get_combined_layer_name(*active_layers)
         elif len(active_layers) == 1:
             uselayer = active_layers[0]
 
@@ -315,7 +323,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         self.update_layers()
         self.update_display_text(self.m.BM._bg_layer)
 
-    @pyqtSlot()
+    @Slot()
     def actionClicked(self):
         action = self.sender()
         if not isinstance(action, QtWidgets.QWidgetAction):
@@ -326,7 +334,10 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         actionwidget = action.defaultWidget()
 
-        checked_layers = [l for l in self.m.BM.bg_layer.split("|") if l != "_"]
+        # just split here to keep transparency-assignments in tact!
+        active_layers = self.m.BM.bg_layer.split("|")
+
+        checked_layers = [l for l in active_layers if l != "_"]
         selected_layer = action.data()
         selected_layers = [l for l in action.data().split("|") if l != "_"]
 
@@ -357,7 +368,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
             uselayer = "???"
             if len(checked_layers) > 1:
-                uselayer = "|".join(checked_layers)
+                uselayer = self.m.BM._get_combined_layer_name(*checked_layers)
             elif len(checked_layers) == 1:
                 uselayer = checked_layers[0]
 
@@ -369,7 +380,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
 
     def update_checkstatus(self):
         currlayer = str(self.m.BM.bg_layer)
-        layers, alphas = self.m.BM._get_layers_alphas(currlayer)
+        layers, alphas = self.m.BM._get_active_layers_alphas
         if "|" in currlayer:
             active_layers = [i for i in layers if not i.startswith("_")]
             active_layers.append(currlayer)
@@ -392,7 +403,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
                 # re connect action trigger
                 w.clicked.connect(action.trigger)
 
-    @pyqtSlot()
+    @Slot()
     def update_layers(self):
         layers = self.layers
         if layers == self._last_layers:

@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 import logging
 
 import requests
@@ -79,7 +84,7 @@ class _WebMapLayer:
 
         print(f"\n LEGEND available: {legQ}\n\n" + txt)
 
-    def fetch_legend(self, style=None, silent=True):
+    def fetch_legend(self, style=None):
         if style is None:
             style = self._style
         try:
@@ -93,15 +98,20 @@ class _WebMapLayer:
                     img = cairosvg.svg2png(legend.content)
 
                 except ImportError:
-                    warn("EOmaps: the legend is '.svg'... please install 'cairosvg'")
+                    _log.warning(
+                        "EOmaps: The legend image is provided as a '.svg' graphic. "
+                        "To add svg graphics to a map, you must install the optional "
+                        "dependency 'cairosvg'! (see: https://cairosvg.org/)",
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    )
                     return None
             else:
                 img = legend.content
 
             img = Image.open(BytesIO(img))
         except Exception:
-            if not silent:
-                warn("EOmaps: could not fetch the legend")
+            if _log.getEffectiveLevel() <= logging.DEBUG:
+                _log.warning("EOmaps: could not fetch the wms legend", exc_info=True)
             return None
         return img
 
@@ -158,7 +168,7 @@ class _WebMapLayer:
             legax.imshow(legend)
 
             # hide the legend if the corresponding layer is not active at the moment
-            if self._layer not in self._m.BM._get_layers_alphas()[0]:
+            if not self._m.BM._layer_visible(self._layer):
                 legax.set_visible(False)
 
             self._m.BM.add_artist(legax, self._layer)
@@ -375,7 +385,7 @@ class _WMTSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or self._layer in m.BM._get_layers_alphas()[0]:
+            if self._layer == "all" or m.BM._layer_visible(self._layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     self._m,
@@ -486,7 +496,7 @@ class _WMSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or self._layer in m.BM.bg_layer.split("|"):
+            if m.BM._layer_visible(self._layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     m=m,

@@ -1,27 +1,32 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """A container class for signals sent to the CompanionWidget"""
 
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from qtpy.QtCore import QObject, Signal
 
 
 class _SignalContainer(QObject):
-    cmapsChanged = pyqtSignal()
+    cmapsChanged = Signal()
 
-    clipboardKwargsChanged = pyqtSignal()
+    clipboardKwargsChanged = Signal()
 
-    dataPlotted = pyqtSignal()
+    dataPlotted = Signal()
 
     # -------- shape drawer
-    drawFinished = pyqtSignal()
-    drawAborted = pyqtSignal()
-    drawStarted = pyqtSignal(str)
+    drawFinished = Signal()
+    drawAborted = Signal()
+    drawStarted = Signal(str)
 
     # -------- annotation editor
-    annotationEditorActivated = pyqtSignal()
-    annotationEditorDeactivated = pyqtSignal()
-    annotationSelected = pyqtSignal()
-    annotationEdited = pyqtSignal()
+    annotationEditorActivated = Signal()
+    annotationEditorDeactivated = Signal()
+    annotationSelected = Signal()
+    annotationEdited = Signal()
 
     # -------- layout editor
-    layoutEditorActivated = pyqtSignal()
-    layoutEditorDeactivated = pyqtSignal()
+    layoutEditorActivated = Signal()
+    layoutEditorDeactivated = Signal()

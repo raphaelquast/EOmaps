@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Mapsgrid class definition (helper for initialization of regular Maps-grids)."""
 
 from functools import wraps, lru_cache
@@ -9,7 +14,7 @@ import matplotlib.pyplot as plt
 from .shapes import Shapes
 from .eomaps import Maps
 
-from .ne_features import NaturalEarth_features
+from .ne_features import NaturalEarthFeatures
 
 try:
     from .webmap_containers import WebMapContainer
@@ -68,10 +73,6 @@ class MapsGrid:
 
     Attributes
     ----------
-    f : matplotlib.figure
-        The matplotlib figure object
-    gridspec : matplotlib.GridSpec
-        The matplotlib GridSpec instance used to initialize the axes.
     m_<identifier> : eomaps.Maps objects
         The individual Maps-objects can be accessed via `mgrid.m_<identifier>`
         The identifiers are hereby `<row>_<col>` or the keys of the `m_inits`
@@ -314,7 +315,7 @@ class MapsGrid:
         Parameters
         ----------
         ax_init : set
-            The GridSpec speciffications for the axis.
+            The GridSpec specifications for the axis.
             use `ax_inits = (<row>, <col>)` to get an axis in a given grid-cell
             use `slice(<start>, <stop>)` for `<row>` or `<col>` to get an axis
             that spans over multiple rows/columns.
@@ -421,7 +422,7 @@ class MapsGrid:
     @property
     @wraps(Maps.add_feature)
     def add_feature(self):
-        x = NaturalEarth_features(self)
+        x = NaturalEarthFeatures(self)
         return x
 
     @wraps(Maps.add_gdf)

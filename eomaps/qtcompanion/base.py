@@ -1,8 +1,13 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 import logging
 from weakref import WeakSet
 
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import Qt, pyqtSlot
+from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtCore import Qt, Slot
 
 from .common import iconpath
 
@@ -257,7 +262,7 @@ class EditLayoutButton(BasicCheckableToolButton):
                 "</ul>",
             )
 
-    @pyqtSlot()
+    @Slot()
     def callback(self):
         if not self.m.parent._layout_editor._modifier_pressed:
             self.m.parent.edit_layout()
@@ -362,7 +367,7 @@ class ToolBar(QtWidgets.QToolBar):
 
         self.press_pos = None
 
-    @pyqtSlot()
+    @Slot()
     def toggle_show_help(self):
         if self.b_showhelp.isChecked():
             self.window().showhelp = True
@@ -371,7 +376,7 @@ class ToolBar(QtWidgets.QToolBar):
             self.window().showhelp = False
             # self.b_showhelp.setText("?")
 
-    @pyqtSlot()
+    @Slot()
     def close_button_callback(self):
         self.window().close()
         if self.m is not None:
@@ -380,11 +385,11 @@ class ToolBar(QtWidgets.QToolBar):
         if self._on_close is not None:
             self._on_close()
 
-    @pyqtSlot()
+    @Slot()
     def open_file_button_callback(self):
         self.window().tabs.tab_open.openNewFile.emit()
 
-    @pyqtSlot()
+    @Slot()
     def maximize_button_callback(self):
         if not self.window().isMaximized():
             self.window().showMaximized()
@@ -395,7 +400,11 @@ class ToolBar(QtWidgets.QToolBar):
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
-            self.press_pos = event.windowPos().toPoint()
+            try:
+                self.press_pos = event.windowPos().toPoint()
+            except Exception:
+                # for PyQt6 compatibility
+                self.press_pos = event.scenePosition().toPoint()
 
     def mouseReleaseEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
@@ -452,7 +461,7 @@ class NewWindow(QtWidgets.QMainWindow):
 
         _windows_to_close.add(self)
 
-    @pyqtSlot()
+    @Slot()
     def on_close(self, e):
         self.close()
 
@@ -483,7 +492,7 @@ class AlwaysOnTopWindow(QtWidgets.QMainWindow):
 
         self.addToolBar(self.toolbar)
 
-    @pyqtSlot()
+    @Slot()
     def toggle_always_on_top(self, *args, **kwargs):
         q = self.m._get_always_on_top()
 

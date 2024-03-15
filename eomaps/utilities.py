@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Collection of utility classes (layer sliders, layer selectors etc.)"""
 
 from matplotlib.legend import DraggableLegend
@@ -5,6 +10,9 @@ from matplotlib.lines import Line2D
 from matplotlib.widgets import Slider
 from functools import wraps
 from matplotlib.pyplot import Artist, rcParams
+
+from packaging import version
+from .helpers import mpl_version
 
 
 class SelectorButtons(Artist):
@@ -67,7 +75,11 @@ class SelectorButtons(Artist):
 
         self.leg = f.legend(circles, self.labels, **kwargs)
 
-        self.circles = self.leg.legendHandles
+        # TODO remove once support for matplotlib <3.7 is dropped
+        if mpl_version >= version.Version("3.7"):
+            self.circles = self.leg.legend_handles
+        else:
+            self.circles = self.leg.legendHandles
 
         for c in self.circles:
             c.set_picker(10)
@@ -231,7 +243,7 @@ class LayerSelector(SelectorButtons):
 
         See Also
         --------
-        utilities.layer_slider : A slider widget to switch between layers.
+        Utilities.layer_slider : A slider widget to switch between layers.
         Maps.show_layer: Set the currently visible layer.
 
         """
@@ -251,7 +263,7 @@ class LayerSelector(SelectorButtons):
             uselayers = []
             for l in layers:
                 if not isinstance(l, str):
-                    uselayers.append(m._get_combined_layer_name(*l))
+                    uselayers.append(m.BM._get_combined_layer_name(*l))
                 else:
                     uselayers.append(l)
             layers = uselayers
@@ -443,7 +455,7 @@ class LayerSlider(Slider):
             uselayers = []
             for l in layers:
                 if not isinstance(l, str):
-                    uselayers.append(m._get_combined_layer_name(*l))
+                    uselayers.append(m.BM._get_combined_layer_name(*l))
                 else:
                     uselayers.append(l)
             layers = uselayers
@@ -573,7 +585,7 @@ class LayerSlider(Slider):
         self._m.BM.update()
 
 
-class utilities:
+class Utilities:
     """
     A collection of utility tools that can be added to EOmaps plots.
 

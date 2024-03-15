@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Grid lines and grid labels."""
 
 import logging
@@ -45,7 +50,15 @@ def _get_intersect(a1, a2, b1, b2):
 
 
 class GridLines:
-    """Class to draw grid-lines."""
+    """
+    Base class for EOmaps grid-lines (and associated grid-labels).
+
+    Note
+    ----
+    To add new grid-lines to a map, see
+    :py:meth:`Maps.add_gridlines <eomaps.eomaps.Maps.add_gridlines>`.
+
+    """
 
     def __init__(
         self, m, d=None, auto_n=10, layer=None, bounds=None, n=100, dynamic=False
@@ -122,7 +135,7 @@ class GridLines:
             - If `int` or `float`, the provided number is used as grid-spacing.
             - If a `list` or `numpy.array` is provided, it is used to draw gridlines
               at the provided coordinates.
-            - If a `tuple` of lengh 2 is provided, it represents separate assignments of
+            - If a `2-tuple` is provided, it represents separate assignments of
               the aforementioned types for longitude/latitude , e.g.: `(d_lon, d_lat)`.
             - If `None`, gridlines are automatically determined based on the "auto_n"
               parameter.

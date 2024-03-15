@@ -1,5 +1,10 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt, Slot, Signal
 from .utils import GetColorWidget
 
 from matplotlib.patches import BoxStyle, ArrowStyle
@@ -148,7 +153,7 @@ arrow_color_tooltip = "<b>click</b>: set arrow color"
 
 
 class AddAnnotationWidget(QtWidgets.QWidget):
-    widgetShown = pyqtSignal()
+    widgetShown = Signal()
 
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -169,7 +174,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
 
         self.text_inp.textChanged.connect(self.update_selected_text)
         self.text_inp.setPlaceholderText(
-            "Enter annotation text (or edit text of existing annoation)\n\n"
+            "Enter annotation text (or edit text of existing annotation)\n\n"
             "Press < SHIFT + ENTER > and click on the map to draw the annotation!"
         )
         self.text_inp.setSizePolicy(
@@ -291,7 +296,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
         self.m._connect_signal("annotationEditorDeactivated", self.update_buttons)
 
     def eventFilter(self, widget, event):
-        from PyQt5 import QtCore
+        from qtpy import QtCore
 
         if (
             event.type() == QtCore.QEvent.KeyPress
@@ -485,7 +490,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
                 "in the list of background-artists!",
             )
 
-    @pyqtSlot(int)
+    @Slot(int)
     def dial_value_changed(self, i):
         self.annotate_props["rotation"] = int(180 - i)
         self.annotate_props["horizontalalignment"] = "center"
@@ -497,14 +502,14 @@ class AddAnnotationWidget(QtWidgets.QWidget):
         if self.m._edit_annotations._drag_active:
             self.update_selected_rotation(self.annotate_props["rotation"])
 
-    @pyqtSlot()
+    @Slot()
     def do_add_annotation(self):
         if self._annotation_active is True:
             self.stop()
         else:
             self.add_annotation(text=self.text_inp.toPlainText())
 
-    @pyqtSlot()
+    @Slot()
     def remove_selected_annotation(self):
         ann = self.selected_annotation
         if ann:
@@ -643,7 +648,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
     def _annotations_editable(self):
         return self.m._edit_annotations._drag_active
 
-    @pyqtSlot()
+    @Slot()
     def toggle_annotations_editable(self):
         if not self._annotations_editable:
             self.m._edit_annotations(True)
@@ -654,7 +659,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
 
         self.update_buttons()
 
-    @pyqtSlot()
+    @Slot()
     def update_buttons(self):
         if self._annotations_editable:
             self.edit_annotations.setText("Annotations editable!")

@@ -1,4 +1,4 @@
-# EOmaps example 3: Customize the appearance of the plot
+# EOmaps example: Customize the appearance of the plot
 
 from eomaps import Maps
 import pandas as pd

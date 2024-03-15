@@ -3,17 +3,19 @@ channels:
   - conda-forge
 
 dependencies:
-  - rtree
   - numpy
   - scipy
-  - pandas
-  - geopandas
   - matplotlib >=3.4
   - cartopy >=0.20.0
   - descartes
+  # ------------- to handle data-classification
   - mapclassify
+  # ------------- to handle reprojections
   - pyproj
-  - pyepsg
+  # ------------- to support Dataframes
+  - pandas
+  # ------------- to support GeoDataFrames
+  - geopandas
   # --------------for data-shading
   - datashader
   # --------------for GeoTIFF and NetCDF files
@@ -23,16 +25,17 @@ dependencies:
   # --------------for WebMaps
   - owslib
   - requests
-  - xmltodict
-  - cairosvg
-  # --------------for testing
+  # --------------to support multiple Qt versions
+  - qtpy
+  # --------------for jupyter widgets
+  - ipywidgets
+
+  ### To run the tests
   - coveralls
   - pytest
   - pytest-cov
-  # --------------for building the docs
-  - sphinx-copybutton
-  - sphinx
+  # --------------for testing the docs
+  # (e.g. parsing .rst code-blocks and Jupyter Notebooks)
   - docutils
-  - pip
-  - pip:
-    - sphinx_rtd_theme
+  - jupyter
+  - nbformat

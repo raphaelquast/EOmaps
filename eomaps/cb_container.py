@@ -1,9 +1,15 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Container classes for callback management"""
 
 import logging
 from types import SimpleNamespace
-from functools import update_wrapper, partial, wraps
+from functools import partial, wraps
 from itertools import chain
+from weakref import proxy
 
 from .callbacks import (
     ClickCallbacks,
@@ -119,12 +125,6 @@ class _CallbackContainer(object):
         else:
             self._temporary_artists = self._parent_container._temporary_artists
 
-        self._cb = cb_class(m, self._temporary_artists)
-        self._cb_list = cb_class._cb_list
-
-        self.attach = self._attach(self)
-        self.get = self._get(self)
-
         self._fwd_cbs = dict()
 
         self._method = method
@@ -164,10 +164,11 @@ class _CallbackContainer(object):
                     obj = self._getobj(m)
 
                     # only include objects that are on the same layer
+                    # (irrespective if a toolbar mode is active or not)
                     if (
                         obj is not None
                         and obj._execute_cb(obj._m.layer)
-                        and not obj._check_toolbar_mode()
+                        # and not obj._check_toolbar_mode()
                     ):
                         objs.append(obj)
             else:
@@ -177,6 +178,7 @@ class _CallbackContainer(object):
                     if event.inaxes == m.ax:
                         obj = self._getobj(m)
                         # only include objects that are on the same layer
+                        # (and only if no toolbar mode is active!)
                         if (
                             obj is not None
                             and obj._execute_cb(obj._m.layer)
@@ -191,10 +193,11 @@ class _CallbackContainer(object):
             self._m.BM._artists_to_clear.setdefault(self._method, []).append(art)
 
     def _sort_cbs(self, cbs):
+        _cb_list = self._attach._available_callbacks()
         if not cbs:
             return set()
         cbnames = set([i.rsplit("__", 1)[0].rsplit("_", 1)[0] for i in cbs])
-        sortp = self._cb_list + list(set(self._cb_list) ^ cbnames)
+        sortp = _cb_list + list(set(_cb_list) ^ cbnames)
         return sorted(
             list(cbs), key=lambda w: sortp.index(w.rsplit("__", 1)[0].rsplit("_", 1)[0])
         )
@@ -221,7 +224,7 @@ class _CallbackContainer(object):
 
     def share_events(self, *args):
         """
-        Share callback-events between this Maps-object and all other Maps-objects.
+        Share callback-events between this Maps-object and other Maps-objects.
 
         (e.g. share events both ways)
 
@@ -284,28 +287,14 @@ class _CallbackContainer(object):
             Indicator if the callback should be executed on the currently visible
             layer or not.
         """
-        if self.execute_on_all_layers:
+        if self.execute_on_all_layers or layer == "all":
             return True
 
-        visible_layer = self._m.BM.bg_layer
-        if layer == "all":
-            # the all layer is always executed
-            return True
-        elif "|" in visible_layer:
-            if layer == visible_layer:
-                # return true for the multi-layer itself
-                return True
-            else:
-                # return true for layers that are part of the multi-layer
-                # (make sure to strip off transparency assignments, e.g. "layer{}" )
-                return any(
-                    i.strip().split("{")[0] == layer for i in visible_layer.split("|")
-                )
-        else:
-            return layer == visible_layer
+        return self._m.BM._layer_visible(layer)
 
     @property
     def execute_on_all_layers(self):
+        """Indicator if callbacks of this container are executed on all layers."""
         if self._parent_container is not None:
             return self._parent_container._execute_on_all_layers
 
@@ -365,6 +354,35 @@ class _CallbackContainer(object):
         """
         self._execute_while_toolbar_active = q
 
+    def _try_decorator(self, func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            try:
+                func(*args, **kwargs)
+            except Exception:
+                _log.error("problem during callback", exc_info=True)
+
+        return inner
+
+    def _attach_decorator(self, func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            return self._add_callback(
+                callback=self._try_decorator(func), *args, **kwargs
+            )
+
+        return inner
+
+
+def _apply_decorator_to_all_public_methods(decorator):
+    def decorate(cls):
+        for attr in filter(lambda x: not x.startswith("_"), dir(cls)):
+            if callable(getattr(cls, attr)):
+                setattr(cls, attr, decorator(getattr(cls, attr)))
+        return cls
+
+    return decorate
+
 
 class _ClickContainer(_CallbackContainer):
     """
@@ -390,11 +408,18 @@ class _ClickContainer(_CallbackContainer):
         # the default button to use when attaching callbacks
         self._default_button = default_button
 
+        self.attach = self._attach(self)
+        self.attach = _apply_decorator_to_all_public_methods(self._attach_decorator)(
+            self.attach
+        )
+
+        self.get = self._get(self)
+
     class _attach:
         """
         Attach custom or pre-defined callbacks to the map.
 
-        Each callback-function takes 2 additional keyword-arguments:
+        Callback-functions accept the following additional keyword-arguments:
 
         double_click : bool
             Indicator if the callback should be executed on double-click (True)
@@ -452,17 +477,8 @@ class _ClickContainer(_CallbackContainer):
 
         def __init__(self, parent):
             self._parent = parent
-
-            # attach pre-defined callbacks
-            for cb in self._parent._cb_list:
-                setattr(
-                    self,
-                    cb,
-                    update_wrapper(
-                        partial(self._parent._add_callback, callback=cb),
-                        getattr(self._parent._cb, cb),
-                    ),
-                )
+            self.m = parent._m
+            self._temporary_artists = self._parent._temporary_artists
 
         def __call__(self, f, double_click=False, button=None, modifier=None, **kwargs):
             """
@@ -531,19 +547,24 @@ class _ClickContainer(_CallbackContainer):
                 **kwargs,
             )
 
+        @classmethod
+        def _available_callbacks(cls):
+            return list(filter(lambda x: not x.startswith("_"), dir(cls)))
+
     class _get:
         """Accessor for objects generated/retrieved by callbacks."""
 
         def __init__(self, parent):
-            self.m = parent._m
-            self.cb = parent._cb
+            self._parent = parent
+            self.m = self._parent._m
 
             self.cbs = dict()
 
         @property
         def picked_object(self):
-            if hasattr(self.cb, "picked_object"):
-                return self.cb.picked_object
+            """Get the most recent picked object."""
+            if hasattr(self._parent.attach, "picked_object"):
+                return self._parent.attach.picked_object
             else:
                 _log.warning(
                     "EOmaps: No picked objects found. Attach "
@@ -552,8 +573,9 @@ class _ClickContainer(_CallbackContainer):
 
         @property
         def picked_vals(self):
-            if hasattr(self.cb, "picked_vals"):
-                return self.cb.picked_vals
+            """Get a list of all picked values."""
+            if hasattr(self._parent.attach, "picked_vals"):
+                return self._parent.attach.picked_vals
             else:
                 _log.warning(
                     "EOmaps: No picked values found. Attach "
@@ -562,8 +584,9 @@ class _ClickContainer(_CallbackContainer):
 
         @property
         def permanent_markers(self):
-            if hasattr(self.cb, "permanent_markers"):
-                return self.cb.permanent_markers
+            """Get a list of all permanent markers."""
+            if hasattr(self._parent.attach, "permanent_markers"):
+                return self._parent.attach.permanent_markers
             else:
                 _log.warning(
                     "EOmaps: No permanent markers found. Attach "
@@ -572,8 +595,9 @@ class _ClickContainer(_CallbackContainer):
 
         @property
         def permanent_annotations(self):
-            if hasattr(self.cb, "permanent_annotations"):
-                return self.cb.permanent_annotations
+            """Get a list of all permanent annotations."""
+            if hasattr(self._parent.attach, "permanent_annotations"):
+                return self._parent.attach.permanent_annotations
             else:
                 _log.warning(
                     "EOmaps: No permanent annotations found. Attach "
@@ -582,6 +606,7 @@ class _ClickContainer(_CallbackContainer):
 
         @property
         def attached_callbacks(self):
+            """Get a list of all IDs of attached callbacks."""
             cbs = []
             for ds, dsdict in self.cbs.items():
                 for b, bdict in dsdict.items():
@@ -660,8 +685,8 @@ class _ClickContainer(_CallbackContainer):
 
                 # call cleanup methods on removal
                 fname = name.rsplit("_", 1)[0]
-                if hasattr(self._cb, f"_{fname}_cleanup"):
-                    getattr(self._cb, f"_{fname}_cleanup")()
+                if hasattr(self._attach, f"_{fname}_cleanup"):
+                    getattr(self._attach, f"_{fname}_cleanup")(self.attach)
             else:
                 _log.error(f"EOmaps: There is no callback named {callback}")
 
@@ -812,19 +837,41 @@ class _ClickContainer(_CallbackContainer):
             else:
                 self._init_picker()
 
+        cb_name = callback if isinstance(callback, str) else callback.__name__
         # attach "on_move" callbacks
         movecb_name = None
-        # set on_motion True for "click" callbacks and False otherwise
-        on_motion = kwargs.pop("on_motion", True if self._method == "click" else False)
+
+        on_motion = kwargs.pop("on_motion", None)
+
+        # set on_motion=True as default for "click" callbacks that
+        # are also supported as move callbacks and False otherwise
+        if self._method == "click" and on_motion is None:
+            if hasattr(self._m.cb._click_move._attach, cb_name):
+                on_motion = True
+            else:
+                on_motion = False
+        elif on_motion is None:
+            on_motion = False
+
         if self._method == "click" and on_motion is True:
-            movecb_name = self._m.cb._click_move._add_callback(
-                *args,
-                callback=callback,
-                double_click=double_click,
-                button=button,
-                modifier=modifier,
-                **kwargs,
-            )
+            # attach associated default click+move callbacks if available
+            if isinstance(callback, str) and not hasattr(
+                self._m.cb._click_move._attach, callback
+            ):
+                on_motion = False
+                _log.warning(
+                    f"Using 'on_motion' = True for the '{callback}' callback has no effect!"
+                )
+
+            if on_motion:
+                movecb_name = self._m.cb._click_move._add_callback(
+                    *args,
+                    callback=callback,
+                    double_click=double_click,
+                    button=button,
+                    modifier=modifier,
+                    **kwargs,
+                )
         elif on_motion is True:
             _log.warning(
                 "EOmaps: 'on_motion=True' is only possible for " "'click' callbacks!"
@@ -835,12 +882,12 @@ class _ClickContainer(_CallbackContainer):
         ), 'the names "pos", "ID", "val" cannot be used as keyword-arguments!'
 
         if isinstance(callback, str):
-            assert hasattr(self._cb, callback), (
-                f"The function '{callback}' does not exist as a pre-defined callback."
+            assert hasattr(self._attach, callback), (
+                f"The function '{callback}' does not exist as a pre-defined {self._method} callback."
                 + " Use one of:\n    - "
-                + "\n    - ".join(self._cb_list)
+                + "\n    - ".join(self._attach._available_callbacks())
             )
-            callback = getattr(self._cb, callback)
+            callback = getattr(self._attach, callback)
 
         if double_click is True:
             btn_key = "double"
@@ -913,6 +960,18 @@ class ClickContainer(_ClickContainer):
         self._cid_motion_event = None
 
         self._event = None
+
+    class _attach(_ClickContainer._attach, ClickCallbacks):
+        __doc__ = _ClickContainer._attach.__doc__
+        pass
+
+    class _get(_ClickContainer._get):
+        __doc__ = _ClickContainer._get.__doc__
+        pass
+
+    # to make namespace accessible for sphinx
+    attach = _attach
+    get = _get
 
     def _init_cbs(self):
         if self._m.parent is self._m:
@@ -1152,7 +1211,7 @@ class MoveContainer(ClickContainer):
 
     # this is just a copy of ClickContainer to manage motion-sensitive callbacks
 
-    def __init__(self, button_down=False, update_on_trigger=True, *args, **kwargs):
+    def __init__(self, button_down=False, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -1160,7 +1219,17 @@ class MoveContainer(ClickContainer):
 
         self._button_down = button_down
 
-        self._update_on_trigger = update_on_trigger
+    class _attach(_ClickContainer._attach, MoveCallbacks):
+        __doc__ = _ClickContainer._attach.__doc__
+        pass
+
+    class _get(_ClickContainer._get):
+        __doc__ = _ClickContainer._get.__doc__
+        pass
+
+    # to make namespace accessible for sphinx
+    attach = _attach
+    get = _get
 
     def _init_cbs(self):
         if self._m.parent is self._m:
@@ -1203,12 +1272,12 @@ class MoveContainer(ClickContainer):
 
                 # execute onclick on the maps object that belongs to the clicked axis
                 # and forward the event to all forwarded maps-objects
-                update = False
+                call_update = False
                 for obj in self._objs:
-                    # check if there is a reason to update
-                    if update is False:
+                    # check if there is a reason to update (e.g. an attached callback)
+                    if call_update is False:
                         if len(obj.get.attached_callbacks) > 0:
-                            update = True
+                            call_update = True
 
                     # clear temporary artists before executing new callbacks to avoid
                     # having old artists around when callbacks are triggered again
@@ -1221,7 +1290,7 @@ class MoveContainer(ClickContainer):
 
                 # only update if a callback is attached
                 # (to avoid lag in webagg backed due to slow updates)
-                if self._update_on_trigger and update:
+                if call_update:
                     if self._button_down:
                         if event.button:
                             self._m.parent.BM.update(clear=self._method)
@@ -1291,6 +1360,21 @@ class PickContainer(_ClickContainer):
         else:
             self._picker = picker
 
+        # indicator how shared pick-events identify the relevant datapoint
+        self._ensure_same_pick_id = False
+
+    class _attach(_ClickContainer._attach, PickCallbacks):
+        __doc__ = _ClickContainer._attach.__doc__
+        pass
+
+    class _get(_ClickContainer._get):
+        __doc__ = _ClickContainer._get.__doc__
+        pass
+
+    # to make namespace accessible for sphinx
+    attach = _attach
+    get = _get
+
     def __getitem__(self, name):
         name = str(name)
         if name.startswith("_"):
@@ -1304,6 +1388,38 @@ class PickContainer(_ClickContainer):
             _log.error(
                 f"the picker {name} does not exist...", "use `m.cb.add_picker` first!"
             )
+
+    def share_events(self, *args, ensure_same_id=False):
+        """
+        Share callback-events between this Maps-object and other Maps-objects.
+
+        (e.g. share events both ways)
+
+        Note
+        ----
+        For **pick-events**, you can use the additional keyword-argument
+        `ensure_same_id` to make sure that all events pick the exact same ID.
+
+        Parameters
+        ----------
+        args : eomaps.Maps
+            The Maps-objects that should execute the callback.
+
+        ensure_same_id : bool
+            If True, all pick-events are triggered by the same ID value.
+            (e.g. the ID of the datapoint that was actually picked)
+
+            If False, each map executes the pick-event with respect to the reprojected
+            mouse-position and identifies the closest datapoint to use.
+
+            The default is False
+        """
+        self._ensure_same_pick_id = ensure_same_id
+
+        for m in args:
+            self._getobj(m)._ensure_same_pick_id = ensure_same_id
+
+        super().share_events(*args)
 
     def set_props(
         self,
@@ -1366,7 +1482,9 @@ class PickContainer(_ClickContainer):
             self._search_radius = search_radius
 
     def _set_artist(self, artist):
-        self._artist = artist
+        # use a weakref-proxy to make sure the artist can be garbage-collected
+        # if it is deleted (or if the figure is closed)
+        self._artist = proxy(artist)
         self._artist.set_picker(self._picker)
 
     def _init_cbs(self):
@@ -1374,7 +1492,6 @@ class PickContainer(_ClickContainer):
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
-
         # make sure that objects are only picked if we are on the right layer
         if not self._execute_cb(self._m.layer):
             return False, None
@@ -1437,7 +1554,12 @@ class PickContainer(_ClickContainer):
         return False, None
 
     def _get_pickdict(self, event):
-        event_ind = event.ind
+        event_ind = getattr(event, "ind", None)
+        if event_ind is None:
+            if _log.getEffectiveLevel() <= logging.DEBUG:
+                _log.debug(f"Pick-event without index encountered: {event}")
+            return
+
         n_inds = len(np.atleast_1d(event_ind))
         # mouseevent = event.mouseevent
         noval = [None] * n_inds if n_inds > 1 else None
@@ -1504,6 +1626,10 @@ class PickContainer(_ClickContainer):
 
         clickdict = self._get_pickdict(event)
 
+        # if no data was found, don't execute the callbacks
+        if clickdict is None:
+            return
+
         if event.mouseevent.dblclick:
             cbs = self.get.cbs.get("double", dict())
         else:
@@ -1532,12 +1658,11 @@ class PickContainer(_ClickContainer):
                     return
 
                 cb = bcbs[key]
-                if clickdict is not None:
-                    if self._consecutive_multipick is False:
-                        cb(**clickdict)
-                    else:
-                        for c in clickdict:
-                            cb(**c)
+                if self._consecutive_multipick is False:
+                    cb(**clickdict)
+                else:
+                    for c in clickdict:
+                        cb(**c)
 
     def _reset_cids(self):
         # clear all temporary artists
@@ -1549,7 +1674,8 @@ class PickContainer(_ClickContainer):
         self._cid_pick_event.clear()
 
     def _artist_picked(self, event):
-        if self._artist is event.artist:
+        # use == instead of "is" here since self._artist is a weakref proxy!
+        if self._artist == event.artist:
             return True
         else:
             # handle contour-plot artists explicitly
@@ -1632,15 +1758,44 @@ class PickContainer(_ClickContainer):
                 # picker_name=picker_name,
             )
 
-            pick = obj._picker(obj._artist, dummymouseevent)
-            if pick[1] is not None:
-                dummyevent.ID = pick[1].get("ID", None)
-                dummyevent.ind = pick[1].get("ind", None)
-                dummyevent.val = pick[1].get("val", None)
-                dummyevent.pos = pick[1].get("pos", None)
-                dummyevent.val_color = pick[1].get("val_color", None)
+            if self._ensure_same_pick_id is False:
+                # execute a new pick-event and use the identified point
+
+                pick = obj._picker(obj._artist, dummymouseevent)
+                if pick[1] is not None:
+                    dummyevent.ID = pick[1].get("ID", None)
+                    dummyevent.ind = pick[1].get("ind", None)
+                    dummyevent.val = pick[1].get("val", None)
+                    dummyevent.pos = pick[1].get("pos", None)
+                    dummyevent.val_color = pick[1].get("val_color", None)
+                else:
+                    dummyevent.ind = None
             else:
-                dummyevent.ind = None
+                # use the ID identified by the parent pick-event to obtain values etc.
+                ID = getattr(event, "ID", None)
+                if ID is not None:
+                    ind = m._data_manager._get_ind_from_ID(ID)
+                    if ind is not None:
+                        # TODO check why arrays with 1 entry need to be converted here
+                        if len(ind) == 1:
+                            ind = ind[0]
+
+                        val = m._data_manager._get_val_from_index(ind)
+                        pos = m._data_manager._get_xy_from_index(ind, reprojected=True)
+
+                        try:
+                            val_color = obj._artist.cmap(obj._artist.norm(val))
+                        except Exception:
+                            val_color = None
+
+                        dummyevent.ID = ID
+                        dummyevent.ind = ind
+                        dummyevent.val = val
+                        dummyevent.pos = pos
+                        dummyevent.val_color = val_color
+                    else:
+                        dummyevent.ID = None
+                        dummyevent.ind = None
 
             obj._onpick(dummyevent)
 
@@ -1655,7 +1810,7 @@ class KeypressContainer(_CallbackContainer):
         Executing the functions will attach the associated callback to the map!
 
     get : accessor for return-objects
-        A container to provide easy-access to the return-values of the callbacks.
+        Accessor for objects generated/retrieved by callbacks.
 
     remove : remove prviously added callbacks from the map
 
@@ -1674,6 +1829,13 @@ class KeypressContainer(_CallbackContainer):
 
         # remember last pressed key (for use as "sticky_modifier")
         self._modifier = None
+
+        self.attach = self._attach(self)
+        self.attach = _apply_decorator_to_all_public_methods(self._attach_decorator)(
+            self.attach
+        )
+
+        self.get = self._get(self)
 
     def _init_cbs(self):
         if self._m.parent is self._m:
@@ -1752,7 +1914,7 @@ class KeypressContainer(_CallbackContainer):
                 "key_press_event", _onpress
             )
 
-    class _attach:
+    class _attach(KeypressCallbacks):
         """
         Attach custom or pre-defined callbacks on keypress events.
 
@@ -1783,17 +1945,8 @@ class KeypressContainer(_CallbackContainer):
 
         def __init__(self, parent):
             self._parent = parent
-
-            # attach pre-defined callbacks
-            for cb in self._parent._cb_list:
-                setattr(
-                    self,
-                    cb,
-                    update_wrapper(
-                        partial(self._parent._add_callback, callback=cb),
-                        getattr(self._parent._cb, cb),
-                    ),
-                )
+            self._m = parent._m
+            self._temporary_artists = self._parent._temporary_artists
 
         def __call__(self, f, key, **kwargs):
             """
@@ -1832,21 +1985,30 @@ class KeypressContainer(_CallbackContainer):
 
             return self._parent._add_callback(f, key, **kwargs)
 
+        @classmethod
+        def _available_callbacks(cls):
+            return list(filter(lambda x: not x.startswith("_"), dir(cls)))
+
     class _get:
+        """Accessor for objects generated/retrieved by callbacks."""
+
         def __init__(self, parent):
             self.m = parent._m
-            self.cb = parent._cb
-
             self.cbs = dict()
 
         @property
         def attached_callbacks(self):
+            """Get a list of all IDs of attached callbacks."""
             cbs = []
             for key, cbdict in self.cbs.items():
                 for name, cb in cbdict.items():
                     cbs.append(f"{name}__{key}")
 
             return cbs
+
+    # to make namespace accessible for sphinx
+    attach = _attach
+    get = _get
 
     def _parse_cid(self, cid):
         name, rest = cid.split("__", 1)
@@ -1878,8 +2040,8 @@ class KeypressContainer(_CallbackContainer):
 
                 # call cleanup methods on removal
                 fname = name.rsplit("_", 1)[0]
-                if hasattr(self._cb, f"_{fname}_cleanup"):
-                    getattr(self._cb, f"_{fname}_cleanup")()
+                if hasattr(self._attach, f"_{fname}_cleanup"):
+                    getattr(self._attach, f"_{fname}_cleanup")()
             else:
                 _log.error(f"EOmaps: there is no callback named {callback}")
         else:
@@ -1920,12 +2082,12 @@ class KeypressContainer(_CallbackContainer):
 
         """
         if isinstance(callback, str):
-            assert hasattr(self._cb, callback), (
+            assert hasattr(self._attach, callback), (
                 f"The function '{callback}' does not exist as a pre-defined callback."
                 + " Use one of:\n    - "
-                + "\n    - ".join(self._cb_list)
+                + "\n    - ".join(self._attach._available_callbacks())
             )
-            callback = getattr(self._cb, callback)
+            callback = getattr(self._attach, callback)
 
         cbdict = self.get.cbs.setdefault(key, dict())
 
@@ -1953,14 +2115,17 @@ class CallbackContainer:
 
     Methods
     -------
-    - **click** : Execute functions when clicking on the map
-
-    - **pick** : Execute functions when you "pick" a pixel on the  map
-      - only available if a dataset has been plotted via `m.plot_map()`
-
-    - **keypress** : Execute functions if you press a key on the keyboard
+    click : Execute functions when clicking on the map
+    move : Execute functions when clicking on the map
+    keypress : Execute functions if you press a key on the keyboard
+    pick : Execute functions that "pick" the closest datapoint(s)
 
     """
+
+    pick = PickContainer
+    click = ClickContainer
+    move = MoveContainer
+    keypress = KeypressContainer
 
     def __init__(self, m):
         self._m = m
@@ -1974,7 +2139,7 @@ class CallbackContainer:
             "_always_active",
         }
 
-        self._click = ClickContainer(
+        self.click = ClickContainer(
             m=self._m,
             cb_cls=ClickCallbacks,
             method="click",
@@ -1991,29 +2156,27 @@ class CallbackContainer:
         # a move-container that shares temporary artists with the click-container
         self._click_move = MoveContainer(
             m=self._m,
-            cb_cls=ClickCallbacks,
+            cb_cls=MoveCallbacks,
             method="_click_move",
-            parent_container=self._click,
+            parent_container=self.click,
             button_down=True,
-            update_on_trigger=True,  # automatically trigger updates for click+move!
         )
 
-        self._move = MoveContainer(
+        self.move = MoveContainer(
             m=self._m,
             cb_cls=MoveCallbacks,
             method="move",
             button_down=False,
             default_button=None,
-            update_on_trigger=False,  # dont trigger updates for move!
         )
 
-        self._pick = PickContainer(
+        self.pick = PickContainer(
             m=self._m,
             cb_cls=PickCallbacks,
             method="pick",
         )
 
-        self._keypress = KeypressContainer(
+        self.keypress = KeypressContainer(
             m=self._m,
             cb_cls=KeypressCallbacks,
             method="keypress",
@@ -2041,30 +2204,6 @@ class CallbackContainer:
             If True, callbacks will be executed.
         """
         self._m.parent._execute_callbacks = val
-
-    @property
-    @wraps(ClickContainer)
-    def click(self):
-        """Attach click callbacks."""
-        return self._click
-
-    @property
-    @wraps(MoveContainer)
-    def move(self):
-        """Attach move callbacks."""
-        return self._move
-
-    @property
-    @wraps(PickContainer)
-    def pick(self):
-        """Attach pick callbacks."""
-        return self._pick
-
-    @property
-    @wraps(KeypressContainer)
-    def keypress(self):
-        """Attach keypress callbacks."""
-        return self._keypress
 
     def add_picker(self, name, artist, picker):
         """
@@ -2098,7 +2237,7 @@ class CallbackContainer:
         Note
         ----
         If the name starts with an underscore (e.g. "_MyPicker") then the
-        associated container will be accessible via `m._cb._pick__MyPicker`
+        associated container will be accessible via `m.cb._pick__MyPicker`
         or via `m.cb.pick["_MyPicker"]`. (This is useful to setup pickers that
         are only used internally)
         """

@@ -1,7 +1,14 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 import logging
 
 import numpy as np
 from pyproj import CRS, Transformer
+
+from .helpers import register_modules
 
 _log = logging.getLogger(__name__)
 
@@ -125,7 +132,7 @@ class DataManager:
 
         # estimate the radius (used as margin on data selection)
         try:
-            self._r = self.m._shapes._estimate_radius(
+            self._r = self.m.set_shape._estimate_radius(
                 self.m, radius_crs="out", method=np.nanmax
             )
             if self._r is not None and all(np.isfinite(i) for i in self._r):
@@ -133,6 +140,8 @@ class DataManager:
             else:
                 self._radius_margin = None
         except Exception:
+            if _log.getEffectiveLevel() <= logging.DEBUG:
+                _log.debug("Estimation of data radius for data-margin failed!")
             self._r = None
             self._radius_margin = None
 
@@ -156,6 +165,255 @@ class DataManager:
         if self.on_fetch_bg in self.m.BM._before_update_actions:
             self.m.BM._before_update_actions.remove(self.on_fetch_bg)
 
+    def _identify_pandas(self, data=None, x=None, y=None, parameter=None):
+        (pd,) = register_modules("pandas", raise_exception=False)
+
+        if pd is None or not isinstance(data, pd.DataFrame):
+            return None
+
+        if parameter is not None:
+            # get the data-values
+            z_data = data[parameter].values
+        else:
+            # use the first found numeric column of the DataFrame if possible.
+            numeric_columns = data.select_dtypes("number").columns
+            if len(numeric_columns) > 0:
+                z_data = data[numeric_columns[0]].values
+            else:
+                # TODO remove this and raise an error?
+                z_data = np.repeat(np.nan, len(data))
+
+        # get the index-values
+        ids = data.index.values
+
+        if isinstance(x, str) and isinstance(y, str):
+            if (x in data) and (y in data):
+                # get the coordinates from columns
+                xorig = data[x].values
+                yorig = data[y].values
+            elif (x in data.index.names) and (y in data.index.names):
+                # get the coordinates from index-values
+                xorig = data.index.get_level_values(x)
+                yorig = data.index.get_level_values(y)
+            else:
+                raise TypeError(
+                    "EOmaps: unable to identify coordinate values for " f"x={x}, y={y}"
+                )
+        elif (x is None) and (y is None):
+            if data.index.nlevels == 2:
+                # get the coordinates from index-values
+                xorig = data.index.get_level_values(0)
+                yorig = data.index.get_level_values(1)
+            else:
+                raise TypeError(
+                    "EOmaps: Either specify explicit column-names to use "
+                    "for `x` and `y` or pass a multi-index DataFrame "
+                    "with exactly 2 index-levels!"
+                )
+        else:
+            assert isinstance(x, (list, np.ndarray, pd.Series)), (
+                "'x' must be either a column-name, or explicit values "
+                " specified as a list, a numpy-array or a pandas.Series "
+                + f"if you provide the data as '{type(data)}'"
+            )
+            assert isinstance(y, (list, np.ndarray, pd.Series)), (
+                "'y' must be either a column-name, or explicit values "
+                " specified as a list, a numpy-array or a pandas.Series "
+                + f"object if you provide the data as '{type(data)}'"
+            )
+
+            xorig = np.asanyarray(x)
+            yorig = np.asanyarray(y)
+
+        return z_data, xorig, yorig, ids, parameter
+
+    def _identify_xarray(self, data=None, x=None, y=None, parameter=None):
+        (xar,) = register_modules("xarray", raise_exception=False)
+
+        if xar is None or not isinstance(data, (xar.Dataset, xar.DataArray)):
+            return None
+
+        if isinstance(data, xar.Dataset):
+            if parameter is None:
+                # use the first variable of the Dataset
+                cols = list(data)
+                parameter = cols[0]
+
+            assert len(data[parameter].dims) <= 2, (
+                "EOmaps: provided dataset has more than 2 dimensions..."
+                f"({data[parameter].dims})."
+            )
+            z_data = data[parameter].values
+            data_dims = data[parameter].dims
+        else:
+            assert len(data.dims) <= 2, (
+                "EOmaps: provided dataset has more than 2 dimensions..."
+                f"({data.dims})."
+            )
+
+            z_data = data.values
+            data_dims = data.dims
+            parameter = data.name
+
+        # use numeric index values
+        ids = range(z_data.size)
+
+        if isinstance(x, str) and isinstance(y, str):  #
+            coords = list(data.coords)
+            if (x in coords) and (y in coords):
+                # get the coordinates from coordinates
+                xorig = data.coords[x].values
+                yorig = data.coords[y].values
+                x_dims = data.coords[x].dims
+                y_dims = data.coords[y].dims
+
+            elif (x in data) and (y in data):
+                xorig = data[x].values
+                yorig = data[y].values
+                x_dims = data[x].dims
+                y_dims = data[y].dims
+
+        elif (x is None) and (y is None):
+            coords = list(data.coords)
+
+            if len(coords) == 2:
+                # get the coordinates from index-values
+                xorig = data[coords[0]].values
+                yorig = data[coords[1]].values
+                x_dims = data[coords[0]].dims
+                y_dims = data[coords[1]].dims
+            else:
+                raise TypeError(
+                    "EOmaps: Either specify explicit coordinate-names to use "
+                    "for `x` and `y` or pass a Dataset with exactly 2 "
+                    "coordinates!"
+                )
+
+        # transpose dat in case data is transposed
+        # (to account for matrix indexing order)
+        # TODO make this prperly
+        if not (data_dims == x_dims and data_dims == y_dims):
+            if len(x_dims) == 2 and len(y_dims) == 2:
+                if data_dims == x_dims[::-1]:
+                    z_data = z_data.T
+            elif len(x_dims) == 1 and len(y_dims) == 1:
+                if data_dims.index(x_dims[0]) > data_dims.index(y_dims[0]):
+                    z_data = z_data.T
+
+        return z_data, xorig, yorig, ids, parameter
+
+    def _identify_array_like(self, data=None, x=None, y=None, parameter=None):
+        def check_dtype(val):
+            if val is None:
+                return True
+
+            if isinstance(val, (list, tuple, np.ndarray)):
+                return True
+
+            # lazily check if pandas was used
+            (pd,) = register_modules("pandas", raise_exception=False)
+            if pd and isinstance(val, pd.Series):
+                return "pandas"
+
+            return False
+
+        data_q = check_dtype(data)
+        if not data_q:
+            return None
+
+        if not (check_dtype(x) and check_dtype(y)):
+            return None
+
+        # set coordinates by extent-tuples (x0, x1) and (y0, y1)
+        if isinstance(x, tuple) and isinstance(y, tuple):
+            assert data is not None, (
+                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list"
+                " or numpy-array!"
+            )
+
+            shape = np.shape(data)
+            assert len(shape) == 2, (
+                "EOmaps: If x- and y are provided as tuples, the data must be a 2D list"
+                " or numpy-array!"
+            )
+
+            # get the data-coordinates
+            xorig = np.linspace(*x, shape[0])
+            yorig = np.linspace(*y, shape[1])
+
+        else:
+            # get the data-coordinates
+            xorig = np.asanyarray(x)
+            yorig = np.asanyarray(y)
+
+        if data is not None:
+            # get the data-values
+            z_data = np.asanyarray(data)
+        else:
+            if xorig.shape == yorig.shape:
+                z_data = np.full(xorig.shape, np.nan)
+            elif (
+                (xorig.shape != yorig.shape)
+                and (len(xorig.shape) == 1)
+                and (len(yorig.shape) == 1)
+            ):
+                z_data = np.full((xorig.shape[0], yorig.shape[0]), np.nan)
+
+        # get the index-values
+        if data_q == "pandas":
+            # use actual index values if pd.Series was passed as "data"
+            ids = data.index.values
+        else:
+            # use numeric index values for all other types
+            ids = range(z_data.size)
+
+        if len(xorig.shape) == 1 and len(yorig.shape) == 1 and len(z_data.shape) == 2:
+            assert (
+                z_data.shape[0] == xorig.shape[0] and z_data.shape[0] == xorig.shape[0]
+            ), (
+                "The shape of the coordinate-arrays is not valid! "
+                f"data={z_data.shape} expects x={(z_data.shape[0],)}, "
+                f"y={(z_data.shape[1],)}, but the provided shapes are:"
+                f"x={xorig.shape}, y={yorig.shape}"
+            )
+
+        if len(xorig.shape) == len(z_data.shape):
+            assert xorig.shape == z_data.shape and yorig.shape == z_data.shape, (
+                f"EOmaps: The data-shape {z_data.shape} and coordinate-shape "
+                + f"x={xorig.shape}, y={yorig.shape} do not match!"
+            )
+
+        return z_data, np.asanyarray(xorig), np.asanyarray(yorig), ids, parameter
+
+    def _identify_data(self, data=None, x=None, y=None, parameter=None):
+        # identify the way how the data has been provided and convert to the internal
+        # structure
+
+        if data is None:
+            data = self.m.data_specs.data
+        if x is None:
+            x = self.m.data_specs.x
+        if y is None:
+            y = self.m.data_specs.y
+        if parameter is None:
+            parameter = self.m.data_specs.parameter
+
+        # check supported data-types
+        for identify_func in (
+            self._identify_array_like,
+            self._identify_pandas,
+            self._identify_xarray,
+        ):
+            ret = identify_func(data=data, x=x, y=y, parameter=parameter)
+
+            if ret is not None:
+                return ret
+
+        raise TypeError(
+            "EOmaps: Unable to handle the input-data types: \n"
+            f"data={type(data)}, x={type(x)}, y={type(y)}"
+        )
+
     def _prepare_data(self, assume_sorted=True):
         in_crs = self.m.data_specs.crs
         cpos = self.m.data_specs.cpos
@@ -169,7 +427,19 @@ class DataManager:
         crs2 = CRS.from_user_input(self.m._crs_plot)
 
         # identify the provided data and get it in the internal format
-        z_data, xorig, yorig, ids, parameter = self.m._identify_data()
+        z_data, xorig, yorig, ids, parameter = self._identify_data()
+
+        # check if Fill-value is provided, and mask the data accordingly
+        if self.m.data_specs.encoding:
+            fill_value = self.m.data_specs.encoding.get("_FillValue", None)
+            if fill_value:
+                z_data = np.ma.MaskedArray(
+                    data=z_data,
+                    mask=z_data == fill_value,
+                    copy=False,
+                    fill_value=fill_value,
+                    hard_mask=True,
+                )
 
         if cpos is not None and cpos != "c":
             # fix position of pixel-center in the input-crs
@@ -436,7 +706,7 @@ class DataManager:
     def _remove_existing_coll(self):
         if self.m.coll is not None:
             try:
-                if self.m._coll_dynamic:
+                if getattr(self.m, "_coll_dynamic", False):
                     self.m.BM.remove_artist(self.m._coll)
                 else:
                     self.m.BM.remove_bg_artist(self.m._coll)
@@ -523,7 +793,7 @@ class DataManager:
 
             self.m.cb.pick._set_artist(coll)
 
-        except Exception as ex:
+        except Exception:
             _log.exception(
                 f"EOmaps: Unable to plot the data for the layer '{layer}'!",
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
@@ -637,6 +907,8 @@ class DataManager:
 
                 x1 = x1 - x1 % bs + bs
                 y1 = y1 - y1 % bs + bs
+            else:
+                bs = None
         else:
             bs = None
 
@@ -781,6 +1053,8 @@ class DataManager:
         # only zoom if the shape provides a _maxsize attribute
         if self._current_data["z_data"] is None or maxsize is None:
             return
+        elif blocksize is None:
+            return
         elif self._current_data["z_data"].size < maxsize:
             return
 
@@ -894,7 +1168,7 @@ class DataManager:
         # (qs = [<2d mask>, <1d x mask>, <1d y mask>]
         qs = self._get_q()
 
-        # estimate slices (and optional blocksize if requred) for 2D data
+        # estimate slices (and optional blocksize if required) for 2D data
         if len(self.z_data.shape) == 2 and all(i is not None for i in qs[1:]):
             slices, blocksize = self._estimate_slice_blocksize(*qs[1:])
         else:
@@ -1063,6 +1337,40 @@ class DataManager:
             ID = None
         return ID
 
+    def _get_ind_from_ID(self, ID):
+        """
+        Get numerical indexes from a list of data IDs
+
+        Parameters
+        ----------
+        ID : single ID or list of IDs
+            The IDs to search for.
+
+        Returns
+        -------
+        inds : list of indexes or None
+        """
+        ids = self.ids
+
+        # find numerical index from ID
+        ID = np.atleast_1d(ID)
+        if isinstance(ids, range):
+            # if "ids" is range-like, so is "ind", therefore we can simply
+            # select the values.
+            inds = np.array([ids[i] for i in ID])
+        elif isinstance(ids, list):
+            # for lists, using .index to identify the index
+            inds = np.array([ids.index(i) for i in ID])
+        elif isinstance(ids, np.ndarray):
+            inds = np.flatnonzero(np.isin(ids, ID))
+        else:
+            inds = None
+
+        if len(inds) == 0:
+            inds = None
+
+        return inds
+
     def _get_xy_from_ID(self, ID, reprojected=False):
         """
         Get x and y coordinates from a list of data IDs
@@ -1076,22 +1384,8 @@ class DataManager:
         -------
         (x, y) : a tuple of x- and y- coordinate arrays
         """
-        ids = self.ids
 
-        # find numerical index from ID
-        ID = np.atleast_1d(ID)
-        if isinstance(ids, range):
-            # if "ids" is range-like, so is "ind", therefore we can simply
-            # select the values.
-            inds = np.array([ids[i] for i in ID])
-        if isinstance(ids, list):
-            # for lists, using .index to identify the index
-            inds = np.array([ids.index(i) for i in ID])
-        elif isinstance(ids, np.ndarray):
-            inds = np.flatnonzero(np.isin(ids, ID))
-        else:
-            inds = None
-
+        inds = self._get_ind_from_ID(ID)
         return self._get_xy_from_index(inds, reprojected=reprojected)
 
     def cleanup(self):

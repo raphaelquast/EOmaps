@@ -1,0 +1,51 @@
+name: eomaps
+channels:
+  - conda-forge
+
+dependencies:
+  - python >= 3.8
+  - numpy
+  - scipy
+  - matplotlib >=3.4
+  - cartopy >=0.20.0
+  - descartes
+  # ------------- to handle data-classification
+  - mapclassify
+  # ------------- to handle reprojections
+  - pyproj
+  # ------------- to support Dataframes
+  - pandas
+  # ------------- to support GeoDataFrames
+  - geopandas
+  # --------------for data-shading
+  - datashader
+  # --------------for GeoTIFF and NetCDF files
+  - netcdf4
+  - xarray
+  - rioxarray
+  # --------------for WebMaps
+  - owslib
+  - requests
+  # --------------to support multiple Qt versions
+  - qtpy
+  # --------------for jupyter widgets
+  - ipywidgets
+  - ipympl
+
+  ### To run the tests
+  - coveralls
+  - pytest
+  - pytest-cov
+  # --------------for testing the docs
+  # (e.g. parsing .rst code-blocks and Jupyter Notebooks)
+  - docutils
+  - jupyter
+  - nbformat
+
+  ### To build the docs
+  - docutils
+  - sphinx
+  - sphinx-copybutton
+  - sphinx-design
+  - sphinx_rtd_theme
+  - myst-nb

@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Interactive scalebar."""
 
 import logging
@@ -21,7 +26,15 @@ _log = logging.getLogger(__name__)
 
 
 class ScaleBar:
-    """Base class for EOmaps scalebars."""
+    """
+    Base class for EOmaps scalebars.
+
+    Note
+    ----
+    To add a new scalebar to a map, see
+    :py:meth:`Maps.add_scalebar <eomaps.eomaps.Maps.add_scalebar>`.
+
+    """
 
     def __init__(
         self,
@@ -71,10 +84,10 @@ class ScaleBar:
 
         Parameters
         ----------
-        lon, lat : float
+        pos : (float, float)
             The longitude and latitude of the starting point for the scalebar
             (If None, the center of the axis is used )
-        azim : float
+        rotation : float
             The azimuth-direction (in degrees) in which the scalebar points.
             The default is 90.
         preset : str
@@ -197,7 +210,7 @@ class ScaleBar:
         self._scale_factor_base = 1000
         # multipliers for changing the label size
         self._size_factor_base = 50
-        # inverval for adjusting the text-offset
+        # interval for adjusting the text-offset
         self._cb_offset_interval = 0.05
         # interval for rotating the scalebar
         self._cb_rotate_interval = 1
@@ -1027,7 +1040,7 @@ class ScaleBar:
     def _get_patch_verts(self, pts, lon, lat, ang, d):
         offsets = self._patch_offsets
 
-        # top bottom left right referrs to a horizontally oriented colorbar!
+        # top bottom left right refers to a horizontally oriented colorbar!
         ot = d * offsets[0]
         ob = self._maxw + d * (self._label_props["offset"] + offsets[1])
         o_l = d * offsets[2]

@@ -9,34 +9,37 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
 
 **Keyboard shortcuts** are assigned as follows:
 
-.. table::
-    :widths: 52 45
-    :align: center
 
-    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
-    | - Press ``ALT + L``: enter the **Layout Editor** mode                                   | .. image:: _static/minigifs/layout_editor.gif |
-    | - Press ``ALT + L`` again or ``escape`` to exit the **Layout Editor**                   |     :align: center                            |
-    |                                                                                         |                                               |
-    | **Pick** and **re-arrange** the axes as you like with the mouse.                        |                                               |
-    |                                                                                         |                                               |
-    | - To pick **multiple axes**, hold down ``shift``!                                       |                                               |
-    | - | **Resize** picked axes with the **scroll-wheel**                                    |                                               |
-    |   | (or by pressing the ``+`` and ``-`` keys)                                           |                                               |
-    | - Hold down ``h`` or ``v`` to change horizontal/vertical size                           |                                               |
-    | - Hold down ``control`` to change ratio between colorbar and histogram                  |                                               |
-    |                                                                                         |                                               |
-    | **Snap-To-Grid:**                                                                       |                                               |
-    |                                                                                         |                                               |
-    | - Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality   |                                               |
-    | - Press ``0`` to deactivate **"snap-to-grid"**                                          |                                               |
-    |                                                                                         |                                               |
-    | **Undo, Redo, Save:**                                                                   |                                               |
-    |                                                                                         |                                               |
-    | - Press ``control + z`` to undo the last step                                           |                                               |
-    | - Press ``control + y`` to redo the last undone step                                    |                                               |
-    | - Press ``P`` to print the current layout to the console                                |                                               |
-    |                                                                                         |                                               |
-    +-----------------------------------------------------------------------------------------+-----------------------------------------------+
+.. grid:: 1 1 1 2
+
+    .. grid-item-card::
+
+         - Press ``ALT + L``: enter the **Layout Editor** mode
+         - Press ``ALT + L`` again or ``escape`` to exit the **Layout Editor**
+
+         **Pick** and **re-arrange** the axes as you like with the mouse.
+
+         - To pick **multiple axes**, hold down ``shift``!
+         - | **Resize** picked axes with the **scroll-wheel**
+           | (or by pressing the ``+`` and ``-`` keys)
+         - Hold down ``h`` or ``v`` to change horizontal/vertical size
+         - Hold down ``control`` to change ratio between colorbar and histogram
+
+         **Snap-To-Grid:**
+
+         - Press keys ``1-9`` to set the grid-spacing for the **"snap-to-grid"** functionality
+         - Press ``0`` to deactivate **"snap-to-grid"**
+
+         **Undo, Redo, Save:**
+
+         - Press ``control + z`` to undo the last step
+         - Press ``control + y`` to redo the last undone step
+         - Press ``P`` to print the current layout to the console
+
+
+    .. grid-item::
+
+            .. image:: _static/minigifs/layout_editor.gif
 
 
 

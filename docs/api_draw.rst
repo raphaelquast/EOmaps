@@ -15,17 +15,22 @@ Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using 
 
 - To remove the most recently drawn shape use ``m.draw.remove_last_shape()``.
 
-.. table::
-    :widths: 60 40
-    :align: center
 
-    +--------------------------------------+---------------------------------------------+
-    | .. code-block:: python               | .. image:: _static/minigifs/draw_shapes.gif |
-    |                                      |   :align: center                            |
-    |     m = Maps()                       |                                             |
-    |     m.add_feature.preset.coastline() |                                             |
-    |     m.draw.polygon()                 |                                             |
-    +--------------------------------------+---------------------------------------------+
+
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+
+         .. code-block:: python
+
+            m = Maps()
+            m.add_feature.preset.coastline()
+            m.draw.polygon()
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/draw_shapes.gif
+
 
 .. note::
 
@@ -39,15 +44,14 @@ Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using 
     active draws!
 
 
-
-.. currentmodule:: eomaps.draw
+.. currentmodule:: eomaps.eomaps.Maps.draw
 
 .. autosummary::
     :nosignatures:
 
-    ShapeDrawer.new_drawer
-    ShapeDrawer.rectangle
-    ShapeDrawer.circle
-    ShapeDrawer.polygon
-    ShapeDrawer.save_shapes
-    ShapeDrawer.remove_last_shape
+    new_drawer
+    rectangle
+    circle
+    polygon
+    save_shapes
+    remove_last_shape

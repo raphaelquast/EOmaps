@@ -31,7 +31,7 @@ By default, the widgets will show all available layers (except the "all" layer) 
 - To exclude certain layers from the widget, use ``exclude_layers=[...layer-names to exclude...]``
 - To remove a previously created widget ``s`` from the map, simply use ``s.remove()``
 
-.. currentmodule:: eomaps.utilities.utilities
+.. currentmodule:: eomaps.eomaps.Maps.util
 
 .. autosummary::
     :nosignatures:
@@ -41,20 +41,23 @@ By default, the widgets will show all available layers (except the "all" layer) 
 
 
 
-.. table::
-    :widths: 70 30
-    :align: center
+.. grid:: 1 1 1 2
 
-    +------------------------------------+-------------------------------------------------+
-    | .. code-block:: python             | .. image:: _static/minigifs/layer_selector.gif  |
-    |   :name: test_add_utils            |    :align: center                               |
-    |                                    |                                                 |
-    |   from eomaps import Maps          |                                                 |
-    |   m = Maps(layer="coastline")      |                                                 |
-    |   m.add_feature.preset.coastline() |                                                 |
-    |                                    |                                                 |
-    |   m2 = m.new_layer(layer="ocean")  |                                                 |
-    |   m2.add_feature.preset.ocean()    |                                                 |
-    |                                    |                                                 |
-    |   s = m.util.layer_selector()      |                                                 |
-    +------------------------------------+-------------------------------------------------+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_add_utils
+
+            from eomaps import Maps
+            m = Maps(layer="coastline")
+            m.add_feature.preset.coastline()
+
+            m2 = m.new_layer(layer="ocean")
+            m2.add_feature.preset.ocean()
+
+            s = m.util.layer_selector()
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/layer_selector.gif
+            :width: 50%

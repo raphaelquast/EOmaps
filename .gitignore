@@ -8,6 +8,8 @@ docs/_build
 docs/debug.log
 docs/.vscode
 docs/generated
+docs/api/autodoc_additional_props.rst
+
 docs/_tables
 docs/_static/example_gifs_very_old
 
@@ -26,3 +28,7 @@ tests/.ipynb_checkpoints
 tests/.pylint.d
 
 _exclude*
+
+docs/jupyter_execute/*
+docs/.jupyter_cache/*
+docs/.virtual_documents/*

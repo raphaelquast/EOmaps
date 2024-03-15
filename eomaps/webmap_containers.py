@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Collection of WebMap services."""
 
 import logging
@@ -449,7 +454,7 @@ class WebMapContainer(object):
 
             - default: standard OSM layer
             - default_german: standard OSM layer in german
-            - CyclOSM: a bycicle oriented style
+            - CyclOSM: a bicycle oriented style
             - OEPNV_public_transport: a layer indicating global public transportation
             - OpenRiverboatMap: a style to navigate waterways
             - OpenTopoMap: SRTM + OSM for nice topography
@@ -1254,7 +1259,7 @@ class WebMapContainer(object):
                 Technology (https://heigit.org)
 
 
-                For more details, plese visit:
+                For more details, please visit:
                 https://osmlanduse.org
                 """
             WMS._EOmaps_source_code = (
@@ -1294,7 +1299,7 @@ class WebMapContainer(object):
 
         check: https://discomap.eea.europa.eu/
 
-        EEA standard re-use policy: Unless otherwise indicated, reuse of
+        EEA standard reuse policy: Unless otherwise indicated, reuse of
         content on the EEA website for commercial or non-commercial
         purposes is permitted free of charge, provided that the source is
         acknowledged.
@@ -1336,7 +1341,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1369,7 +1374,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1402,7 +1407,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1435,7 +1440,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1468,7 +1473,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1501,7 +1506,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1534,7 +1539,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1567,7 +1572,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -1600,7 +1605,7 @@ class WebMapContainer(object):
 
                 ... make sure to check the link above...
 
-                EEA standard re-use policy: Unless otherwise indicated, reuse of
+                EEA standard reuse policy: Unless otherwise indicated, reuse of
                 content on the EEA website for commercial or non-commercial
                 purposes is permitted free of charge, provided that the source is
                 acknowledged.
@@ -2289,26 +2294,7 @@ class WebMapContainer(object):
         WMS.__doc__ = self._DLR.__doc__
         return WMS
 
-    @property
-    @lru_cache()
-    def DLR_basemaps(self):
-        class _DepreciatedWebServiceCollection(_WebServiceCollection):
-            def __init__(self, *args, **kwargs):
-                print(
-                    "EOmaps: The WebMap service 'DLR_basemaps' is depreciated and will "
-                    "be removed in the next minor version!\n"
-                    "Use `m.add_wms.DLR.basemaps...` instead!",
-                )
-                super().__init__(*args, **kwargs)
-
-        WMS = _DepreciatedWebServiceCollection(
-            m=self._m,
-            service_type="wms",
-            url="https://geoservice.dlr.de/eoc/basemap/wms?SERVICE=WMS&REQUEST=GetCapabilities",
-        )
-
-        WMS.__doc__ = type(self).DLR.__doc__
-        return WMS
+    DLR.__doc__ = _DLR.__doc__
 
     @property
     @lru_cache()

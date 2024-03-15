@@ -1,4 +1,4 @@
-# EOmaps example 2: Data-classification and multiple Maps in one figure
+# EOmaps example: Data-classification and multiple Maps in one figure
 
 from eomaps import Maps
 import pandas as pd
@@ -94,9 +94,9 @@ m.apply_layout(
         "4_cb_histogram_size": 0.8,
         "5_cb": [0.72022, 0.0825, 0.2625, 0.2805],
         "5_cb_histogram_size": 0.8,
-        "7_logo": [0.2725, 0.451, 0.05, 0.04538],
+        "6_logo": [0.2725, 0.451, 0.05, 0.04538],
+        "7_logo": [0.625, 0.3795, 0.05, 0.04538],
         "8_logo": [0.625, 0.3795, 0.05, 0.04538],
-        "9_logo": [0.625, 0.3795, 0.05, 0.04538],
-        "10_logo": [0.93864, 0.451, 0.05, 0.04538],
+        "9_logo": [0.93864, 0.451, 0.05, 0.04538],
     }
 )

@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Interactive Compass (or North Arrow)."""
 
 import logging
@@ -14,7 +19,15 @@ _log = logging.getLogger(__name__)
 
 
 class Compass:
-    """Base class for EOmaps compass objects."""
+    """
+    Base class for EOmaps compass (or North-arrow) objects.
+
+    Note
+    ----
+    To add a new compass (or north-arrow) to a map, see
+    :py:meth:`Maps.add_compass <eomaps.eomaps.Maps.add_compass>`.
+
+    """
 
     def __init__(self, m):
         self._m = m
@@ -68,7 +81,8 @@ class Compass:
 
             The default is "axes".
         scale : float, optional
-            A scale-factor for the size of the compass. The default is 10.
+            A scale-factor for the size of the compass in relation to the size of the
+            whole figure. The default is 10.
         style : str, optional
 
             - "north arrow" : draw only a north-arrow
@@ -404,9 +418,7 @@ class Compass:
 
     @property
     def _layer_visible(self):
-        return self.layer == "all" or (
-            self.layer in (*self._m.BM.bg_layer.split("|"), self._m.BM.bg_layer)
-        )
+        return self._m.BM._layer_visible(self.layer)
 
     def _disconnect(self):
         """Disconnect the callbacks."""

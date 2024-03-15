@@ -1,7 +1,12 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 import logging
 
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, QLocale, pyqtSignal
+from qtpy import QtWidgets, QtGui
+from qtpy.QtCore import Qt, QLocale, Signal
 from pathlib import Path
 import io
 import numpy as np
@@ -29,6 +34,11 @@ def _none_or_val(val):
         return None
     else:
         return val
+
+
+def _floatstr_to_int(val):
+    # pythons int() cannot convert float-strings to integer!
+    return int(float(val))
 
 
 def _identify_radius(r):
@@ -170,6 +180,7 @@ class ShapeSelector(QtWidgets.QFrame):
         mask_radius=_none_or_val,
         radius=_identify_radius,
         n=_none_or_val,
+        maxsize=_floatstr_to_int,
     )
 
     _argtypes = dict(
@@ -181,10 +192,9 @@ class ShapeSelector(QtWidgets.QFrame):
         mask_radius=(float,),
         flat=(str_to_bool,),
         aggregator=(str,),
-        maxsize=(int,),
     )
 
-    def __init__(self, *args, m=None, default_shape="shade_raster", **kwargs):
+    def __init__(self, *args, m=None, default_shape="shade_points", **kwargs):
         super().__init__(*args, **kwargs)
 
         self.m = m
@@ -309,7 +319,7 @@ class ShapeSelector(QtWidgets.QFrame):
 class PlotFileWidget(QtWidgets.QWidget):
 
     file_endings = None
-    default_shape = "shade_raster"
+    default_shape = "shade_points"
 
     def __init__(
         self,
@@ -690,8 +700,12 @@ class PlotXarrayWidget(PlotFileWidget):
         f = self._file_handle
 
         try:
-            vmin = f[self.parameter.text()].min()
-            vmax = f[self.parameter.text()].max()
+
+            vals = f[self.parameter.text()]
+            if hasattr(vals, "_FillValue"):
+                vals = vals.where(vals != vals._FillValue)
+            vmin = vals.min()
+            vmax = vals.max()
 
             self.vmin.setText(str(float(vmin)))
             self.vmax.setText(str(float(vmax)))
@@ -870,19 +884,23 @@ class PlotNetCDFWidget(PlotXarrayWidget):
         self.x.set_complete_vals(cols)
         self.y.set_complete_vals(cols)
 
-        if "lon" in cols:
-            self.x.setText("lon")
-        elif "x" in cols:
-            self.x.setText("x")
-        else:
-            self.x.setText(cols[0])
+        self.x.setText("?")
+        self.y.setText("?")
 
-        if "lat" in cols:
-            self.y.setText("lat")
-        elif "y" in cols:
-            self.y.setText("y")
-        else:
-            self.x.setText(cols[1])
+        # check if coordinate variable-names can be identified
+        cols_lower = [i.casefold() for i in cols]
+        for c0, c1 in [
+            ("x", "y"),
+            ("lon", "lat"),
+            ("longitude", "latitude"),
+        ]:
+            if (c0.casefold() in cols_lower) and (c1.casefold() in cols_lower):
+                col0 = cols[cols_lower.index(c0)]
+                col1 = cols[cols_lower.index(c1)]
+
+                self.x.setText(col0)
+                self.y.setText(col1)
+                break
 
         self.parameter.set_complete_vals(cols)
         self.parameter.setText(
@@ -1338,7 +1356,7 @@ class OpenDataStartTab(QtWidgets.QWidget):
 
 
 class OpenFileTabs(QtWidgets.QTabWidget):
-    openNewFile = pyqtSignal()
+    openNewFile = Signal()
 
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)

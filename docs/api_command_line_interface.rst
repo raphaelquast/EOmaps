@@ -9,7 +9,7 @@ To start a new EOmaps map from the command-line, simply type ``eomaps`` and hit 
 
 In addition, the following optional parameters can be provided:
 
-- ``--help`` get additionnal help on how to use the ``eomaps`` command
+- ``--help`` get additional help on how to use the ``eomaps`` command
 - ``--crs`` set the coordinate reference system of the map
 - ``--location`` query the location via the OpenStreetMap Nominatim service and set the map-extent
 - ``--file`` a path to a file that should be opened for plotting

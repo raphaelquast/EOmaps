@@ -1,7 +1,19 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
+import importlib.metadata
+from .helpers import register_modules as _register_modules
+
+# address numpy runtime warning concerning binary incompatibility when
+# reading NetCDF files (see https://github.com/pydata/xarray/issues/7259)
+_register_modules("netCDF4", raise_exception=False)
+
 from .eomaps import Maps
 from .mapsgrid import MapsGrid
-from ._version import __version__
 
+__version__ = importlib.metadata.version("eomaps")
 __author__ = "Raphael Quast"
 
 # Follow conventions used by cartopy to setup cache directory
@@ -17,7 +29,7 @@ _data_dir = os.path.join(os.environ.get("XDG_DATA_HOME", _writable_dir), "eomaps
 
 
 # -----------------------------------------------------------------------------------
-# The following loggin config is adapted from matplotlibs way of dealing with logging
+# The following login config is adapted from matplotlibs way of dealing with logging
 # (see https://github.com/matplotlib/matplotlib/blob/main/lib/matplotlib/__init__.py)
 
 import logging

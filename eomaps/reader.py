@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Classes to read files (NetCDF, GeoTIFF, CSV etc.)"""
 
 import logging
@@ -268,17 +273,6 @@ class read_file:
             # Using masked-arrays ensures that we can deal with integers as well!
             if mask_and_scale is False:
                 encoding = usencfile.attrs
-                fill_value = encoding.get("_FillValue", None)
-
-                if fill_value and fill_values == "mask":
-                    data = np.ma.MaskedArray(
-                        data=data,
-                        mask=data == fill_value,
-                        copy=False,
-                        fill_value=fill_value,
-                        hard_mask=True,
-                    )
-
             else:
                 encoding = None
 
@@ -459,8 +453,23 @@ class read_file:
 
             data = usencfile[parameter]
             if coords is None:
-                coords = list(data.dims)
-                if len(coords) != 2:
+                dims = list(data.dims)
+
+                # check if coordinate variable-names can be identified
+                dims_lower = [i.casefold() for i in dims]
+                for c0, c1 in [
+                    ("x", "y"),
+                    ("lon", "lat"),
+                    ("longitude", "latitude"),
+                ]:
+                    if (c0.casefold() in dims_lower) and (c1.casefold() in dims_lower):
+                        coords = (
+                            dims[dims_lower.index(c0)],
+                            dims[dims_lower.index(c1)],
+                        )
+                        break
+
+                if coords is None:
                     raise AssertionError(
                         "EOmaps: could not identify the coordinate-dimensions! "
                         + "Please provide coordinate-names explicitly via the "
@@ -535,16 +544,6 @@ class read_file:
                     add_offset=getattr(usencfile[parameter], "add_offset", 0),
                     _FillValue=getattr(usencfile[parameter], "_FillValue", None),
                 )
-                fill_value = encoding.get("_FillValue", None)
-                if fill_value and fill_values == "mask":
-                    data = np.ma.MaskedArray(
-                        data=data,
-                        mask=data == fill_value,
-                        copy=False,
-                        fill_value=fill_value,
-                        hard_mask=True,
-                    )
-
             else:
                 encoding = None
 

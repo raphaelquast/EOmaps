@@ -1,8 +1,13 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 import logging
 from datetime import datetime
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSlot
+from qtpy import QtWidgets
+from qtpy.QtCore import Slot
 
 _log = logging.getLogger(__name__)
 
@@ -34,7 +39,7 @@ class SetExtentToLocation(QtWidgets.QWidget):
                 "'location' can be a country-name, a city-name an address etc.",
             )
 
-    @pyqtSlot()
+    @Slot()
     def set_extent(self):
         # make sure that queries have a couple of seconds delay
         # to comply to OpenStreetMap Nominatim Usage Policy

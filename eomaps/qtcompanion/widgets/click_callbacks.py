@@ -1,5 +1,10 @@
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
+from qtpy import QtWidgets, QtGui
+from qtpy.QtCore import Qt, Signal, Slot
 
 
 class AnnotateButton(QtWidgets.QPushButton):
@@ -110,8 +115,11 @@ class PickMapDropdown(QtWidgets.QComboBox):
         super().__init__(*args, **kwargs)
 
         self.setStyleSheet("border-style:none;")
+
+        # set fixed width to avoid expanding window-width on startup for extremely
+        # long layer names... (full name is shown in dropdown)
         self.setMinimumWidth(150)
-        self.setMaximumWidth(400)
+        self.setMaximumWidth(150)
         self.setSizeAdjustPolicy(self.AdjustToContents)
 
     def enterEvent(self, e):
@@ -152,7 +160,7 @@ class ClearButton(QtWidgets.QPushButton):
 
 
 class ClickCallbacks(QtWidgets.QFrame):
-    widgetShown = pyqtSignal()
+    widgetShown = Signal()
 
     def __init__(self, *args, m=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -312,7 +320,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.widgetShown.emit()
 
     def identify_pick_map(self):
-        layers, _ = self.m.BM._get_layers_alphas()
+        layers, _ = self.m.BM._get_active_layers_alphas
         layers.extend(("all", "inset_all"))
 
         pickm = list()
@@ -322,16 +330,16 @@ class ClickCallbacks(QtWidgets.QFrame):
 
         return pickm
 
-    @pyqtSlot()
+    @Slot()
     def clear_annotations_and_markers(self):
         # clear all annotations and markers from this axis
         # (irrespective of the visible layer!)
         for m in (self.m.parent, *self.m.parent._children):
             if m.ax == self.m.ax:
-                m.cb.click._cb.clear_annotations()
-                m.cb.click._cb.clear_markers()
-                m.cb.pick._cb.clear_annotations()
-                m.cb.pick._cb.clear_markers()
+                m.cb.click._attach.clear_annotations(m.cb.click.attach)
+                m.cb.click._attach.clear_markers(m.cb.click.attach)
+                m.cb.pick._attach.clear_annotations(m.cb.pick.attach)
+                m.cb.pick._attach.clear_markers(m.cb.pick.attach)
 
         self.m.BM.update()
 
@@ -361,6 +369,7 @@ class ClickCallbacks(QtWidgets.QFrame):
             else:
                 name = f"{i}"
 
+            # indicate map-layer name if combined layer is visible
             if "|" in m.BM.bg_layer:
                 if m.layer != m.BM.bg_layer:
                     name += f" ({m.layer})"
@@ -401,7 +410,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.populate_dropdown()
         self.update_buttons()
 
-    @pyqtSlot()
+    @Slot()
     def update_buttons(self):
         if self._pick_map is None or self._pick_map.coll is None:
             self.t_pick.setEnabled(False)
@@ -494,7 +503,7 @@ class ClickCallbacks(QtWidgets.QFrame):
 
             self.cids[key] = (self.m.all, method(**self._kwargs.get(key, dict())))
 
-    @pyqtSlot()
+    @Slot()
     def radius_changed(self):
         try:
             radius = float(self.radius_inp.text())
@@ -504,7 +513,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.attach_callback("mark")
         self.update_buttons()
 
-    @pyqtSlot()
+    @Slot()
     def n_points_changed(self):
         try:
             n = int(self.n_points_inp.text())
@@ -516,7 +525,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.update_buttons()
 
     def button_clicked(self, key):
-        @pyqtSlot()
+        @Slot()
         def cb():
             if self.cids.get(key, None) is not None:
                 self.remove_callback(key)

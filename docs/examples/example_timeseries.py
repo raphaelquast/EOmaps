@@ -1,4 +1,4 @@
-# EOmaps example 9:  Data analysis widgets - Interacting with a database
+# EOmaps example:  Data analysis widgets - Interacting with a database
 
 from eomaps import Maps
 import pandas as pd

@@ -1,8 +1,13 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 import logging
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QThread, QObject, pyqtSignal, pyqtSlot, QTimer
-from PyQt5.QtGui import QStatusTipEvent
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt, QThread, QObject, Signal, Slot, QTimer
+from qtpy.QtGui import QStatusTipEvent
 
 from ... import Maps, _data_dir
 from pathlib import Path
@@ -12,7 +17,7 @@ import os
 _log = logging.getLogger(__name__)
 
 # the path to which already fetched WebMap layers are stored
-# (to avoid fetching available layers on menu-population)
+# (to avoid fetching available layers on menu-population)W
 wms_layers_dumppath = Path(_data_dir) / "_companion_wms_layers.json"
 
 
@@ -36,7 +41,7 @@ class WMSBase:
     def ask_for_legend(self, wms, wmslayer):
         if hasattr(wms, "add_legend"):
             try:
-                img = wms.fetch_legend(silent=True)
+                img = wms.fetch_legend()
                 if img is not None:
                     self._ask_for_legend(wms, wmslayer, img)
             except:
@@ -597,7 +602,7 @@ class StatusTipFilter(QObject):
 
 
 class AddWMSMenuButton(QtWidgets.QPushButton):
-    wmsLayerCreated = pyqtSignal(str)
+    wmsLayerCreated = Signal(str)
 
     def __init__(
         self, *args, m=None, new_layer=False, show_layer=False, layer=None, **kwargs
@@ -698,11 +703,11 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                     "NOTE: This is not necessarily the currently visible layer!",
                 )
 
-    @pyqtSlot()
+    @Slot()
     def show_menu(self):
         self.feature_menu.popup(self.mapToGlobal(self.menu_button.pos()))
 
-    @pyqtSlot()
+    @Slot()
     def populate_menu(self):
 
         self.sub_menus = dict()
@@ -711,7 +716,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             self.sub_menus[wmsname].aboutToShow.connect(self._populate_submenu_cb)
         self.feature_menu.aboutToShow.disconnect()
 
-    @pyqtSlot()
+    @Slot()
     def _populate_submenu_cb(self):
         wmsname = self.sender().title()
         self.fetch_submenu(wmsname=wmsname)
@@ -862,15 +867,15 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         except Exception:
             _log.error(f"There was a problem with the WMS: {wmsname}")
 
-    @pyqtSlot()
+    @Slot()
     def menu_callback_factory(self, wmsname, wmslayer):
-        @pyqtSlot()
+        @Slot()
         def wms_cb():
 
             self.window().statusBar().showMessage(
                 f"Adding WebMap service:   {wmsname} - {wmslayer}   . . ."
             )
-            # trigger an immediate repaint of the statusbar to show the messge
+            # trigger an immediate repaint of the statusbar to show the message
             # before fetching the service
             self.window().statusBar().repaint()
 

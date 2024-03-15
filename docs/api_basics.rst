@@ -19,16 +19,34 @@ The first :py:class:`Maps` object that is created will initialize a
 `cartopy.GeoAxes <https://scitools.org.uk/cartopy/docs/latest/reference/generated/cartopy.mpl.geoaxes.GeoAxes.html?highlight=geoaxes#cartopy.mpl.geoaxes.GeoAxes>`_
 for a map.
 
-.. code-block:: python
-    :name: test_init_map_objects
 
-    from eomaps import Maps
-    m = Maps(crs=4326,               # create a Maps-object with a map in lon/lat (epsg=4326) projection
-        layer="first layer",         # assign the layer "first_layer"
-        figsize=(7, 5))              # set the figure-size to 7x5
-    m.set_extent((-25, 35, 25, 70))  # set the extent of the map
-    m.add_feature.preset.coastline() # add coastlines to the map
-    m.add_title("my map")            # add a title above the map
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+        :columns: 12 12 12 8
+
+        .. code-block:: python
+            :name: test_init_map_objects
+
+            from eomaps import Maps
+            m = Maps(                        # Create a Maps-object
+                crs=4326,                    #     Use lon/lat (epsg=4326) projection
+                layer="base",                #     Assign the layer-name "base"
+                figsize=(6, 5))              #     Set the figure-size to 6x5
+
+            m.set_extent((-25, 35, 30, 70))  # Set the extent of the map
+            m.set_frame(linewidth=3)         # Set the linewidth of the frame
+
+            m.add_feature.preset.coastline() # Add coastlines
+            m.add_feature.preset.ocean()     # Add ocean-coloring
+            m.add_title("My first map",      # Add a title
+                        fontsize=16)         #     With a fontsize of 16pt
+
+    .. grid-item::
+        :columns: 8 8 8 4
+
+        .. image:: _static/minigifs/basics_first_map.png
+
 
 - ``crs`` represents the projection used for plotting
 - ``layer`` represents the name of the layer associated with the Maps-object (see :ref:`layers`).
@@ -36,16 +54,19 @@ for a map.
   (e.g.: ``figsize``, ``frameon``, ``edgecolor`` etc).
 
 
-Possible ways for specifying the ``crs`` for plotting are:
+.. dropdown:: Possible ways for specifying the ``crs`` for plotting
+    :open:
+    :icon: info
+    :color: info
 
-- If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.)
+    - If you provide an integer, it is identified as an epsg-code (e.g. ``4326``, ``3035``, etc.)
 
-  - 4326 defaults to `PlateCarree` projection
+      - 4326 defaults to `PlateCarree` projection
 
-- All other CRS usable for plotting are accessible via ``Maps.CRS``, e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.Equi7_EU``...
+    - All other CRS usable for plotting are accessible via ``Maps.CRS``, e.g.: ``crs=Maps.CRS.Orthographic()``, ``crs=Maps.CRS.Equi7_EU``...
 
-  - ``Maps.CRS`` is just an accessor for ``cartopy.crs``
-  - For a full list of available projections see: `Cartopy projections <https://scitools.org.uk/cartopy/docs/v0.15/crs/projections.html>`_
+      - ``Maps.CRS`` is just an accessor for ``cartopy.crs``
+      - For a full list of available projections see: `Cartopy projections <https://scitools.org.uk/cartopy/docs/v0.15/crs/projections.html>`_
 
 .. autosummary::
     :nosignatures:
@@ -61,48 +82,70 @@ Possible ways for specifying the ``crs`` for plotting are:
 Layer management
 ~~~~~~~~~~~~~~~~
 
+A :py:class:`Maps` object represents one (or more) of the following things **on the assigned layer**:
+
+- a collection of features, callbacks,..
+- a single dataset  (and associated callbacks)
+
+
+You can create as many layers as you need! The following image explains how it works in general:
+
 .. image:: _static/intro.png
-   :width: 40%
+   :width: 70%
+
+.. dropdown:: Creating new layers
+    :icon: info
+    :color: info
+
+    To create **a NEW layer**, use :py:meth:`m.new_layer("layer-name") <Maps.new_layer>`.
+
+    - Features, Colorbars etc. added to a :py:class:`Maps` object are only visible if the associated layer is visible.
+    - Callbacks are only executed if the associated layer is visible.
+    - See :ref:`combine_layers` on how to select the currently visible layer(s).
 
 
-A :py:class:`Maps` object represents a collection of features, callbacks,.. **on the assigned layer**.
+    .. code-block:: python
+        :name: test_layers_create_new_layer
 
-Once you have created a map, you can create **additional** :py:class:`Maps` **objects for the same map** by using :py:meth:`Maps.new_layer`.
+        from eomaps import Maps
+        m = Maps()                           # same as `m = Maps(crs=4326, layer="base")`
+        m.add_feature.preset.coastline()     # add coastlines to the "base" layer
 
-🌱  If no explicit layer-name is provided, the returned :py:class:`Maps` object will use the same layer as the parent :py:class:`Maps` object.
+        m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
+        m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
 
-  - This is especially useful if you want to plot **multiple datasets on the same map and layer**.
-
-🌱  To create **a NEW layer** named ``"my_layer"``, use ``m2 = m.new_layer("my_layer")``
-
-  - Features, Colorbars etc. added to a :py:class:`Maps` object are only visible if the associated layer is visible.
-  - Callbacks are only executed if the associated layer is visible.
-  - See :ref:`combine_layers` on how to select the currently visible layer(s).
-
-
-.. code-block:: python
-    :name: test_layers_01
-
-    from eomaps import Maps
-    m = Maps()                           # same as `m = Maps(crs=4326, layer="base")`
-    m.add_feature.preset.coastline()     # add coastlines to the "base" layer
-
-    m_ocean = m.new_layer(layer="ocean") # create a new layer named "ocean"
-    m_ocean.add_feature.preset.ocean()   # features on this layer will only be visible if the "ocean" layer is visible!
-
-    m_ocean2 = m_ocean.new_layer()       # "m_ocean2" is just another Maps-object on the same layer as "m_ocean"!
-    m_ocean2.set_data(                   # assign a dataset to this Maps-object
-        data=[.14,.25,.38],
-        x=[1,2,3], y=[3,5,7],
-        crs=4326)
-    m_ocean2.set_shape.ellipses()        # set the shape that is used to represent the datapoints
-    m_ocean2.plot_map()                  # plot the data
-
-    m.show_layer("ocean")                # show the "ocean" layer
-    m.util.layer_selector()              # get a utility widget to quickly switch between existing layers
+        m.show_layer("ocean")                # show the "ocean" layer
+        m.util.layer_selector()              # get a utility widget to quickly switch between existing layers
 
 
-.. admonition:: The "all" layer
+.. dropdown:: Multiple ``Maps`` objects on the same layer
+    :icon: info
+    :color: info
+
+    If no explicit layer-name is provided, (e.g. :py:meth:`m.new_layer() <Maps.new_layer>`) the returned :py:class:`Maps` object will use the same layer as the parent :py:class:`Maps` object.
+
+    - This is especially useful if you want to plot **multiple datasets on the same map and layer**.
+
+
+    .. code-block:: python
+        :name: test_layers_on_same_layer
+
+        from eomaps import Maps
+        m = Maps()                           # same as `m = Maps(layer="base")`
+        m.add_feature.preset.coastline()     # add coastlines to the "base" layer
+
+        m2 = m.new_layer()                   # "m2" is just another Maps-object on the same layer as "m"!
+        m2.set_data(                         # assign a dataset to this Maps-object
+            data=[.14,.25,.38],
+            x=[1,2,3], y=[3,5,7],
+            crs=4326)
+        m2.plot_map()                        # plot the data
+        m2.cb.pick.attach.annotate()         # attach a callback that picks datapoints from the data assigned to "m2"
+
+
+.. dropdown:: The "all" layer
+    :icon: info
+    :color: info
 
     | There is one layer-name that has a special meaning... the ``"all"`` layer.
     | Any callbacks and features added to this layer will be **executed on ALL other layers** as well!
@@ -124,8 +167,10 @@ Once you have created a map, you can create **additional** :py:class:`Maps` **ob
         m_ocean.add_feature.preset.ocean()   # add ocean-coloring to the "ocean" layer
         m.show_layer("ocean")                # show the "ocean" layer (note that it has coastlines as well!)
 
+.. dropdown:: Artists added with methods **outside of EOmaps**
+    :icon: info
+    :color: info
 
-.. admonition:: Artists added with methods **outside of EOmaps**
 
     If you use methods that are **NOT provided by EOmaps**, the corresponding artists will always appear on the ``"base"`` layer by default!
     (e.g. ``cartopy`` or ``matplotlib`` methods accessible via ``m.ax.`` or ``m.f.`` like ``m.ax.plot(...)``)
@@ -159,7 +204,13 @@ Once you have created a map, you can create **additional** :py:class:`Maps` **ob
 🗗 Combine & compare multiple layers
 ************************************
 
-.. admonition:: Using the :ref:`companion_widget`
+All maps of a figure always show **the same visible layer**.
+
+The visible layer can be a **single layer-name**, or a **combination of multiple layer-names** in order to to transparently combine/overlay multiple layers.
+
+.. dropdown:: Using the :ref:`companion_widget` to switch/overlay layers
+    :icon: info
+    :color: info
 
     Usually it is most convenient to combine and compare layers via the :ref:`companion_widget`.
 
@@ -180,69 +231,76 @@ Once you have created a map, you can create **additional** :py:class:`Maps` **ob
 
     .. image:: _static/minigifs/rearrange_layers.gif
 
-
-To programmatically switch between layers or view a layer that represents a **combination of multiple existing layers**, use :py:meth:`Maps.show_layer`.
-
-🌱 If you provide a single layer-name, the map will show the corresponding layer, e.g. ``m.show_layer("my_layer")``
-
-🌱 To **(transparently) overlay multiple existing layers**, use one of the following options:
-
-- Provide **multiple layer names or tuples** of the form ``(< layer-name >, < transparency [0-1] >)``
-
-  - ``m.show_layer("A", "B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
-  - ``m.show_layer("A", ("B", 0.5))`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
-
-- Provide a **combined layer name** by separating the individual layer names you want to show with a ``"|"`` character.
-
-  - ``m.show_layer("A|B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
-  - To transparently overlay a layer, add the transparency to the layer-name in curly-brackets, e.g.: ``"<layer-name>{<transparency>}"``.
-
-    - ``m.show_layer("A|B{0.5}")`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
+.. dropdown:: Programmatically switch/overlay layers
+    :icon: info
+    :color: info
 
 
-.. code-block:: python
-    :name: test_transparent_layer_overlay
+    To programmatically switch between layers or view a layer that represents a **combination of multiple existing layers**, use :py:meth:`Maps.show_layer`.
 
-    from eomaps import Maps
-    m = Maps(layer="first")
-    m.add_feature.physical.land(fc="k")
+    If you provide a single layer-name, the map will show the corresponding layer, e.g. ``m.show_layer("my_layer")``
 
-    m2 = m.new_layer("second")                # create a new layer and plot some data
-    m2.add_feature.preset.ocean(zorder=2)
-    m2.set_data(data=[.14,.25,.38],
-                x=[10,20,30], y=[30,50,70],
-                crs=4326)
-    m2.plot_map(zorder=1)                     # plot the data "below" the ocean
+    To **(transparently) overlay multiple existing layers**, use one of the following options:
 
-    m.show_layer("first", ("second", .75))   # overlay the second layer with 25% transparency
+    - Provide **multiple layer names or tuples** of the form ``(< layer-name >, < transparency [0-1] >)``
 
+      - ``m.show_layer("A", "B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
+      - ``m.show_layer("A", ("B", 0.5))`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
 
-.. currentmodule:: eomaps.callbacks.ClickCallbacks
+    - Provide a **combined layer name** by separating the individual layer names you want to show with a ``"|"`` character.
 
-🌱 If you want to overlay a part of the screen with a different layer, have a look at :py:meth:`peek_layer` callbacks**!
+      - ``m.show_layer("A|B")`` will overlay all features of the layer ``B`` on top of the layer ``A``.
+      - To transparently overlay a layer, add the transparency to the layer-name in curly-brackets, e.g.: ``"<layer-name>{<transparency>}"``.
+
+        - ``m.show_layer("A|B{0.5}")`` will overlay the layer ``B`` with 50% transparency on top of the layer ``A``.
 
 
-.. autosummary::
-    :nosignatures:
+    .. code-block:: python
+        :name: test_transparent_layer_overlay
 
-    peek_layer
+        from eomaps import Maps
+        m = Maps(layer="first")
+        m.add_feature.physical.land(fc="k")
 
+        m2 = m.new_layer("second")                # create a new layer and plot some data
+        m2.add_feature.preset.ocean(zorder=2)
+        m2.set_data(data=[.14,.25,.38],
+                    x=[10,20,30], y=[30,50,70],
+                    crs=4326)
+        m2.plot_map(zorder=1)                     # plot the data "below" the ocean
 
-
-.. code-block:: python
-    :name: test_peek_layer_cb
-
-    from eomaps import Maps
-    m = Maps()
-    m.all.add_feature.preset.coastline()
-    m.add_feature.preset.urban_areas()
-
-    m.add_feature.preset.ocean(layer="ocean")
-    m.add_feature.physical.land(layer="land", fc="g")
-    m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)], shape="round", how=0.4)
+        m.show_layer("first", ("second", .75))   # overlay the second layer with 25% transparency
 
 
-.. admonition:: The "stacking order" of features and layers
+.. dropdown:: Interactively overlay layers
+    :icon: info
+    :color: info
+
+    .. currentmodule:: eomaps.callbacks.ClickCallbacks
+
+    If you want to interactively overlay a part of the screen with a different layer, have a look at :py:meth:`peek_layer` callbacks!
+
+    .. autosummary::
+        :nosignatures:
+
+        peek_layer
+
+    .. code-block:: python
+        :name: test_peek_layer_cb
+
+        from eomaps import Maps
+        m = Maps()
+        m.all.add_feature.preset.coastline()
+        m.add_feature.preset.urban_areas()
+
+        m.add_feature.preset.ocean(layer="ocean")
+        m.add_feature.physical.land(layer="land", fc="g")
+        m.cb.click.attach.peek_layer(layer=["ocean", ("land", 0.5)], shape="round", how=0.4)
+
+
+.. dropdown:: The "stacking order" of features and layers
+    :icon: info
+    :color: info
 
     The stacking order of features at the **same layer** is controlled by the ``zorder`` argument.
 
@@ -288,14 +346,18 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
     m = Maps()
     m.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95)
 
-.. admonition:: Export to clipboard (``ctrl + c``)
+.. dropdown:: Export to clipboard (``ctrl + c``)
+    :icon: info
+    :color: info
 
     If you use ``PyQt5`` as matplotlib-backend, you can also press (``control`` + ``c``) to export the figure to the clipboard.
 
     The export will be performed using the **currently set export-parameters** in the :ref:`companion_widget` .
     Alternatively, you can also programmatically set the export-parameters via :py:meth:`Maps.set_clipboard_kwargs` .
 
-.. admonition:: Notes on exporting high-dpi figures
+.. dropdown:: Notes on exporting high-dpi figures
+    :icon: info
+    :color: info
 
     EOmaps tries its best to follow the WYSIWYG concept (e.g. *"What You See Is What You Get"*).
     However, if you export the map with a dpi-value other than ``100``, there are certain circumstances
@@ -375,105 +437,148 @@ To position the map in a (virtual) grid, one of the following options are possib
   - ``index`` can also be a two-tuple specifying the (first, last)
     indices (1-based, and including last) of the map, e.g., ``Maps(ax=(3, 1, (1, 2)))`` makes a map that spans the upper 2/3 of the figure.
 
-.. table::
 
-    +----------------------------------------------------+------------------------------------+
-    | .. code-block:: python                             | .. image:: _static/grids/grid1.png |
-    |     :name: test_gridpos_1                          |   :align: center                   |
-    |                                                    |                                    |
-    |     from eomaps import Maps                        | |img_minsize|                      |
-    |     # ----- initialize a figure with an EOmaps map |                                    |
-    |     # position = item 1 of a 2x1 grid              |                                    |
-    |     m = Maps(ax=(2, 1, 1))                         |                                    |
-    |     # ----- add a normal matplotlib axes           |                                    |
-    |     # position = item 2 of a 2x1 grid              |                                    |
-    |     ax = m.f.add_subplot(2, 1, 2)                  |                                    |
-    +----------------------------------------------------+------------------------------------+
+.. grid:: 1 1 1 2
 
-.. table::
+    .. grid-item::
+        :columns: 12 12 12 8
 
-    +----------------------------------------------------+------------------------------------+
-    | .. code-block:: python                             | .. image:: _static/grids/grid2.png |
-    |     :name: test_gridpos_2                          |   :align: center                   |
-    |                                                    |                                    |
-    |     from eomaps import Maps                        | |img_minsize|                      |
-    |     # ----- initialize a figure with an EOmaps map |                                    |
-    |     # position = item 1 of a 2x2 grid              |                                    |
-    |     m = Maps(ax=(2, 2, 1))                         |                                    |
-    |     # ----- add another Map to the same figure     |                                    |
-    |     # position = item 3 of a 2x2 grid              |                                    |
-    |     m2 = m.new_map(ax=(2, 2, 3))                   |                                    |
-    |     # ----- add a normal matplotlib axes           |                                    |
-    |     # position = second item of a 1x2 grid         |                                    |
-    |     ax = m.f.add_subplot(1, 2, 2)                  |                                    |
-    +----------------------------------------------------+------------------------------------+
+         .. code-block:: python
+             :name: test_gridpos_1
 
-.. table::
+             from eomaps import Maps
+             # ----- initialize a figure with an EOmaps map
+             # position = item 1 of a 2x1 grid
+             m = Maps(ax=(2, 1, 1))
+             # ----- add a normal matplotlib axes
+             # position = item 2 of a 2x1 grid
+             ax = m.f.add_subplot(2, 1, 2)
 
-    +----------------------------------------------------+------------------------------------+
-    | .. code-block:: python                             | .. image:: _static/grids/grid3.png |
-    |     :name: test_gridpos_3                          |   :align: center                   |
-    |                                                    |                                    |
-    |     from eomaps import Maps                        | |img_minsize|                      |
-    |     # ----- initialize a figure with an EOmaps map |                                    |
-    |     # position = span 2 rows of a 3x1 grid         |                                    |
-    |     m = Maps(ax=(3, 1, (1, 2)))                    |                                    |
-    |     # ----- add a normal matplotlib axes           |                                    |
-    |     # position = item 3 of a 3x1 grid              |                                    |
-    |     ax = m.f.add_subplot(3, 1, 3)                  |                                    |
-    +----------------------------------------------------+------------------------------------+
+    .. grid-item-card::
+        :columns: 6 6 6 4
+        :img-background: _static/grids/grid1.png
+
+
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+        :columns: 12 12 12 8
+
+        .. code-block:: python
+            :name: test_gridpos_2
+
+            from eomaps import Maps
+            # ----- initialize a figure with an EOmaps map
+            # position = item 1 of a 2x2 grid
+            m = Maps(ax=(2, 2, 1))
+            # ----- add another Map to the same figure
+            # position = item 3 of a 2x2 grid
+            m2 = m.new_map(ax=(2, 2, 3))
+            # ----- add a normal matplotlib axes
+            # position = second item of a 1x2 grid
+            ax = m.f.add_subplot(1, 2, 2)
+
+    .. grid-item-card::
+        :columns: 6 6 6 4
+        :img-background: _static/grids/grid2.png
+
+
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+        :columns: 12 12 12 8
+
+        .. code-block:: python
+            :name: test_gridpos_3
+
+            from eomaps import Maps
+            # ----- initialize a figure with an EOmaps map
+            # position = item 1 of a 2x2 grid
+            m = Maps(ax=(2, 2, 1))
+            # ----- add another Map to the same figure
+            # position = item 3 of a 2x2 grid
+            m2 = m.new_map(ax=(2, 2, 3))
+            # ----- add a normal matplotlib axes
+            # position = second item of a 1x2 grid
+            ax = m.f.add_subplot(1, 2, 2)
+
+    .. grid-item-card::
+        :columns: 6 6 6 4
+        :img-background: _static/grids/grid3.png
+
+
+
+
 
 - A 3-digit integer.
 
   - The digits are interpreted as if given separately as three single-digit integers, i.e. ``Maps(ax=235)`` is the same as ``Maps(ax=(2, 3, 5))``.
   - Note that this can only be used if there are no more than 9 subplots.
 
-.. table::
+.. grid:: 1 1 1 2
 
-    +----------------------------------------------------+------------------------------------+
-    | .. code-block:: python                             | .. image:: _static/grids/grid4.png |
-    |     :name: test_gridpos_4                          |   :align: center                   |
-    |                                                    |                                    |
-    |     from eomaps import Maps                        | |img_minsize|                      |
-    |     # ----- initialize a figure with an EOmaps map |                                    |
-    |     m = Maps(ax=211)                               |                                    |
-    |     # ----- add a normal matplotlib axes           |                                    |
-    |     ax = m.f.add_subplot(212)                      |                                    |
-    +----------------------------------------------------+------------------------------------+
+    .. grid-item::
+        :columns: 12 12 12 8
 
-.. table::
+        .. code-block:: python
+            :name: test_gridpos_4
 
-    +----------------------------------------------------+------------------------------------+
-    | .. code-block:: python                             | .. image:: _static/grids/grid5.png |
-    |     :name: test_gridpos_5                          |   :align: center                   |
-    |                                                    |                                    |
-    |     from eomaps import Maps                        | |img_minsize|                      |
-    |     # ----- initialize a figure with an EOmaps map |                                    |
-    |     m = Maps(ax=221)                               |                                    |
-    |     # ----- add 2 more Maps to the same figure     |                                    |
-    |     m2 = m.new_map(ax=222)                         |                                    |
-    |     m3 = m.new_map(ax=223)                         |                                    |
-    |     # ----- add a normal matplotlib axes           |                                    |
-    |     ax = m.f.add_subplot(224)                      |                                    |
-    +----------------------------------------------------+------------------------------------+
+            from eomaps import Maps
+            # ----- initialize a figure with an EOmaps map
+            m = Maps(ax=211)
+            # ----- add a normal matplotlib axes
+            ax = m.f.add_subplot(212)
+
+    .. grid-item-card::
+        :columns: 6 6 6 4
+        :img-background: _static/grids/grid4.png
+
+
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+        :columns: 12 12 12 8
+
+        .. code-block:: python
+            :name: test_gridpos_5
+
+            from eomaps import Maps
+            # ----- initialize a figure with an EOmaps map
+            m = Maps(ax=221)
+            # ----- add 2 more Maps to the same figure
+            m2 = m.new_map(ax=222)
+            m3 = m.new_map(ax=223)
+            # ----- add a normal matplotlib axes
+            ax = m.f.add_subplot(224)
+
+    .. grid-item-card::
+        :columns: 6 6 6 4
+        :img-background: _static/grids/grid5.png
+
 
 
 - A matplotlib `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_
 
-.. table::
+.. grid:: 1 1 1 2
 
-    +----------------------------------------------+------------------------------------+
-    | .. code-block:: python                       | .. image:: _static/grids/grid6.png |
-    |     :name: test_gridpos_6                    |   :align: center                   |
-    |                                              |                                    |
-    |     from matplotlib.gridspec import GridSpec | |img_minsize|                      |
-    |     from eomaps import Maps                  |                                    |
-    |                                              |                                    |
-    |     gs = GridSpec(2, 2)                      |                                    |
-    |     m = Maps(ax=gs[0,0])                     |                                    |
-    |     m2 = m.new_map(ax=gs[0,1])               |                                    |
-    |     ax = m.f.add_subplot(gs[1,:])            |                                    |
-    +----------------------------------------------+------------------------------------+
+    .. grid-item::
+        :columns: 12 12 12 8
+
+        .. code-block:: python
+            :name: test_gridpos_6
+
+            from matplotlib.gridspec import GridSpec
+            from eomaps import Maps
+
+            gs = GridSpec(2, 2)
+            m = Maps(ax=gs[0,0])
+            m2 = m.new_map(ax=gs[0,1])
+            ax = m.f.add_subplot(gs[1,:])
+
+    .. grid-item-card::
+        :columns: 6 6 6 4
+        :img-background: _static/grids/grid6.png
+
 
 Absolute positioning
 ********************
@@ -490,23 +595,29 @@ To set the absolute position of the map, provide a list of 4 floats representing
     Also, using ``m.f.tight_layout()`` will not work with axes added in this way.
 
 
-.. table::
+.. grid:: 1 1 1 2
 
-    +----------------------------------------------------+------------------------------------+
-    | .. code-block:: python                             | .. image:: _static/grids/grid7.png |
-    |     :name: test_gridpos_abspos                     |   :align: center                   |
-    |                                                    |                                    |
-    |     from eomaps import Maps                        | |img_minsize|                      |
-    |     # ----- initialize a figure with an EOmaps map |                                    |
-    |     m = Maps(ax=(.07, 0.53, .6, .3))               |                                    |
-    |     # ----- add a normal matplotlib axes           |                                    |
-    |     ax = m.f.add_axes((.35, .15, .6, .2))          |                                    |
-    +----------------------------------------------------+------------------------------------+
+    .. grid-item::
+        :columns: 12 12 12 8
+
+        .. code-block:: python
+            :name: test_gridpos_abspos
+
+            from eomaps import Maps
+            # ----- initialize a figure with an EOmaps map
+            m = Maps(ax=(.07, 0.53, .6, .3))
+            # ----- add a normal matplotlib axes
+            ax = m.f.add_axes((.35, .15, .6, .2))
+
+    .. grid-item-card::
+        :columns: 6 6 6 4
+        :img-background: _static/grids/grid7.png
+
 
 Using already existing figures / axes
 *************************************
 
-It is also possible to insert an EOmaps map into an existing figure or re-use an existing axes.
+It is also possible to insert an EOmaps map into an existing figure or reuse an existing axes.
 
   - To put a map on an existing figure, provide the figure-instance via ``m = Maps(f= <the figure instance>)``
   - To use an existing axes, provide the axes-instance via ``m = Maps(ax= <the axes instance>)``
@@ -545,45 +656,49 @@ Dynamic updates of plots in the same figure
 
 Here's an example to show how it works:
 
-.. table::
-
-    +-------------------------------------------------------------------------------------+------------------------------------------------------+
-    | .. code-block:: python                                                              | .. image:: _static/minigifs/dynamic_axes_updates.gif |
-    |         :name: test_dynamic_axes_updates                                            |   :align: center                                     |
-    |                                                                                     |                                                      |
-    |         from eomaps import Maps                                                     | |img_minsize|                                        |
-    |                                                                                     |                                                      |
-    |         # Initialize a new figure with an EOmaps map                                |                                                      |
-    |         m = Maps(ax=223)                                                            |                                                      |
-    |         m.ax.set_title("click me!")                                                 |                                                      |
-    |         m.add_feature.preset.coastline()                                            |                                                      |
-    |         m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)                  |                                                      |
-    |                                                                                     |                                                      |
-    |         # Add another map to the figure                                             |                                                      |
-    |         m2 = m.new_map(ax=224, crs=Maps.CRS.Mollweide())                            |                                                      |
-    |         m2.add_feature.preset.coastline()                                           |                                                      |
-    |         m2.add_feature.preset.ocean()                                               |                                                      |
-    |         m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)          |                                                      |
-    |                                                                                     |                                                      |
-    |         # Add a "normal" matplotlib plot to the figure                              |                                                      |
-    |         ax = m.f.add_subplot(211)                                                   |                                                      |
-    |         # Since we want to dynamically update the data on the axis, it must be      |                                                      |
-    |         # added to the BlitManager to ensure that the artists are properly updated. |                                                      |
-    |         # (EOmaps handles interactive re-drawing of the figure)                     |                                                      |
-    |         m.BM.add_artist(ax, layer=m.layer)                                          |                                                      |
-    |                                                                                     |                                                      |
-    |         # plot some static data on the axis                                         |                                                      |
-    |         ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])                         |                                                      |
-    |                                                                                     |                                                      |
-    |         # define a callback that plots markers on the axis if you click on the map  |                                                      |
-    |         def cb(pos, **kwargs):                                                      |                                                      |
-    |             ax.plot(*pos, marker="o")                                               |                                                      |
-    |                                                                                     |                                                      |
-    |         m.cb.click.attach(cb)        # attach the callback to the first map         |                                                      |
-    |         m.cb.click.share_events(m2)  # share click events between the 2 maps        |                                                      |
-    +-------------------------------------------------------------------------------------+------------------------------------------------------+
 
 
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+
+        .. code-block:: python
+            :name: test_dynamic_axes_updates
+
+            from eomaps import Maps
+
+            # Initialize a new figure with an EOmaps map
+            m = Maps(ax=223)
+            m.ax.set_title("click me!")
+            m.add_feature.preset.coastline()
+            m.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2)
+
+            # Add another map to the figure
+            m2 = m.new_map(ax=224, crs=Maps.CRS.Mollweide())
+            m2.add_feature.preset.coastline()
+            m2.add_feature.preset.ocean()
+            m2.cb.click.attach.mark(radius=20, fc="none", ec="r", lw=2, n=200)
+
+            # Add a "normal" matplotlib plot to the figure
+            ax = m.f.add_subplot(211)
+            # Since we want to dynamically update the data on the axis, it must be
+            # added to the BlitManager to ensure that the artists are properly updated.
+            # (EOmaps handles interactive re-drawing of the figure)
+            m.BM.add_artist(ax, layer=m.layer)
+
+            # plot some static data on the axis
+            ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])
+
+            # define a callback that plots markers on the axis if you click on the map
+            def cb(pos, **kwargs):
+                ax.plot(*pos, marker="o")
+
+            m.cb.click.attach(cb)        # attach the callback to the first map
+            m.cb.click.share_events(m2)  # share click events between the 2 maps
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/dynamic_axes_updates.gif
 
 
 MapsGrid objects

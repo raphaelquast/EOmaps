@@ -82,9 +82,200 @@ A dataset is fully specified by setting the following properties:
 - ``cpos``, ``cpos_radius`` (optional): the pixel offset
 
 
+The following data-types are currently accepted as input:
+
+.. dropdown:: **pandas.DataFrames**
+    :icon: square-fill
+    :color: info
+
+    .. tab-set::
+
+        .. tab-item:: Assignments
+
+            - ``data``: pandas.DataFrame
+            - ``x``, ``y``: The column-names to use as coordinates (``string``)
+            - ``parameter``: The column-name to use as data-values (``string``)
+
+        .. tab-item:: basic DataFrame
+
+            .. code-block:: python
+                :name: test_assign_pandas_01
+
+                from eomaps import Maps
+                import pandas as pd
+
+                df = pd.DataFrame(dict(lon=[1,2,3], lat=[2,5,4], data=[12, 43, 2]))
+                m = Maps()
+                m.set_data(df, x="lon", y="lat", crs=4326, parameter="data")
+                m.plot_map()
+
+        .. tab-item:: multiindex DataFrame
+
+            .. code-block:: python
+                :name: test_assign_pandas_02
+
+                from eomaps import Maps
+                import pandas as pd
+
+                data = dict(param=[10, 29, 39])
+                index = pd.MultiIndex.from_arrays([[10,20,30], [10,20,30]], names=("lon", "lat"))
+                df = pd.DataFrame(data=data, index=index)
+
+                m = Maps()
+                m.set_data(df, x="lon", y="lat", crs=4326, parameter="param")
+                m.plot_map()
+
+
+
+.. dropdown:: **numpy.Array** | **pandas.Series** | **list**
+    :icon: square-fill
+    :color: info
+
+    .. tab-set::
+
+        .. tab-item:: Assignments
+
+            - ``data``, ``x``, ``y``: ``numpy.array``, ``pandas.Series`` or ``list``
+
+              - either data and coordinates have the same 1D/2D shape or
+              - 2D ``data=(m, n)`` and 1D coordinates ``x=(m,)``, ``y=(n,)``
+
+            - ``parameter``: (optional) parameter name (``string``)
+
+        .. tab-item:: 1D list
+
+            .. code-block:: python
+                :name: test_assign_list
+
+                from eomaps import Maps
+
+                x, y, data = [1,2,3], [2, 5, 4], [12, 43, 2]
+                m = Maps()
+                m.set_data(data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+        .. tab-item:: 1D numpy
+
+            .. code-block:: python
+                :name: test_assign_numpy_1d
+
+                from eomaps import Maps
+                import numpy as np
+
+                x, y, data = np.array([1,2,3]), np.array([5, 7, 9]), np.array([1, 2, 3])
+                m = Maps()
+                m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+
+        .. tab-item:: 2D numpy
+
+            .. code-block:: python
+                :name: test_assign_numpy_2d
+
+                from eomaps import Maps
+                import numpy as np
+
+                x, y = np.meshgrid(np.array([1,2,3]), np.array([5, 7, 9]))
+                data = np.random.randint(0, 10, x.shape)
+                m = Maps()
+                m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+
+        .. tab-item:: 2D + 1D numpy
+
+            .. code-block:: python
+                :name: test_assign_numpy_1d2d
+
+                from eomaps import Maps
+                import numpy as np
+
+                x, y = np.linspace(-20, 20, 100), np.linspace(15, 34, 50)
+                data = np.random.randint(0, 100, size=(100, 50)
+                m = Maps()
+                m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+
+        .. tab-item:: pandas Series
+
+            .. code-block:: python
+                :name: test_assign_series
+
+                from eomaps import Maps
+                import pandas as pd
+
+                x, y, data = pd.Series([1,2,3]), pd.Series([2, 5, 4]), pd.Series([12, 43, 2])
+                m = Maps()
+                m.set_data(data, x=x, y=y, crs=4326, parameter="param_name")
+                m.plot_map()
+
+
+.. dropdown:: **xarray.Dataset**
+    :icon: square-fill
+    :color: info
+
+    .. tab-set::
+
+        .. tab-item:: Assignments
+
+            - ``data``: xarray.Dataset
+            - ``x``, ``y``: The variables to use as coordinates (``string``)
+            - ``parameter``: The variable to use as data-values (``string``)
+
+        .. tab-item:: 2D data and coords
+
+            .. code-block:: python
+                :name: test_assign_xarray_2d
+
+                from eomaps import Maps
+                import xarray as xar
+                import numpy as np
+
+                param = np.random.randint(0, 10, (2,2,3))
+                lon = [[-20, 20], [23, 54]]
+                lat = [[-10, 20], [-10, 20]]
+                time = [1,2,3]
+
+                ds = xar.Dataset(
+                    data_vars=dict(my_param=(["x", "y", "time"], param)),
+                    coords=dict(lon=(["x", "y"], lon), lat=(["x", "y"], lat), time=time),
+                )
+
+                m = Maps()
+                m.set_data(data=ds.sel(time=1), x="lon", y="lat", parameter="my_param", crs=4326)
+                m.plot_map()
+
+        .. tab-item:: 1D coords 2D data
+
+            .. code-block:: python
+                :name: test_assign_xarray_1d2d
+
+                from eomaps import Maps
+                import xarray as xar
+                import numpy as np
+
+                param = np.random.randint(0, 10, (2,2,3))
+                lon = [-20, 20]
+                lat = [30, 60]
+                time = [1,2,3]
+
+                ds = xar.Dataset(
+                    data_vars=dict(my_param=(["lon", "lat", "time"], param)),
+                    coords=dict(lon=lon, lat=lat, time=time),
+                )
+
+                m = Maps()
+                m.set_data(data=ds.sel(time=1), x="lon", y="lat", parameter="my_param", crs=4326)
+                m.plot_map()
+
+
+
+
 .. note::
 
-    Make sure to use a individual :py:class:`Maps` object (e.g. with ``m2 = m.new_layer()`` for each dataset!
+    Make sure to use a individual :py:class:`Maps` object (e.g. with ``m2 = m.new_layer()``) for each dataset!
     Calling :py:meth:`Maps.plot_map` multiple times on the same :py:class:`Maps` object will remove
     and override the previously plotted dataset!
 
@@ -96,60 +287,8 @@ A dataset is fully specified by setting the following properties:
     - Plotting data in its native crs will omit the reprojection step and is therefore a lot faster!
     - If your dataset is 2D (e.g. a raster), it is best (for speed and memory) to provide the coordinates as 1D vectors!
 
+       - 1D coordinate vectors will be broadcasted using matrix-indexing! (e.g. ``x[nx], y[ny] -> data[nx, ny]``)
        - Note that reprojecting 1D coordinate vectors to a different crs will result in (possibly very large) 2D coordinate arrays!
-
-
-The following data-types are accepted as input:
-
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
-| **pandas DataFrames**                                               | .. code-block:: python                                                             |
-|                                                                     |     :name: test_pandas_data_01                                                     |
-|                                                                     |                                                                                    |
-| - ``data``: ``pandas.DataFrame``                                    |     from eomaps import Maps                                                        |
-| - ``x``, ``y``: The column-names to use as coordinates (``string``) |     import pandas as pd                                                            |
-| - ``parameter``: The column-name to use as data-values (``string``) |                                                                                    |
-|                                                                     |     df = pd.DataFrame(dict(lon=[1,2,3], lat=[2,5,4], data=[12, 43, 2]))            |
-|                                                                     |     m = Maps()                                                                     |
-|                                                                     |     m.set_data(df, x="lon", y="lat", crs=4326, parameter="data")                   |
-|                                                                     |     m.plot_map()                                                                   |
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
-| **pandas Series**                                                   | .. code-block:: python                                                             |
-|                                                                     |     :name: test_pandas_data_02                                                     |
-|                                                                     |                                                                                    |
-| - ``data``, ``x``, ``y``: ``pandas.Series``                         |     from eomaps import Maps                                                        |
-| - ``parameter``: (optional) parameter name (``string``)             |     import pandas as pd                                                            |
-|                                                                     |                                                                                    |
-|                                                                     |     x, y, data = pd.Series([1,2,3]), pd.Series([2, 5, 4]), pd.Series([12, 43, 2])  |
-|                                                                     |     m = Maps()                                                                     |
-|                                                                     |     m.set_data(data, x=x, y=y, crs=4326, parameter="param_name")                   |
-|                                                                     |     m.plot_map()                                                                   |
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
-| **1D** or **2D** data **and** coordinates                           | .. code-block:: python                                                             |
-|                                                                     |     :name: test_numpy_data_01                                                      |
-|                                                                     |                                                                                    |
-| - ``data``, ``x``, ``y``: equal-size ``numpy.array`` (or ``list``)  |     from eomaps import Maps                                                        |
-| - ``parameter``: (optional) parameter name (``string``)             |     import numpy as np                                                             |
-|                                                                     |                                                                                    |
-|                                                                     |     x, y = np.mgrid[-20:20, -40:40]                                                |
-|                                                                     |     data = x + y                                                                   |
-|                                                                     |     m = Maps()                                                                     |
-|                                                                     |     m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")              |
-|                                                                     |     m.plot_map()                                                                   |
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
-| **1D** coordinates and **2D** data                                  | .. code-block:: python                                                             |
-|                                                                     |     :name: test_numpy_data_02                                                      |
-|                                                                     |                                                                                    |
-| - ``data``: ``numpy.array`` (or ``list``) with shape ``(n, m)``     |     from eomaps import Maps                                                        |
-| - ``x``: ``numpy.array`` (or ``list``) with shape ``(n,)``          |     import numpy as np                                                             |
-| - ``y``: ``numpy.array`` (or ``list``) with shape ``(m,)``          |                                                                                    |
-| - ``parameter``: (optional) parameter name (``string``)             |     x = np.linspace(10, 50, 100)                                                   |
-|                                                                     |     y = np.linspace(10, 50, 50)                                                    |
-|                                                                     |     data = np.random.normal(size=(100, 50))                                        |
-|                                                                     |                                                                                    |
-|                                                                     |     m = Maps()                                                                     |
-|                                                                     |     m.set_data(data=data, x=x, y=y, crs=4326, parameter="param_name")              |
-|                                                                     |     m.plot_map()                                                                   |
-+---------------------------------------------------------------------+------------------------------------------------------------------------------------+
 
 
 .. _set_the_shape:
@@ -201,15 +340,15 @@ Available shapes (see bleow for details on each plot-shape!):
     The suggested "suitable datasizes" mentioned below always refer to the number of datapoints that are
     visible in the desired plot-extent.
 
-    .. currentmodule:: eomaps.shapes.Shapes
+    .. currentmodule:: eomaps.eomaps
 
-    For very large datasets, make sure to have a look at the :py:class:`raster`, :py:class:`shade_raster`, and :py:class:`shade_points` shapes
+    For very large datasets, make sure to have a look at the :py:class:`raster <Maps.set_shape.raster>`, :py:class:`shade_raster <Maps.set_shape.shade_raster>`, and :py:class:`shade_points <Maps.set_shape.shade_points>` shapes
     which use fast aggregation techniques to resample the data prior to plotting. This way datasets with billions of datapoints can be
     visualized fast.
 
 .. admonition:: Optional dependencies
 
-    :py:class:`shade_raster`, and :py:class:`shade_points` require the `datashader <https://datashader.org/>`_ package!
+    :py:class:`shade_raster <Maps.set_shape.shade_raster>`, and :py:class:`shade_points <Maps.set_shape.shade_points>` require the `datashader <https://datashader.org/>`_ package!
     You can install it via:
 
     .. code-block:: python
@@ -220,16 +359,20 @@ Available shapes (see bleow for details on each plot-shape!):
 
     By default, the plot-shape is assigned based on the associated dataset.
 
-    - For datasets with less than 500 000 pixels, ``m.set_shape.ellipses()`` is used.
-    - | For larger 2D datasets ``m.set_shape.raster()`` is used
-      | ... and ``m.set_shape.shade_points()`` is attempted to be used for the rest.
+    - For datasets with less than 500 000 pixels, :py:class:`ellipses <Maps.set_shape.ellipses>` is used.
+    - | For larger 2D datasets :py:class:`raster <m.set_shape.raster>` is used
+      | ... and :py:class:`shade_points <Maps.set_shape.shade_points` is attempted to be used for the rest.
 
+
+.. _shp_ellipses:
 
 Ellipses
 ********
 
-.. image:: _static/shape_imgs/ellipses.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.ellipses
 
 .. list-table::
    :header-rows: 1
@@ -239,10 +382,8 @@ Ellipses
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-.. autosummary::
-    :nosignatures:
-
-    ellipses
+.. image:: _static/shape_imgs/ellipses.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -251,11 +392,15 @@ Ellipses
                          n=50             # number of calculated points on the ellipse
                          )
 
+.. _shp_rectangles:
+
 Rectangles
 **********
 
-.. image:: _static/shape_imgs/rectangles.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.rectangles
 
 .. list-table::
    :header-rows: 1
@@ -265,11 +410,8 @@ Rectangles
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-
-.. autosummary::
-    :nosignatures:
-
-    rectangles
+.. image:: _static/shape_imgs/rectangles.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -279,12 +421,15 @@ Rectangles
                            )
 
 
+.. _shp_geod_circles:
 
 Geodesic Circles
 ****************
 
-.. image:: _static/shape_imgs/geod_circles.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.geod_circles
 
 .. list-table::
    :header-rows: 1
@@ -294,11 +439,8 @@ Geodesic Circles
    * - up to ~500k
      - 1D, 2D or mixed
 
-
-.. autosummary::
-    :nosignatures:
-
-    geod_circles
+.. image:: _static/shape_imgs/geod_circles.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -306,13 +448,15 @@ Geodesic Circles
                              n=50             # number of calculated points on the circle
                              )
 
+.. _shp_voronoi:
 
 Voronoi Diagram
 ***************
 
-.. image:: _static/shape_imgs/voronoi_diagram.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
 
+    Maps.set_shape.voronoi_diagram
 
 .. list-table::
    :header-rows: 1
@@ -322,11 +466,8 @@ Voronoi Diagram
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-
-.. autosummary::
-    :nosignatures:
-
-    voronoi_diagram
+.. image:: _static/shape_imgs/voronoi_diagram.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -335,17 +476,15 @@ Voronoi Diagram
                                 )
 
 
-
-
+.. _shp_delaunay:
 
 Delaunay Triangulation
 **********************
 
-.. image:: _static/shape_imgs/delaunay_triangulation.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
 
-.. image:: _static/shape_imgs/delaunay_triangulation_flat.png
-    :width: 50%
+    Maps.set_shape.delaunay_triangulation
 
 .. list-table::
    :header-rows: 1
@@ -355,10 +494,11 @@ Delaunay Triangulation
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-.. autosummary::
-    :nosignatures:
+.. image:: _static/shape_imgs/delaunay_triangulation.png
+    :width: 50%
 
-    voronoi_diagram
+.. image:: _static/shape_imgs/delaunay_triangulation_flat.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -368,14 +508,15 @@ Delaunay Triangulation
                                        mask_crs="in",     # projection of the mask dimension
                                       )
 
+.. _shp_contour:
+
 Contour plots
 *************
 
-.. image:: _static/shape_imgs/contour_filled.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
 
-.. image:: _static/shape_imgs/contour.png
-    :width: 50%
+    Maps.set_shape.contour
 
 .. list-table::
    :header-rows: 1
@@ -385,22 +526,25 @@ Contour plots
    * - up to a few million datapoints
      - 1D, 2D or mixed
 
+.. image:: _static/shape_imgs/contour_filled.png
+    :width: 50%
 
-.. autosummary::
-    :nosignatures:
-
-    contour
+.. image:: _static/shape_imgs/contour.png
+    :width: 50%
 
 .. code-block:: python
 
     m.set_shape.contour(filled=True)   # filled contour polygons (True) or contour lines (False)
 
+.. _shp_scatter:
 
 Scatter Points
 **************
 
-.. image:: _static/shape_imgs/scatter_points.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.scatter_points
 
 .. list-table::
    :header-rows: 1
@@ -410,11 +554,8 @@ Scatter Points
    * - ~500k datapoints
      - 1D, 2D or mixed
 
-
-.. autosummary::
-    :nosignatures:
-
-    scatter_points
+.. image:: _static/shape_imgs/scatter_points.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -422,12 +563,15 @@ Scatter Points
                                marker="*",       # the marker shape to use
                                )
 
+.. _shp_raster:
 
 Raster
 ******
 
-.. image:: _static/shape_imgs/raster.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.raster
 
 .. list-table::
    :header-rows: 1
@@ -437,11 +581,8 @@ Raster
    * - billions of datapoints (large datasets are pre-aggregated)
      - 2D or 1D coordinates + 2D data
 
-
-.. autosummary::
-    :nosignatures:
-
-    raster
+.. image:: _static/shape_imgs/raster.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -450,11 +591,15 @@ Raster
                        valid_fraction=0.5,  # % of masked values in aggregation bin for masked result
                        interp_order=0,      # spline interpolation order for "spline" aggregator
 
+.. _shp_shade_raster:
+
 Shade Raster
 ************
 
-.. image:: _static/shape_imgs/shade_raster.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.shade_raster
 
 .. list-table::
    :header-rows: 1
@@ -466,11 +611,8 @@ Shade Raster
      - 2D or 1D coordinates + 2D data
      - `datashader <https://datashader.org/>`_
 
-
-.. autosummary::
-    :nosignatures:
-
-    shade_raster
+.. image:: _static/shape_imgs/shade_raster.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -479,11 +621,15 @@ Shade Raster
                              agg_hook=None,        # datashader aggregation hook callback
                              )
 
+.. _shp_shade_points:
+
 Shade Points
 ************
 
-.. image:: _static/shape_imgs/shade_points.png
-    :width: 50%
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.shade_raster
 
 .. list-table::
    :header-rows: 1
@@ -495,11 +641,8 @@ Shade Points
      - 1D, 2D or mixed
      - `datashader <https://datashader.org/>`_
 
-
-.. autosummary::
-    :nosignatures:
-
-    shade_raster
+.. image:: _static/shape_imgs/shade_points.png
+    :width: 50%
 
 .. code-block:: python
 
@@ -528,33 +671,35 @@ To assign a classification scheme to a :py:class:`Maps` object, use ``m.set_clas
     Maps.set_classify
 
 
-.. table::
-    :widths: 70 30
-    :align: center
+.. grid:: 1 1 1 2
 
-    +------------------------------------------------------------------+--------------------------------------------------+
-    | .. code-block:: python                                           | .. image:: _static/minigifs/classify_data_01.png |
-    |     :name: test_classify_data                                    |     :align: center                               |
-    |                                                                  |                                                  |
-    |     from eomaps import Maps                                      | |img_minsize|                                    |
-    |     import numpy as np                                           |                                                  |
-    |                                                                  |                                                  |
-    |     data = np.random.normal(0, 1, (50, 50))                      |                                                  |
-    |     x = np.linspace(-45, 45, 50)                                 |                                                  |
-    |     y = np.linspace(-45, 45, 50)                                 |                                                  |
-    |                                                                  |                                                  |
-    |     m = Maps(figsize=(4, 5))                                     |                                                  |
-    |     m.add_feature.preset.coastline(lw=2)                         |                                                  |
-    |     m.add_feature.preset.ocean(zorder=99, alpha=0.5)             |                                                  |
-    |     m.set_data(data, x, y)                                       |                                                  |
-    |     m.set_shape.ellipses()                                       |                                                  |
-    |     m.set_classify.StdMean(multiples=[-1.5, -.5, .5, 1.5])       |                                                  |
-    |     m.plot_map(vmin=-3, vmax=3)                                  |                                                  |
-    |                                                                  |                                                  |
-    |     cb = m.add_colorbar(pos=0.2, label="StdMean classification") |                                                  |
-    |     cb.tick_params(labelsize=7)                                  |                                                  |
-    +------------------------------------------------------------------+--------------------------------------------------+
+    .. grid-item::
 
+         .. code-block:: python
+            :name: test_classify_data
+
+            from eomaps import Maps
+            import numpy as np
+
+            data = np.random.normal(0, 1, (50, 50))
+            x = np.linspace(-45, 45, 50)
+            y = np.linspace(-45, 45, 50)
+
+            m = Maps(figsize=(4, 5))
+            m.add_feature.preset.coastline(lw=2)
+            m.add_feature.preset.ocean(zorder=99, alpha=0.5)
+            m.set_data(data, x, y)
+            m.set_shape.ellipses()
+            m.set_classify.StdMean(multiples=[-1.5, -.5, .5, 1.5])
+            m.plot_map(vmin=-3, vmax=3)
+
+            cb = m.add_colorbar(pos=0.2, label="StdMean classification")
+            cb.tick_params(labelsize=7)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/classify_data_01.png
+            :width: 75%
 
 
 Currently available classification-schemes are (see `mapclassify <https://github.com/pysal/mapclassify>`_ for details):
@@ -775,7 +920,7 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
     import numpy as np
 
     x, y = np.meshgrid(np.linspace(-20, 40, 100),
-                    np.linspace(50, 70, 50))
+                       np.linspace(50, 70, 50))
 
     # values must be between 0 and 1
     r = np.random.randint(0, 100, x.shape) / 100
@@ -814,43 +959,46 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
     Colorbars are only visible if the layer at which the data was plotted is visible!
 
 
-.. table::
-    :widths: 60 40
-    :align: center
+.. grid:: 1 1 1 2
 
-    +-----------------------------------------------------------------+------------------------------------------+
-    | .. code-block:: python                                          | .. image:: _static/minigifs/colorbar.gif |
-    |     :name: test_colorbars                                       |     :align: center                       |
-    |                                                                 |                                          |
-    |     from eomaps import Maps                                     | |img_minsize|                            |
-    |     import numpy as np                                          |                                          |
-    |                                                                 |                                          |
-    |     data = np.random.normal(0, 1, (50, 50))                     |                                          |
-    |     x = np.linspace(-45, 45, 50)                                |                                          |
-    |     y = np.linspace(-45, 45, 50)                                |                                          |
-    |                                                                 |                                          |
-    |     m = Maps(layer="all")                                       |                                          |
-    |     m.add_feature.preset.coastline()                            |                                          |
-    |     m.add_feature.preset.ocean(zorder=99, alpha=0.5)            |                                          |
-    |     m.util.layer_selector(loc="upper left")                     |                                          |
-    |                                                                 |                                          |
-    |     mA = m.new_layer("A")                                       |                                          |
-    |     mA.set_data(data, x, y)                                     |                                          |
-    |     mA.set_classify.Quantiles(k=5)                              |                                          |
-    |     mA.plot_map(vmin=-3, vmax=3)                                |                                          |
-    |     cbA = mA.add_colorbar(label="Quantile classification")      |                                          |
-    |     cbA.tick_params(rotation=45)                                |                                          |
-    |                                                                 |                                          |
-    |     mB = m.new_layer("B")                                       |                                          |
-    |     mB.set_data(data, x, y)                                     |                                          |
-    |     mB.set_classify.EqualInterval(k=5)                          |                                          |
-    |     mB.plot_map(vmin=-3, vmax=3)                                |                                          |
-    |     cbB = mB.add_colorbar(label="EqualInterval classification") |                                          |
-    |     cbB.tick_params(labelcolor="darkblue", labelsize=9)         |                                          |
-    |                                                                 |                                          |
-    |     m.subplots_adjust(bottom=0.1)                               |                                          |
-    |     mA.show()                                                   |                                          |
-    +-----------------------------------------------------------------+------------------------------------------+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_colorbars
+
+            from eomaps import Maps
+            import numpy as np
+
+            data = np.random.normal(0, 1, (50, 50))
+            x = np.linspace(-45, 45, 50)
+            y = np.linspace(-45, 45, 50)
+
+            m = Maps(layer="all")
+            m.add_feature.preset.coastline()
+            m.add_feature.preset.ocean(zorder=99, alpha=0.5)
+            m.util.layer_selector(loc="upper left")
+
+            mA = m.new_layer("A")
+            mA.set_data(data, x, y)
+            mA.set_classify.Quantiles(k=5)
+            mA.plot_map(vmin=-3, vmax=3)
+            cbA = mA.add_colorbar(label="Quantile classification")
+            cbA.tick_params(rotation=45)
+
+            mB = m.new_layer("B")
+            mB.set_data(data, x, y)
+            mB.set_classify.EqualInterval(k=5)
+            mB.plot_map(vmin=-3, vmax=3)
+            cbB = mB.add_colorbar(label="EqualInterval classification")
+            cbB.tick_params(labelcolor="darkblue", labelsize=9)
+
+            m.subplots_adjust(bottom=0.1)
+            m.show_layer(mA.layer)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/colorbar.gif
+
 
 .. autosummary::
     :nosignatures:
@@ -870,7 +1018,6 @@ The returned ``ColorBar``-object has the following useful methods defined:
     ColorBar.set_hist_size
     ColorBar.tick_params
     ColorBar.set_visible
-    ColorBar.remove
 
 Set colorbar tick labels based on bins
 **************************************
@@ -879,32 +1026,38 @@ Set colorbar tick labels based on bins
 
 To label the colorbar with custom names for a given set of bins, use :py:meth:`ColorBar.set_bin_labels`:
 
-.. table::
 
-    +-------------------------------------------------------------------------------+------------------------------------------------+
-    | .. code-block:: python                                                        | .. image:: _static/minigifs/colorbar_ticks.png |
-    |     :name: test_colorbar_bin_labels                                           |   :align: center                               |
-    |                                                                               |                                                |
-    |     import numpy as np                                                        | |img_minsize|                                  |
-    |     from eomaps import Maps                                                   |                                                |
-    |     # specify some random data                                                |                                                |
-    |     lon, lat = np.mgrid[-45:45, -45:45]                                       |                                                |
-    |     data = np.random.normal(0, 50, lon.shape)                                 |                                                |
-    |                                                                               |                                                |
-    |     # use a custom set of bins to classify the data                           |                                                |
-    |     bins = np.array([-50, -30, -20, 20, 30, 40, 50])                          |                                                |
-    |     names = np.array(["below -50", "A", "B", "C", "D", "E", "F", "above 50"]) |                                                |
-    |                                                                               |                                                |
-    |     m = Maps()                                                                |                                                |
-    |     m.add_feature.preset.coastline()                                          |                                                |
-    |     m.set_data(data, lon, lat)                                                |                                                |
-    |     m.set_classify.UserDefined(bins=bins)                                     |                                                |
-    |     m.plot_map(cmap="tab10")                                                  |                                                |
-    |     m.add_colorbar()                                                          |                                                |
-    |                                                                               |                                                |
-    |     # set custom colorbar-ticks based on the bins                             |                                                |
-    |     m.colorbar.set_bin_labels(bins, names)                                    |                                                |
-    +-------------------------------------------------------------------------------+------------------------------------------------+
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_colorbar_bin_labels
+
+            import numpy as np
+            from eomaps import Maps
+            # specify some random data
+            lon, lat = np.mgrid[-45:45, -45:45]
+            data = np.random.normal(0, 50, lon.shape)
+
+            # use a custom set of bins to classify the data
+            bins = np.array([-50, -30, -20, 20, 30, 40, 50])
+            names = np.array(["below -50", "A", "B", "C", "D", "E", "F", "above 50"])
+
+            m = Maps()
+            m.add_feature.preset.coastline()
+            m.set_data(data, lon, lat)
+            m.set_classify.UserDefined(bins=bins)
+            m.plot_map(cmap="tab10")
+            m.add_colorbar()
+
+            # set custom colorbar-ticks based on the bins
+            m.colorbar.set_bin_labels(bins, names)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/colorbar_ticks.png
+
 
 
 .. autosummary::
@@ -925,21 +1078,25 @@ Using the colorbar as a "dynamic shade indicator"
 For shade shapes, the colorbar can be used to indicate the distribution of the shaded
 pixels within the current field of view by setting ``dynamic_shade_indicator=True``.
 
-.. table::
 
-    +--------------------------------------------------------------------+--------------------------------------------------+
-    | .. code-block:: python                                             | .. image:: _static/minigifs/dynamic_colorbar.gif |
-    |   :name: test_colorbar_dynamic_shade_indicator                     |   :align: center                                 |
-    |                                                                    |                                                  |
-    |   from eomaps import Maps                                          | |img_minsize|                                    |
-    |   import numpy as np                                               |                                                  |
-    |   x, y = np.mgrid[-45:45, 20:60]                                   |                                                  |
-    |                                                                    |                                                  |
-    |   m = Maps()                                                       |                                                  |
-    |   m.add_feature.preset.coastline()                                 |                                                  |
-    |   m.set_data(data=x+y, x=x, y=y, crs=4326)                         |                                                  |
-    |   m.set_shape.shade_raster()                                       |                                                  |
-    |   m.plot_map()                                                     |                                                  |
-    |   m.add_colorbar(dynamic_shade_indicator=True, hist_bins=20)       |                                                  |
-    |                                                                    |                                                  |
-    +--------------------------------------------------------------------+--------------------------------------------------+
+.. grid:: 1 1 1 2
+
+    .. grid-item::
+
+         .. code-block:: python
+            :name: test_colorbar_dynamic_shade_indicator
+
+            from eomaps import Maps
+            import numpy as np
+            x, y = np.mgrid[-45:45, 20:60]
+
+            m = Maps()
+            m.add_feature.preset.coastline()
+            m.set_data(data=x+y, x=x, y=y, crs=4326)
+            m.set_shape.shade_raster()
+            m.plot_map()
+            m.add_colorbar(dynamic_shade_indicator=True, hist_bins=20)
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/dynamic_colorbar.gif

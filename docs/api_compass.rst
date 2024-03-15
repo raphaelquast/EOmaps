@@ -19,7 +19,7 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
     While a compass is picked (and the LEFT mouse button is pressed), the following
     additional interactions are available:
 
-    - press ``delte`` on the keyboard: remove the compass from the plot
+    - press ``delete`` on the keyboard: remove the compass from the plot
     - rotate the ``mouse wheel``: scale the size of the compass
 
 .. autosummary::
@@ -28,21 +28,24 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
     Maps.add_compass
 
 
+.. grid:: 1 1 1 2
 
-.. table::
-    :widths: 70 30
-    :align: center
+    .. grid-item::
 
-    +--------------------------------------+-----------------------------------------+
-    | .. code-block:: python               | .. image:: _static/minigifs/compass.gif |
-    |   :name: test_add_compass            |   :align: center                        |
-    |                                      |                                         |
-    |   from eomaps import Maps            | |img_minsize|                           |
-    |   m = Maps(Maps.CRS.Stereographic()) |                                         |
-    |   m.add_feature.preset.ocean()       |                                         |
-    |                                      |                                         |
-    |   m.add_compass()                    |                                         |
-    +--------------------------------------+-----------------------------------------+
+         .. code-block:: python
+            :name: test_add_compass
+
+            from eomaps import Maps
+            m = Maps(Maps.CRS.Stereographic())
+            m.add_feature.preset.ocean()
+
+            m.add_compass()
+
+    .. grid-item::
+
+        .. image:: _static/minigifs/compass.gif
+            :width: 50%
+
 
 The compass object is dynamically updated if you pan/zoom the map, and it can be
 dragged around on the map with the mouse.

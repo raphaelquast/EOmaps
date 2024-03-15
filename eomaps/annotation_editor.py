@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Functionalities for editable annotations."""
 import logging
 from types import SimpleNamespace
@@ -187,7 +192,7 @@ class DraggableAnnotation(DraggableBase):
                 return
 
             # don't allow moving the annotation anchor outside the axis bounds
-            # (otherwhise it would disappear if "annotation_clip=True")
+            # (otherwise it would disappear if "annotation_clip=True")
             ann.xy = ann.axes.transData.inverted().transform(
                 (
                     np.clip(self.x + dx, self._ax_bbox.x0 + 1, self._ax_bbox.x1 - 1),
@@ -615,7 +620,7 @@ class AnnotationEditor(_EditorBase):
         use_ids : bool, optional
             If True, ID values are used to identify the annotation-positions.
             (NOTE: this can cause problems because the Maps-object must have
-             the correct data assigned to identify the annotation!)
+            the correct data assigned to identify the annotation!)
             If False, always use the current position of the annotation
             as input-argument for the returned code.
 

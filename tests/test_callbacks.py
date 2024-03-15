@@ -586,9 +586,10 @@ class TestCallbacks(unittest.TestCase):
     def test_clear_markers(self):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
-        m.cb.click.attach.mark(permanent=True)
+        cid = m.cb.click.attach.mark(permanent=True)
         self.click_ax_center(m)
         self.assertTrue(len(m.cb.click.get.permanent_markers) == 1)
+        m.cb.click.remove(cid)
 
         cid = m.cb.click.attach.clear_markers()
         self.click_ax_center(m)
@@ -654,6 +655,43 @@ class TestCallbacks(unittest.TestCase):
                 m.cb.pick.remove(cid)
                 plt.close("all")
 
+    def test_overlay_layer(self):
+        # ---------- test as CLICK callback
+        m = self.create_basic_map()
+        m_a = m.new_layer("A")
+        m_b = m.new_layer("B")
+
+        cid0 = m.all.cb.keypress.attach.overlay_layer(layer="A", key="0")
+        cid1 = m.all.cb.keypress.attach.overlay_layer(layer=("B", 0.5), key="1")
+        cid2 = m.all.cb.keypress.attach.overlay_layer(layer=["A", ("B", 0.5)], key="2")
+
+        init_layer = m.layer
+
+        key_press_event(m.f.canvas, "0")
+        key_release_event(m.f.canvas, "0")
+        self.assertTrue(m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, "A"))
+        key_press_event(m.f.canvas, "0")
+        key_release_event(m.f.canvas, "0")
+        self.assertTrue(m.BM._bg_layer == m.layer)
+
+        key_press_event(m.f.canvas, "1")
+        key_release_event(m.f.canvas, "1")
+        self.assertTrue(
+            m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, ("B", 0.5))
+        )
+        key_press_event(m.f.canvas, "1")
+        key_release_event(m.f.canvas, "1")
+        self.assertTrue(m.BM._bg_layer == m.layer)
+
+        key_press_event(m.f.canvas, "2")
+        key_release_event(m.f.canvas, "2")
+        self.assertTrue(
+            m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, "A", ("B", 0.5))
+        )
+        key_press_event(m.f.canvas, "2")
+        key_release_event(m.f.canvas, "2")
+        self.assertTrue(m.BM._bg_layer == m.layer)
+
     def test_switch_layer(self):
         # ---------- test as CLICK callback
         m = self.create_basic_map()
@@ -666,7 +704,7 @@ class TestCallbacks(unittest.TestCase):
         cid1 = m.all.cb.keypress.attach.switch_layer(layer="2", key="2")
 
         # a callback only active on the "base" layer
-        cid3 = m.cb.keypress.attach.switch_layer(layer="3", key="3")
+        cid3 = m.cb.keypress.attach.switch_layer(layer=["2", ("3", 0.5)], key="3")
 
         # switch to layer 2
         key_press_event(m.f.canvas, "2")
@@ -686,7 +724,9 @@ class TestCallbacks(unittest.TestCase):
         # now the 3rd callback should trigger
         key_press_event(m.f.canvas, "3")
         key_release_event(m.f.canvas, "3")
-        self.assertTrue(m.BM._bg_layer == "3")
+        self.assertTrue(
+            m.BM._bg_layer == m.BM._get_combined_layer_name("2", ("3", 0.5))
+        )
 
         m.all.cb.keypress.remove(cid0)
         m.all.cb.keypress.remove(cid1)

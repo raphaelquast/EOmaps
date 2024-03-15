@@ -1,3 +1,8 @@
+# Copyright EOmaps Contributors
+#
+# This file is part of EOmaps and is released under the BSD 3-clause license.
+# See LICENSE in the root of the repository for full licensing details.
+
 """Inset maps class definitions."""
 
 import numpy as np
@@ -5,12 +10,19 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 
 from . import Maps
-from .helpers import _deprecated
 from .grid import _intersect, _get_intersect
 
 
 class InsetMaps(Maps):
-    """Base class to create inset maps."""
+    """
+    Base class to create inset maps.
+
+    Note
+    ----
+    To create a new inset-map, see
+    :py:meth:`Maps.new_inset_map <eomaps.eomaps.Maps.new_inset_map>`.
+
+    """
 
     # a subclass of Maps that includes some special functions for inset maps
 
@@ -214,10 +226,6 @@ class InsetMaps(Maps):
     def plot_map(self, *args, **kwargs):
         set_extent = kwargs.pop("set_extent", False)
         super().plot_map(*args, **kwargs, set_extent=set_extent)
-
-    @_deprecated("Use `add_extent_indicator` instead!")
-    def indicate_inset_extent(self, *args, **kwargs):
-        return self.add_extent_indicator(*args, **kwargs)
 
     # a convenience-method to add a boundary-polygon to a map
     def add_extent_indicator(self, m=None, n=100, **kwargs):
