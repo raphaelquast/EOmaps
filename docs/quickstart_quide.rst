@@ -1,7 +1,7 @@
 
 .. _quickstart_guide:
 
-🚀 From 0 to EOmaps - a quickstart guide
+🚲 From 0 to EOmaps - a quickstart guide
 *****************************************
 
 The following section is intended to provide a quick overview on how to get started using ``EOmaps``.
@@ -27,8 +27,8 @@ Links to websites that provide additional information are provided throughout th
 - basic python knowledge
 
 
-🐍 Getting started - set up a python environment
-------------------------------------------------
+Getting started - set up a python environment
+---------------------------------------------
 
 There are of course many ways to set up a python environment... in the following, we will use the (free and open-source) ``conda``
 package manager which greatly simplifies the creation of environments that depend on both python and c++ libraries
