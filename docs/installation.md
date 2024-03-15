@@ -21,7 +21,7 @@ EOmaps is available on [conda-forge](https://anaconda.org/conda-forge/eomaps) an
 conda install -c conda-forge eomaps
 ```
 
-This will install all required and optional dependencies.
+This will install all required dependencies as well as the optional dependencies ``pandas``, ``geopandas``, ``mapclassify``, ``datashader``, ``owslib``, ``requests`` and ``qtpy``
 
 
 :::{dropdown} Greatly speed up the installation!
