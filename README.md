@@ -5,9 +5,16 @@
     </a>
 </p>
 
-| Tests | Package | Documentation | License | Citation |
-|:-:|:-:|:-:|:-:|:-:|
-| [![tests](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml/badge.svg?branch=master)](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml)  [![codecov](https://codecov.io/gh/raphaelquast/EOmaps/graph/badge.svg)](https://codecov.io/gh/raphaelquast/EOmaps) | [![pypi](https://img.shields.io/pypi/v/eomaps)](https://pypi.org/project/eomaps/)  [![Conda Version](https://img.shields.io/conda/vn/conda-forge/eomaps.svg)](https://anaconda.org/conda-forge/eomaps) | [![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest) |  [![License: BSD 3 clause](https://img.shields.io/badge/License-BSD_3_clause-blue.svg)](https://github.com/raphaelquast/EOmaps/blob/master/LICENSE) | [![10.5281/zenodo.6459598](https://zenodo.org/badge/410829039.svg)](https://zenodo.org/badge/latestdoi/410829039) |
+<div align="center">
+
+
+|     Tests & Review      | [![tests](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml/badge.svg?branch=master)](https://github.com/raphaelquast/EOmaps/actions/workflows/testMaps.yml) | [![codecov](https://codecov.io/gh/raphaelquast/EOmaps/graph/badge.svg)](https://codecov.io/gh/raphaelquast/EOmaps)  |                    [![pyOpenSci](https://tinyurl.com/y22nb8up)](https://github.com/pyOpenSci/software-submission/issues/138)                    |
+| :---------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------: |
+| Package & Documentation |                                                [![pypi](https://img.shields.io/pypi/v/eomaps)](https://pypi.org/project/eomaps/)                                                 | [![Conda Version](https://img.shields.io/conda/vn/conda-forge/eomaps.svg)](https://anaconda.org/conda-forge/eomaps) | [![Documentation Status](https://readthedocs.org/projects/eomaps/badge/?version=latest)](https://eomaps.readthedocs.io/en/latest/?badge=latest) |
+|   License & Citation    |                [![License: BSD 3 clause](https://img.shields.io/badge/License-BSD_3_clause-blue.svg)](https://github.com/raphaelquast/EOmaps/blob/master/LICENSE)                |  [![10.5281/zenodo.6459598](https://zenodo.org/badge/410829039.svg)](https://zenodo.org/badge/latestdoi/410829039)  |                                                                                                                                                 |
+
+
+</div>
 
 <a href="https://www.buymeacoffee.com/raphaelquast" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png" alt="Buy Me A Coffee" align="right" style="height: 25px !important;" ></a>
 <a href="https://app.gitter.im/#/room/#EOmaps:gitter.im" target="_blank"><img src="https://img.shields.io/gitter/room/raphaelquast/EOmaps?style=social" alt="chat on gitter" align="left" style="height: 20px !important;" ></a>
