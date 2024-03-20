@@ -604,6 +604,10 @@ class LayoutEditor:
         except AttributeError:
             pass
 
+        # capture scroll events in ipympl backend (e.g. Jupyter Notebooks)
+        self._init_capture_scroll = self.m.f.canvas.capture_scroll
+        self.m.f.canvas.capture_scroll = True
+
         self._filepath = filepath
         self.modifier_pressed = True
         _log.info(
@@ -722,6 +726,10 @@ class LayoutEditor:
 
         self._history.clear()
         self._history_undone.clear()
+
+        # Reset capturing scroll events to the value before activating the editor
+        # (only relevant for ipympl backend... e.g. Jupyter Notebooks)
+        self.m.f.canvas.capture_scroll = getattr(self, "_init_capture_scroll", False)
 
         toolbar = getattr(self.m.f, "toolbar", None)
         if toolbar is not None:
