@@ -605,7 +605,7 @@ class LayoutEditor:
             pass
 
         # capture scroll events in ipympl backend (e.g. Jupyter Notebooks)
-        self._init_capture_scroll = self.m.f.canvas.capture_scroll
+        self._init_capture_scroll = getattr(self.m.f.canvas, "capture_scroll", False)
         self.m.f.canvas.capture_scroll = True
 
         self._filepath = filepath
