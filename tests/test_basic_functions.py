@@ -222,7 +222,7 @@ class TestBasicPlotting(unittest.TestCase):
 
         m2 = m.new_layer()
         m2.inherit_data(m)
-        m.set_shape.hexbin(size=(50, 25), aggregator=np.median)
+        m2.set_shape.hexbin(size=(50, 25), aggregator=np.median)
         m2.plot_map()
 
         plt.close("all")
