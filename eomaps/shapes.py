@@ -1080,6 +1080,78 @@ class Shapes(object):
             else:
                 return self._get_polygon_coll(x, y, crs, **kwargs)
 
+    class _Hexbin(object):
+        name = "hexbin"
+
+        def __init__(self, m):
+            self._m = m
+
+        def __call__(self, size=100, aggregator="mean"):
+            """
+            Draw a 2D hexagonal binning plot of the data.
+
+            All arguments are forwarded to `matplotlib.pyplot.hexbin()`.
+
+            Parameters
+            ----------
+            size : int, or (int, int), optional
+                If int, the number of hexagons in x-direction.
+                If a tuple of int is provided, the number of hexagons
+                in x- and y-direction
+
+                See matplotlib.pyplot.hexbin for more information about marker styles.
+            aggregator: str or callable
+                The function used to aggregate the data-values.
+                If a string is provided, it is identified as the associated numpy
+                function. The default is "mean".
+            """
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape._size = size
+                shape._aggregator = aggregator
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(size=self._size, aggregator=self._aggregator)
+
+        @property
+        def radius(self):
+            radius = Shapes._get_radius(self._m, "estimate", "in")
+            return radius
+
+        @property
+        def radius_crs(self):
+            return "in"
+
+        def get_coll(self, x, y, crs, **kwargs):
+            color_and_array = Shapes._get_colors_and_array(kwargs, None)
+
+            if isinstance(self._aggregator, str):
+                reduce_C_function = getattr(np, self._aggregator)
+            else:
+                reduce_C_function = self._aggregator
+
+            color_and_array["C"] = color_and_array.pop("array", None)
+
+            if "extent" not in kwargs:
+                dm = self._m._data_manager
+
+                extent = (dm._x0min, dm._x0max, dm._y0min, dm._y0max)
+
+            coll = self._m.ax.hexbin(
+                x,
+                y,
+                gridsize=self._size,
+                reduce_C_function=reduce_C_function,
+                extent=kwargs.get("extent", extent),
+                **color_and_array,
+                **kwargs,
+            )
+            return coll
+
     class _ScatterPoints(object):
         name = "scatter_points"
 
@@ -2203,6 +2275,11 @@ class Shapes(object):
     @wraps(_ScatterPoints.__call__)
     def scatter_points(self, *args, **kwargs):
         shp = self._ScatterPoints(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_Hexbin.__call__)
+    def hexbin(self, *args, **kwargs):
+        shp = self._Hexbin(m=self._m)
         return shp.__call__(*args, **kwargs)
 
     @wraps(_GeodCircles.__call__)
