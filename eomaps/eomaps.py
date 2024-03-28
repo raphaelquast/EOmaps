@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, SubplotSpec
 
 import matplotlib.patches as mpatches
-from matplotlib.path import Path as mpath
+import matplotlib.path as mpath
 
 from cartopy import crs as ccrs
 
@@ -111,6 +111,24 @@ def _handle_backends():
                 "Call `m.show()` to show the map (and block the console)! "
                 "To change, use Maps.config(use_interactive_mode=True/False)."
             )
+
+
+def _fix_multipath_GeoSpine():
+    # temporary fix for the treatment of multi-path GeoSpines
+    from packaging import version
+
+    cartopy_version = version.parse(importlib.metadata.version("cartopy"))
+    if cartopy_version <= version.Version("0.23.0"):
+        from cartopy.mpl.geoaxes import GeoSpine
+
+        def _adjust_location(self):
+            if self.stale:
+                self._path = self._original_path.clip_to_bbox(self.axes.viewLim)
+                # only attempt to close paths that represent a single polygon
+                if np.count_nonzero(self._path.codes == mpath.Path.MOVETO) <= 1:
+                    self._path = mpath.Path(self._path.vertices, closed=True)
+
+        GeoSpine._adjust_location = _adjust_location
 
 
 # hardcoded list of available mapclassify-classifiers
@@ -5411,9 +5429,43 @@ class Maps(metaclass=_MapsMeta):
             """Set the behavior for WebMap services on axis or figure size changes."""
             refetch_wms_on_size_change(*args, **kwargs)
 
-    def set_frame(self, rounded=0, **kwargs):
+    def _set_gdf_path_boundary(self, gdf):
+        geom = gdf.to_crs(self.crs_plot).unary_union.boundary
+
+        if geom.geom_type == "MultiLineString":
+            multi = True
+            boundary_linestrings = geom.geoms
+        elif geom.geom_type == "LineString":
+            multi = False
+            boundary_linestrings = [geom]
+
+        vertices, codes = [], []
+        for g in boundary_linestrings:
+            x, y = g.xy
+            codes.extend(
+                [mpath.Path.MOVETO, *[mpath.Path.LINETO] * len(x), mpath.Path.CLOSEPOLY]
+            )
+            vertices.extend([(x[0], y[0]), *zip(x, y), (x[-1], y[-1])])
+
+        path = mpath.Path(vertices, codes)
+
+        self.ax.set_boundary(path, self.ax.transData)
+
+        x0, y0 = np.min(vertices, axis=0)
+        x1, y1 = np.max(vertices, axis=0)
+
+        self.set_extent([x0, x1, y0, y1], gdf.crs)
+
+        if multi:
+            # TODO apply fix for multi-path geometries (see cartopy PR #2362)
+            _fix_multipath_GeoSpine()
+
+    def set_frame(self, rounded=0, gdf=None, **kwargs):
         """
         Set the properties of the map boundary and the background patch.
+
+        You can either use a rectangle with rounded corners or arbitrary geometries
+        provided as a geopandas.GeoDataFrame.
 
         Parameters
         ----------
@@ -5421,6 +5473,15 @@ class Maps(metaclass=_MapsMeta):
             If provided, use a rectangle with rounded corners as map boundary
             line. The corners will be rounded with respect to the provided
             fraction (0=no rounding, 1=max. radius). The default is None.
+        gdf : geopandas.GeoDataFrame or path
+            A geopandas.GeoDataFrame that contains geometries that should be used as
+            map-frame.
+
+            If a path (string or pathlib.Path) is provided, the corresponding file
+            will be read as a geopandas.GeoDataFrame and the boundaries of the
+            contained geometries will be used as map-boundary.
+
+            The default is None.
         kwargs :
             Additional kwargs to style the boundary line (e.g. the spine)
             and the background patch
@@ -5443,6 +5504,8 @@ class Maps(metaclass=_MapsMeta):
         >>> m.add_feature.preset.ocean()
         >>> m.set_frame(fc="r", ec="b", lw=3, rounded=.2)
 
+        Customize the map-boundary style
+
         >>> import matplotlib.patheffects as pe
         >>> m = Maps()
         >>> m.add_feature.preset.ocean(fc="k")
@@ -5450,6 +5513,15 @@ class Maps(metaclass=_MapsMeta):
         >>>     facecolor=(.8, .8, 0, .5), edgecolor="w", linewidth=2,
         >>>     rounded=.5,
         >>>     path_effects=[pe.withStroke(linewidth=7, foreground="m")])
+
+        Set the map-boundary to a custom polygon (in this case the boarder of Austria)
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.land(fc="k")
+        >>> # Get a GeoDataFrame with all country-boarders from NaturalEarth
+        >>> gdf = m.add_feature.cultural.admin_0_countries.get_gdf()
+        >>> # set the map-boundary to the Austrian country-boarder
+        >>> m.set_frame(gdf = gdf[gdf.NAME=="Austria"])
 
         """
 
@@ -5459,7 +5531,10 @@ class Maps(metaclass=_MapsMeta):
 
         self.ax.spines["geo"].update(kwargs)
 
-        if rounded:
+        if gdf is not None:
+            self._set_gdf_path_boundary(self._handle_gdf(gdf))
+
+        elif rounded:
             assert (
                 rounded <= 1
             ), "EOmaps: rounded corner fraction must be between 0 and 1"
@@ -5511,7 +5586,7 @@ class Maps(metaclass=_MapsMeta):
                         y0 + r,
                     ]
 
-                    path = mpath(np.column_stack((xs, ys)))
+                    path = mpath.Path(np.column_stack((xs, ys)))
                     self.ax.set_boundary(path, transform=self.crs_plot)
 
                 self.BM._before_fetch_bg_actions.append(cb)
