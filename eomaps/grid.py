@@ -236,9 +236,8 @@ class GridLines:
         elif isinstance(d, (int, float, np.number)):
             dlon = dlat = d
         elif isinstance(d, (list, np.ndarray)):
-            d = np.asanyarray(d)
-            if len(d.shape) == 2:
-                lons, lats = np.asanyarray(d)
+            if len(d) == 2:
+                lons, lats = np.asanyarray(d[0]), np.asanyarray(d[1])
             else:
                 lons = lats = np.asanyarray(d)
         else:
