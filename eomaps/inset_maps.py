@@ -348,18 +348,24 @@ class InsetMaps(Maps):
             p_map = verts_t.mean(axis=0)
 
             p_inset = verts.mean(axis=0)
-            # find intersection points of lines connecting the centers
+            # find the first intersection point of lines connecting the centers
             # 1) with the inset-map boundary
-            q = _intersect(p_map, p_inset, verts[:-1], verts[1:])
-            if q.any():
-                x0, y0 = _get_intersect(p_map, p_inset, verts[:-1][q], verts[1:][q])
+            q = np.nonzero(_intersect(p_map, p_inset, verts[:-1], verts[1:]))[0]
+
+            if len(q) > 0:
+                x0, y0 = _get_intersect(
+                    p_map, p_inset, verts[:-1][q[0]], verts[1:][q[0]]
+                )
             else:
                 x0, y0 = p_inset
 
             # 2) with the inset-map indicator on the map
-            q = _intersect(p_map, p_inset, verts_t[:-1], verts_t[1:])
-            if q.any():
-                x1, y1 = _get_intersect(p_map, p_inset, verts_t[:-1][q], verts_t[1:][q])
+            q = np.nonzero(_intersect(p_map, p_inset, verts_t[:-1], verts_t[1:]))[0]
+            if len(q) > 0:
+                x1, y1 = _get_intersect(
+                    p_map, p_inset, verts_t[:-1][q[0]], verts_t[1:][q[0]]
+                )
+
                 # update indicator line vertices
                 l.set_xdata([x0, x1])
                 l.set_ydata([y0, y1])
