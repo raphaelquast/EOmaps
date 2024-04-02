@@ -1127,6 +1127,14 @@ class Shapes(object):
             return "in"
 
         def get_coll(self, x, y, crs, **kwargs):
+            # hide edgecolors if they are not explicitly set (to avoid overlapping
+            # hexagons due to large edge linewidths)
+            # matplotlib's default is currently `ec="face", lw=1`
+            if not any(i in kwargs for i in ("ec", "edgecolor")):
+                special_kwargs = {"ec": "none"}
+            else:
+                special_kwargs = {}
+
             color_and_array = Shapes._get_colors_and_array(kwargs, None)
 
             if isinstance(self._aggregator, str):
@@ -1149,6 +1157,7 @@ class Shapes(object):
                 extent=kwargs.get("extent", extent),
                 **color_and_array,
                 **kwargs,
+                **special_kwargs,
             )
             return coll
 
