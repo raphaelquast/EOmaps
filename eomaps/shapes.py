@@ -21,6 +21,29 @@ from .helpers import register_modules
 _log = logging.getLogger(__name__)
 
 
+def _depreciate_radius(size, crs, **kwargs):
+    # depreciate use of radius and radius_crs in favor of size and crs
+    # TODO remove in v8
+
+    if "radius" in kwargs:
+        _log.warning(
+            "EOmaps: The 'radius' kwarg is depreciated "
+            "and will be removed in EOmaps v8. "
+            "Use 'size' instead!"
+        )
+        size = kwargs.pop("radius")
+
+    if "radius_crs" in kwargs:
+        _log.warning(
+            "EOmaps: The 'radius_crs' kwarg is depreciated "
+            "and will be removed in EOmaps v8. "
+            "Use 'crs' instead!"
+        )
+        crs = kwargs.pop("radius_crs")
+
+    return size, crs
+
+
 class _CollectionAccessor:
     """
     Accessor class to handle contours drawn by plt.contour.
@@ -648,20 +671,20 @@ class Shapes(object):
         def __init__(self, m):
             super().__init__(m=m)
 
-        def __call__(self, radius="estimate", radius_crs="in", n=None):
+        def __call__(self, size="estimate", crs="in", n=None, **kwargs):
             """
             Draw projected ellipses with dimensions defined in units of a given crs.
 
             Parameters
             ----------
-            radius : int, float, array-like or str, optional
-                The radius in x- and y- direction.
-                The default is "estimate" in which case the radius is attempted
-                to be estimated from the input-coordinates.
+            size : int, float, array-like or str, optional
+                The size in x- and y- direction.
+                The default is "estimate" in which case the size is estimated
+                from the input-coordinates.
 
                 If you provide an array of sizes, each datapoint will be drawn with
                 the respective size!
-            radius_crs : crs-specification, optional
+            crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
             n : int or None
@@ -670,6 +693,8 @@ class Shapes(object):
                 The default is None.
             """
             from . import MapsGrid  # do this here to avoid circular imports!
+
+            radius, radius_crs = _depreciate_radius(size, crs, **kwargs)
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 shape = self.__class__(m)
@@ -881,20 +906,19 @@ class Shapes(object):
         def __init__(self, m):
             super().__init__(m=m)
 
-        def __call__(self, radius="estimate", radius_crs="in", mesh=False, n=None):
+        def __call__(self, size="estimate", crs="in", mesh=False, n=None, **kwargs):
             """
             Draw projected rectangles with fixed dimensions (and possibly curved edges).
 
             Parameters
             ----------
-            radius : int, float, tuple or str, optional
-                The radius in x- and y- direction.
-                The default is "estimate" in which case the radius is attempted
-                to be estimated from the input-coordinates.
+            size : int, float, tuple or str, optional
+                The size in x- and y- direction. The default is "estimate" in which
+                case the size is estimated from the input-coordinates.
 
                 If you provide an array of sizes, each datapoint will be drawn with
                 the respective size!
-            radius_crs : crs-specification, optional
+            crs : crs-specification, optional
                 The crs in which the dimensions are defined.
                 The default is "in".
             mesh : bool
@@ -913,6 +937,8 @@ class Shapes(object):
                 The default is None
             """
             from . import MapsGrid  # do this here to avoid circular imports!
+
+            radius, radius_crs = _depreciate_radius(size, crs, **kwargs)
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 shape = self.__class__(m)
