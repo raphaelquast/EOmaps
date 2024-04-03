@@ -989,7 +989,7 @@ class _ClickCallbacks(_CallbacksBase):
         shp = self.m.set_shape._get(shape)
 
         if shape == "ellipses":
-            shp_pts = shp._get_ellipse_points(
+            shp_pts = shp._get_points(
                 x=np.atleast_1d(x),
                 y=np.atleast_1d(y),
                 crs=xy_crs,
@@ -1011,7 +1011,7 @@ class _ClickCallbacks(_CallbacksBase):
             bnd_verts = shp_pts[0][0]
 
         elif shape == "geod_circles":
-            shp_pts = shp._get_geod_circle_points(
+            shp_pts = shp._get_points(
                 x=np.atleast_1d(x),
                 y=np.atleast_1d(y),
                 crs=xy_crs,

@@ -431,7 +431,7 @@ class InsetMaps(Maps):
         shp = self.set_shape._get(shape)
 
         if shape == "ellipses":
-            shp_pts = shp._get_ellipse_points(
+            shp_pts = shp._get_points(
                 x=np.atleast_1d(x),
                 y=np.atleast_1d(y),
                 crs=xy_crs,
@@ -456,12 +456,11 @@ class InsetMaps(Maps):
             bnd_verts = shp_pts[0][0]
 
         elif shape == "geod_circles":
-            shp_pts = shp._get_geod_circle_points(
+            shp_pts = shp._get_points(
                 x=np.atleast_1d(x),
                 y=np.atleast_1d(y),
                 crs=xy_crs,
                 radius=radius,
-                # radius_crs=radius_crs,
                 n=n,
             )
             bnd_verts = np.stack(shp_pts[:2], axis=2).squeeze()
