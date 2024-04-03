@@ -750,6 +750,7 @@ class _ClickContainer(_CallbackContainer):
         double_click=False,
         button=None,
         modifier=None,
+        on_motion=None,
         **kwargs,
     ):
         """
@@ -808,14 +809,16 @@ class _ClickContainer(_CallbackContainer):
             - If None, the callback is executed if no modifier is activated.
 
             The default is None.
-        on_motion : bool
+        on_motion : bool or None, optional
             !! Only relevant for "click" callbacks !!
 
             - True: Continuously execute the callback if the mouse is moved while the
               assigned button is pressed.
             - False: Only execute the callback on clicks.
+            - None: use True for default callbacks that support on_motion and False
+              for all other callbacks (incl. custom callbacks)
 
-            The default is True.
+            The default is None.
         **kwargs :
             kwargs passed to the callback-function
             For documentation of the individual functions check the docs in `m.cb`
@@ -840,8 +843,6 @@ class _ClickContainer(_CallbackContainer):
         cb_name = callback if isinstance(callback, str) else callback.__name__
         # attach "on_move" callbacks
         movecb_name = None
-
-        on_motion = kwargs.pop("on_motion", None)
 
         # set on_motion=True as default for "click" callbacks that
         # are also supported as move callbacks and False otherwise
