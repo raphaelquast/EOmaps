@@ -391,12 +391,17 @@ class _MoveClickPickCallbacks(_CallbacksBase):
 
         if printstr is not None:
             # create a new annotation
-            if not multipick:
-                bbox = dict(boxstyle="round", fc="w", ec=val_color)
-                bbox.update(kwargs.pop("bbox", dict()))
+            inp_bbox = kwargs.pop("bbox", dict())
+
+            if inp_bbox is not None:
+                if not multipick:
+                    bbox = dict(boxstyle="round", fc="w", ec=val_color)
+                    bbox.update(inp_bbox)
+                else:
+                    bbox = dict(boxstyle="round", fc="w", ec="k")
+                    bbox.update(inp_bbox)
             else:
-                bbox = dict(boxstyle="round", fc="w", ec="k")
-                bbox.update(kwargs.pop("bbox", dict()))
+                bbox = None
 
             styledict = dict(
                 xytext=(20, 20),
