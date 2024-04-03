@@ -166,6 +166,7 @@ class _ShapeBase:
 
 class _CircularShapeBase(_ShapeBase):
     name = "circular_shape_base"
+    radius_crs = None
 
     def __init__(self, m):
         super().__init__(m=m)
@@ -406,7 +407,6 @@ class Shapes(object):
         self._radius_estimation_range = 100000
 
     def _get(self, shape, **kwargs):
-        kwargs.setdefault("radius_crs", None)
         # get the name of the class for a given shape
         # (CamelCase without underscores)
         shapeclass_name = "_" + "".join(i.capitalize() for i in shape.split("_"))

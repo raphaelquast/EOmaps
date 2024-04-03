@@ -398,6 +398,14 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         m.add_marker(
+            xy=[(20, 3), (20, 4)],
+            xy_crs=4326,
+            shape="scatter_points",
+            radius=1000,
+            facecolor=("red", "green"),
+        )
+
+        m.add_marker(
             np.arange(1410, 1440, 1),
             facecolor=[1, 0, 0, 0.5],
             edgecolor="r",
