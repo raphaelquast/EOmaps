@@ -57,7 +57,7 @@ def callback(m, **kwargs):
 
 
 # attach the callback (to update the dataset plotted on the Maps object "m3")
-m.cb.click.attach(callback, m=m3)
+m.cb.click.attach(callback, m=m3, on_motion=True)
 
 # --------- add some basic overlays from NaturalEarth
 m.add_feature.preset.coastline()
