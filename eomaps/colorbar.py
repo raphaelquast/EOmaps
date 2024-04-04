@@ -67,7 +67,11 @@ class ColorBarBase:
         hist_size=0.9,
     ):
         self._parent_cb = None
-        self._hist_size_ = hist_size
+
+        if hist_size is None:
+            self._hist_size_ = 0
+        else:
+            self._hist_size_ = hist_size
 
         self._extend_frac = extend_frac
 
@@ -104,6 +108,9 @@ class ColorBarBase:
 
     @_hist_size.setter
     def _hist_size(self, size):
+        if size is None:
+            size = 0
+
         if self._parent_cb is None:
             self._hist_size_ = size
         else:
@@ -248,8 +255,24 @@ class ColorBarBase:
         self.ax_cb_plot.callbacks.connect("ylim_changed", ychanged)
 
     def _hide_singular_axes(self):
-        sing_hist = self.ax_cb_plot.bbox.width <= 2 or self.ax_cb_plot.bbox.height <= 2
-        sing_cb = self.ax_cb.bbox.width <= 2 or self.ax_cb.bbox.height <= 2
+
+        sing_hist = (self.ax_cb_plot.bbox.width <= 2) or (
+            self.ax_cb_plot.bbox.height <= 2
+        )
+        sing_cb = (self.ax_cb.bbox.width <= 2) or (self.ax_cb.bbox.height <= 2)
+
+        # trigger a draw to update axes positions before checking singularity
+        # (ignore any errors in here to avoid any remaining issues with singular axes
+        # if hist-updates are triggered faster than draw-events...)
+        try:
+            self._m.f.canvas.draw()
+        except Exception:
+            pass
+
+        sing_hist = (self.ax_cb_plot.bbox.width <= 2) or (
+            self.ax_cb_plot.bbox.height <= 2
+        )
+        sing_cb = (self.ax_cb.bbox.width <= 2) or (self.ax_cb.bbox.height <= 2)
 
         if sing_hist:
             self.ax_cb_plot.set_visible(False)
@@ -262,12 +285,10 @@ class ColorBarBase:
             self.ax_cb.set_visible(True)
 
     def _set_hist_size(self, size=None, update_all=False):
-        if size is None:
-            size = self._hist_size
-        else:
+        if size is not None:
             self._hist_size = size
 
-        assert 0 <= size <= 1, "Histogram size must be between 0 and 1"
+        assert 0 <= self._hist_size <= 1, "Histogram size must be between 0 and 1"
 
         self._hide_singular_axes()
 
