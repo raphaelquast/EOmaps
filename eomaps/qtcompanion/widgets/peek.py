@@ -316,6 +316,13 @@ class ModifierInput(QtWidgets.QLineEdit):
 
 
 class PeekLayerWidget(QtWidgets.QWidget):
+    _peek_kwargs = dict()
+
+    @classmethod
+    def set_default_kwargs(cls, **kwargs):
+        """Update the default kwargs used by peek-layer callbacks."""
+        cls._peek_kwargs.update(kwargs)
+
     def __init__(self, *args, m=None, layers=None, exclude=None, **kwargs):
         """
         A dropdown-list that attaches a peek-callback to look at the selected layer
@@ -401,6 +408,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
             alpha=self.buttons.alpha,
             modifier=modifier,
             shape=self.buttons.shape,
+            **PeekLayerWidget._peek_kwargs,
         )
         self.current_layer = l
 
@@ -424,6 +432,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
             alpha=self.buttons.alpha,
             modifier=modifier,
             shape=self.buttons.shape,
+            **PeekLayerWidget._peek_kwargs,
         )
 
         # execute the attached callback with the last available
