@@ -5053,7 +5053,12 @@ class Maps(metaclass=_MapsMeta):
         # add all (possibly still invisible) layers with artists defined
         # (ONLY do this for unique layers... skip multi-layers )
         layers = layers.union(
-            chain(*(self.BM._parse_multi_layer_str(i)[0] for i in self.BM._bg_artists))
+            chain(
+                *(
+                    self.BM._parse_multi_layer_str(i)[0]
+                    for i in (*self.BM._bg_artists, *self.BM._artists)
+                )
+            )
         )
 
         # exclude private layers
