@@ -758,8 +758,9 @@ class _MoveClickPickCallbacks(_CallbacksBase):
         ax = self.m.ax
 
         # default boundary args
-        args = dict(fc="none", ec="k", lw=1.1)
-        args.update(kwargs)
+        kwargs.setdefault("fc", "none")
+        kwargs.setdefault("ec", "k")
+        kwargs.setdefault("lw", 1.1)
 
         if isinstance(how, str):
             # base transformations on transData to ensure correct treatment
@@ -864,7 +865,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
         if clip_path is not None:
-            patch = PathPatch(clip_path, ec="k", fc="none")
+            patch = PathPatch(clip_path, **kwargs)
             marker = self.m.ax.add_patch(patch)
             self.m.cb.click.add_temporary_artist(marker)
 
