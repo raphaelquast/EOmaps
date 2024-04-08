@@ -2801,11 +2801,21 @@ class Maps(metaclass=_MapsMeta):
         extent : The extent in the given crs (x0, x1, y0, y1).
 
         """
-        bnds = self._crs_boundary_bounds
 
         # fast track if plot-crs is requested
         if crs == self.crs_plot:
             x0, x1, y0, y1 = (*self.ax.get_xlim(), *self.ax.get_ylim())
+
+            bnds = self._crs_boundary_bounds
+            # clip the map-extent with respect to the boundary bounds
+            # (to avoid returning values outside the crs bounds)
+            try:
+                x0, x1 = np.clip([x0, x1], bnds[0], bnds[2])
+                y0, y1 = np.clip([y0, y1], bnds[1], bnds[3])
+            except Exception:
+                _log.debug(
+                    "EOmaps: Error while trying to clip map extent", exc_info=True
+                )
         else:
             if crs is not None:
                 crs = self._get_cartopy_crs(crs)
@@ -2813,14 +2823,6 @@ class Maps(metaclass=_MapsMeta):
                 crs = self._get_cartopy_crs(4326)
 
             x0, x1, y0, y1 = self.ax.get_extent(crs=crs)
-
-        # clip the map-extent with respect to the boundary bounds
-        # (to avoid returning values outside the crs bounds)
-        try:
-            x0, x1 = np.clip([x0, x1], bnds[0], bnds[2])
-            y0, y1 = np.clip([y0, y1], bnds[1], bnds[3])
-        except Exception:
-            _log.debug("EOmaps: Error while trying to clip map extent", exc_info=True)
 
         return x0, x1, y0, y1
 
@@ -3079,6 +3081,20 @@ class Maps(metaclass=_MapsMeta):
             cmap=cmap,
             classify_specs=self.classify_specs,
         )
+
+        if norm is not None:
+            if "norm" in kwargs:
+                raise TypeError(
+                    "EOmaps: You cannot provide an explicit norm for the dataset if a "
+                    "classification scheme is used!"
+                )
+        else:
+            if "norm" in kwargs:
+                norm = kwargs.pop("norm")
+                norm.vmin = self._vmin
+                norm.vmax = self._vmax
+            else:
+                norm = plt.Normalize(vmin=self._vmin, vmax=self._vmax)
 
         # todo remove duplicate attributes
         self.classify_specs._cbcmap = cbcmap
@@ -4336,7 +4352,7 @@ class Maps(metaclass=_MapsMeta):
             classified = False
             bins = None
             cbcmap = cmap
-            norm = mpl.colors.Normalize(vmin, vmax)
+            norm = None
 
         return cbcmap, norm, bins, classified
 
@@ -4557,7 +4573,7 @@ class Maps(metaclass=_MapsMeta):
             f"{self._data_manager.z_data.size} datapoints ({self.shape.name})"
         )
 
-        for key in ("array", "norm"):
+        for key in ("array",):
             assert (
                 key not in kwargs
             ), f"The key '{key}' is assigned internally by EOmaps!"
@@ -5051,7 +5067,12 @@ class Maps(metaclass=_MapsMeta):
         # add all (possibly still invisible) layers with artists defined
         # (ONLY do this for unique layers... skip multi-layers )
         layers = layers.union(
-            chain(*(self.BM._parse_multi_layer_str(i)[0] for i in self.BM._bg_artists))
+            chain(
+                *(
+                    self.BM._parse_multi_layer_str(i)[0]
+                    for i in (*self.BM._bg_artists, *self.BM._artists)
+                )
+            )
         )
 
         # exclude private layers

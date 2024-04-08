@@ -236,9 +236,8 @@ class GridLines:
         elif isinstance(d, (int, float, np.number)):
             dlon = dlat = d
         elif isinstance(d, (list, np.ndarray)):
-            d = np.asanyarray(d)
-            if len(d.shape) == 2:
-                lons, lats = np.asanyarray(d)
+            if len(d) == 2:
+                lons, lats = np.asanyarray(d[0]), np.asanyarray(d[1])
             else:
                 lons = lats = np.asanyarray(d)
         else:
@@ -692,6 +691,7 @@ class GridLabels:
 
         # get boundary vertices of current axis spine (in figure coordinates)
         bl = self._get_bound_verts()
+        bndmin, bndmax = bl.min(axis=0), bl.max(axis=0)
 
         # get gridlines
         uselines = np.array(lines[axis])
@@ -774,25 +774,28 @@ class GridLabels:
                         if xt > 0.99 or xt < 0.01:
                             continue
 
-                        if "t" in self._where:
-                            if "b" not in self._where:
-                                # don't draw the second intersection point
-                                if yt <= 0.5:
-                                    continue
-                        elif "b" in self._where:
-                            if yt > 0.5:
+                        line_in_bnds = l[:, 1].clip(bndmin[1], bndmax[1])
+                        line_center = (line_in_bnds.min() + line_in_bnds.max()) / 2
+                        top = y > line_center
+                        if top:
+                            if not ("t" in self._where):
+                                continue
+                        else:
+                            if not ("b" in self._where):
                                 continue
                     else:
                         if yt > 0.99 or yt < 0.01:
                             continue
 
-                        if "r" in self._where:
-                            if "l" not in self._where:
-                                # don't draw the second intersection point
-                                if xt <= 0.5:
-                                    continue
-                        elif "l" in self._where:
-                            if xt > 0.5:
+                        line_in_bnds = l[:, 0].clip(bndmin[0], bndmax[0])
+                        line_center = (line_in_bnds.min() + line_in_bnds.max()) / 2
+
+                        right = x > line_center
+                        if right:
+                            if not ("r" in self._where):
+                                continue
+                        else:
+                            if not ("l" in self._where):
                                 continue
 
                 # calculate rotation angle of boundary segment

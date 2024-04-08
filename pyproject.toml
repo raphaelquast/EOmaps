@@ -11,7 +11,7 @@ eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
 
 [project]
 name = "eomaps"
-version = "8.0.2"
+version = "8.1"
 description = "A library to create interactive maps of geographical datasets."
 readme = "README.md"
 license = {file = "LICENSE"}

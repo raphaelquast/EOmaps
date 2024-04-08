@@ -308,21 +308,9 @@ To specify how a dataset is visualized on the map, you have to set the *"plot-sh
 
 Available shapes (see bleow for details on each plot-shape!):
 
-.. currentmodule:: eomaps.shapes.Shapes
 
-.. autosummary::
-    :nosignatures:
 
-    ellipses
-    rectangles
-    geod_circles
-    voronoi_diagram
-    delaunay_triangulation
-    contour
-    scatter_points
-    raster
-    shade_raster
-    shade_points
+ .. include:: _shape_table.rst
 
 
 
@@ -536,6 +524,37 @@ Contour plots
 
     m.set_shape.contour(filled=True)   # filled contour polygons (True) or contour lines (False)
 
+.. _shp_hexbin:
+
+Hexbin plots
+************
+
+.. autosummary::
+    :nosignatures:
+
+    Maps.set_shape.hexbin
+
+.. list-table::
+   :header-rows: 1
+
+   * - Suitable data size
+     - Supported data structures
+   * - up to a few million datapoints
+     - 1D, 2D or mixed
+
+.. image:: _static/shape_imgs/hexbin.png
+    :width: 50%
+
+
+.. code-block:: python
+
+    m.set_shape.hexbin(size=(40, 20),      # number of hexagons in x- and y-direction
+                       aggregator="mean",  # the aggregation method to use
+                       )
+
+
+
+
 .. _shp_scatter:
 
 Scatter Points
@@ -654,7 +673,7 @@ Shade Points
 .. _classify_the_data:
 
 
-1) Classify the data
+3) Classify the data
 ~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
@@ -749,16 +768,29 @@ Arguments that are supported by all shapes except ``shade`` shapes are:
 By default, the plot-extent of the axis is adjusted to the extent of the data **if the extent has not been set explicitly before**.
 To always keep the extent as-is, use ``m.plot_map(set_extent=False)``.
 
-.. code-block:: python
-    :name: test_plot_data
+.. grid:: 1 1 1 2
 
-    from eomaps import Maps
-    m = Maps()
-    m.add_feature.preset.coastline(lw=0.5)
+    .. grid-item::
 
-    m.set_data([1,2,3,4,5], [10,20,40,60,70], [10,20,50,70,30], crs=4326)
-    m.set_shape.geod_circles(radius=7e5)
-    m.plot_map(cmap="viridis", ec="b", lw=1.5, alpha=0.85, set_extent=False)
+        .. code-block:: python
+            :name: test_plot_data
+
+            from eomaps import Maps
+            m = Maps()
+            m.add_feature.preset.ocean()
+
+            m.set_data(
+                data=[1, 2, 3, 4, 5],
+                x = [-10, 20, 40, 60, 70],
+                y = [-10, 20, 50, 70, 30])
+            m.set_shape.geod_circles(radius=7e5)
+            m.plot_map(cmap="viridis", set_extent=False)
+
+    .. grid-item::
+
+        .. image:: _static/data_visualization/plot_data.png
+            :width: 75%
+
 
 
 You can then continue to add a :ref:`colorbar` or create :ref:`zoomed_in_views_on_datasets`.
@@ -791,14 +823,38 @@ In general, the colors assigned to the shapes are specified by
   - ``vmin`` and ``vmax`` set the range of data-values that are mapped to the colorbar-colors
   - Any values outside this range will get the colormaps ``over`` and ``under`` colors assigned.
 
-.. code-block:: python
-    :name: test_customize_the_plot
+.. grid:: 1 1 1 2
 
-    from eomaps import Maps
-    m = Maps()
-    m.set_data([1,2,3,4,5], [10,20,40,60,70], [10,20,50,70,30])
-    m.set_shape.ellipses(radius=5)
-    m.plot_map(cmap="viridis", vmin=2, vmax=4, ec="b", lw=0.5)
+    .. grid-item::
+
+        .. code-block:: python
+            :name: test_customize_the_plot
+
+            from eomaps import Maps
+            m = Maps()
+            m.set_frame(rounded=0.2)
+            m.add_feature.preset.ocean()
+            m.add_feature.preset.land(fc="k")
+
+            m.set_data(
+                data=[1, 2, 3, 4, 5],
+                x = [-10, 20, 40, 60, 70],
+                y = [-10, 20, 50, 70, 30])
+            m.set_shape.geod_circles(radius=1e6)
+            m.plot_map(
+                cmap="tab10", # the colormap to use
+                vmin=2,       # min value for cmap
+                vmax=4,       # max value for cmap
+                alpha=0.8,    # transparency
+                ec="w",       # edgecolor
+                lw=1.5,       # linewidth
+                ls="--"       # linestyle
+                )
+
+    .. grid-item::
+
+        .. image:: _static/data_visualization/customize_plot.png
+            :width: 75%
 
 
 ------
@@ -825,36 +881,47 @@ To apply a uniform color to all datapoints, you can use `matpltolib's named colo
 - ``m.plot_map(fc=(0.4, 0.3, 0.2))``
 - ``m.plot_map(fc=(1, 0, 0.2, 0.5))``
 
-.. code-block:: python
-    :name: test_uniform_colors
+.. grid:: 1 1 1 2
 
-    from eomaps import Maps
+    .. grid-item::
 
-    m = Maps()
-    m.set_data(data=None, x=[10,20,30], y=[10,20,30])
+        .. code-block:: python
+            :name: test_uniform_colors
 
-    # Use any of matplotlibs "named colors"
-    m1 = m.new_layer(inherit_data=True)
-    m1.set_shape.ellipses(radius=10)
-    m1.plot_map(fc="r", zorder=0)
+            from eomaps import Maps
 
-    m2 = m.new_layer(inherit_data=True)
-    m2.set_shape.ellipses(radius=8)
-    m2.plot_map(fc="orange", zorder=1)
+            m = Maps()
+            m.add_feature.preset("coastline", "ocean")
+            m.set_data(data=None, x=[10,20,30], y=[10,20,30])
 
-    # Use RGB or RGBA tuples
-    m3 = m.new_layer(inherit_data=True)
-    m3.set_shape.ellipses(radius=6)
-    m3.plot_map(fc=(1, 0, 0.5), zorder=2)
+            # Use any of matplotlibs "named colors"
+            m1 = m.new_layer(inherit_data=True)
+            m1.set_shape.ellipses(radius=10)
+            m1.plot_map(fc="r", zorder=0)
 
-    m4 = m.new_layer(inherit_data=True)
-    m4.set_shape.ellipses(radius=4)
-    m4.plot_map(fc=(1, 1, 1, .75), zorder=3)
+            m2 = m.new_layer(inherit_data=True)
+            m2.set_shape.ellipses(radius=8)
+            m2.plot_map(fc="orange", zorder=1)
 
-    # For grayscale use a string of a number between 0 and 1
-    m5 = m.new_layer(inherit_data=True)
-    m5.set_shape.ellipses(radius=2)
-    m5.plot_map(fc="0.3", zorder=4)
+            # Use RGB tuples (r, g, b)
+            m3 = m.new_layer(inherit_data=True)
+            m3.set_shape.ellipses(radius=6)
+            m3.plot_map(fc=(1, 0, 0.5), zorder=2)
+
+            # Use RGBA tuples (r, g, b, alpha)
+            m4 = m.new_layer(inherit_data=True)
+            m4.set_shape.ellipses(radius=4)
+            m4.plot_map(fc=(1, 1, 1, .75), zorder=3)
+
+            # For grayscale use a string of a number between 0 and 1
+            m5 = m.new_layer(inherit_data=True)
+            m5.set_shape.ellipses(radius=2)
+            m5.plot_map(fc="0.3", zorder=4)
+
+    .. grid-item::
+
+        .. image:: _static/data_visualization/uniform_colors.png
+            :width: 75%
 
 
 Explicit colors
@@ -862,38 +929,50 @@ Explicit colors
 
 To explicitly color each datapoint with a pre-defined color, simply provide a list or array of the aforementioned types.
 
-.. code-block:: python
-    :name: test_explicit_colors
+.. grid:: 1 1 1 2
 
-    from eomaps import Maps
+    .. grid-item::
 
-    m = Maps()
-    m.set_data(data=None, x=[10, 20, 30], y=[10, 20, 30])
+        .. code-block:: python
+            :name: test_explicit_colors
 
-    # Use any of matplotlibs "named colors"
-    # (https://matplotlib.org/stable/gallery/color/named_colors.html)
-    m1 = m.new_layer(inherit_data=True)
-    m1.set_shape.ellipses(radius=10)
-    m1.plot_map(fc=["indigo", "g", "orange"], zorder=1)
+            from eomaps import Maps
 
-    # Use RGB tuples
-    m2 = m.new_layer(inherit_data=True)
-    m2.set_shape.ellipses(radius=6)
-    m2.plot_map(fc=[(1, 0, 0.5),
-                    (0.3, 0.4, 0.5),
-                    (1, 1, 0)], zorder=2)
+            m = Maps()
+            m.add_feature.preset("coastline", "ocean")
+            m.set_data(data=None, x=[10, 20, 30], y=[10, 20, 30])
 
-    # Use RGBA tuples
-    m3 = m.new_layer(inherit_data=True)
-    m3.set_shape.ellipses(radius=8)
-    m3.plot_map(fc=[(1, 0, 0.5, 0.25),
-                    (1, 0, 0.5, 0.75),
-                    (0.1, 0.2, 0.5, 0.5)], zorder=3)
+            # Use any of matplotlibs "named colors"
+            # (https://matplotlib.org/stable/gallery/color/named_colors.html)
+            m1 = m.new_layer(inherit_data=True)
+            m1.set_shape.ellipses(radius=10)
+            m1.plot_map(fc=["indigo", "g", "orange"], zorder=1)
 
-    # For grayscale use a string of a number between 0 and 1
-    m4 = m.new_layer(inherit_data=True)
-    m4.set_shape.ellipses(radius=4)
-    m4.plot_map(fc=[".1", ".2", "0.3"], zorder=4)
+            # Use RGB tuples
+            m2 = m.new_layer(inherit_data=True)
+            m2.set_shape.ellipses(radius=6)
+            m2.plot_map(fc=[(1, 0, 0.5),
+                            (0.3, 0.4, 0.5),
+                            (1, 1, 0)], zorder=2)
+
+            # Use RGBA tuples
+            m3 = m.new_layer(inherit_data=True)
+            m3.set_shape.ellipses(radius=8)
+            m3.plot_map(fc=[(1, 0, 0.5, 0.25),
+                            (1, 0, 0.5, 0.75),
+                            (0.1, 0.2, 0.5, 0.5)], zorder=3)
+
+            # For grayscale use a string of a number between 0 and 1
+            m4 = m.new_layer(inherit_data=True)
+            m4.set_shape.ellipses(radius=4)
+            m4.plot_map(fc=[".1", ".2", "0.3"], zorder=4)
+
+    .. grid-item::
+
+        .. image:: _static/data_visualization/explicit_colors.png
+            :width: 75%
+
+
 
 RGB/RGBA composites
 *******************
@@ -913,25 +992,36 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
 
 - ``m.plot_map(fc=(<R-array>, [0.12345], <B-array>, <A-array>))``
 
-.. code-block:: python
-    :name: test_rgba_composites
 
-    from eomaps import Maps
-    import numpy as np
+.. grid:: 1 1 1 2
 
-    x, y = np.meshgrid(np.linspace(-20, 40, 100),
-                       np.linspace(50, 70, 50))
+    .. grid-item::
 
-    # values must be between 0 and 1
-    r = np.random.randint(0, 100, x.shape) / 100
-    g = np.random.randint(0, 100, x.shape) / 100
-    b = [0.4]
-    a = np.random.randint(0, 100, x.shape) / 100
+        .. code-block:: python
+            :name: test_rgba_composites
 
-    m = Maps()
-    m.add_feature.preset.ocean()
-    m.set_data(data=None, x=x, y=y)
-    m.plot_map(fc=(r, g, b, a))
+            from eomaps import Maps
+            import numpy as np
+
+            x, y = np.meshgrid(np.linspace(-30, 30, 50),
+                               np.linspace(30, 30, 50))
+
+            # values must be between 0 and 1
+            r = np.random.randint(0, 100, x.shape) / 100
+            g = np.random.randint(0, 100, x.shape) / 100
+            b = [0.4]
+            a = np.random.randint(0, 100, x.shape) / 100
+
+            m = Maps()
+            m.add_feature.preset.ocean()
+            m.set_data(data=None, x=x, y=y)
+            m.plot_map(fc=(r, g, b, a))
+
+    .. grid-item::
+
+        .. image:: _static/data_visualization/rgba_composite.png
+            :width: 75%
+
 
 
 
@@ -997,7 +1087,7 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
 
     .. grid-item::
 
-        .. image:: _static/minigifs/colorbar.gif
+        .. image:: _static/data_visualization/colorbar.gif
 
 
 .. autosummary::
@@ -1056,7 +1146,7 @@ To label the colorbar with custom names for a given set of bins, use :py:meth:`C
 
     .. grid-item::
 
-        .. image:: _static/minigifs/colorbar_ticks.png
+        .. image:: _static/data_visualization/colorbar_ticks.png
 
 
 
@@ -1099,4 +1189,4 @@ pixels within the current field of view by setting ``dynamic_shade_indicator=Tru
 
     .. grid-item::
 
-        .. image:: _static/minigifs/dynamic_colorbar.gif
+        .. image:: _static/data_visualization/dynamic_colorbar.gif

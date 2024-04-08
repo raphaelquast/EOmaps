@@ -214,6 +214,19 @@ class TestBasicPlotting(unittest.TestCase):
 
         plt.close("all")
 
+        # hexbin
+        m = Maps(4326)
+        m.set_data(usedata, x="x", y="y", crs=3857)
+        m.set_shape.hexbin()
+        m.plot_map()
+
+        m2 = m.new_layer()
+        m2.inherit_data(m)
+        m2.set_shape.hexbin(size=(50, 25), aggregator=np.median)
+        m2.plot_map()
+
+        plt.close("all")
+
     def test_cpos(self):
         m = Maps(4326)
 
@@ -382,6 +395,14 @@ class TestBasicPlotting(unittest.TestCase):
             facecolor=[1, 0, 0, 0.5],
             edgecolor="r",
             shape="rectangles",
+        )
+
+        m.add_marker(
+            xy=[(20, 3), (20, 4)],
+            xy_crs=4326,
+            shape="scatter_points",
+            radius=1000,
+            facecolor=("red", "green"),
         )
 
         m.add_marker(

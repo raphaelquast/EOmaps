@@ -700,7 +700,7 @@ class ShapeDrawer:
 
                 r = np.sqrt((x - pts[0][0]) ** 2 + (y - pts[0][1]) ** 2)
 
-                pts = Shapes._Ellipses(self._m)._get_ellipse_points(
+                pts = Shapes._Ellipses(self._m)._get_points(
                     np.array([pts[0][0]]),
                     np.array([pts[0][1]]),
                     "out",
@@ -737,7 +737,7 @@ class ShapeDrawer:
             pts = np.asarray(pts)
 
             r = np.sqrt(sum((pts[1] - pts[0]) ** 2))
-            pts = Shapes._Ellipses(self._m)._get_ellipse_points(
+            pts = Shapes._Ellipses(self._m)._get_points(
                 np.array([pts[0][0]]), np.array([pts[0][1]]), "out", [r, r], "out", 100
             )
 

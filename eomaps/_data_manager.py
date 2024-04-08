@@ -762,7 +762,7 @@ class DataManager:
 
             coll.set_label("Dataset " f"({self.m.shape.name}  |  {self.z_data.shape})")
 
-            if self.m.shape.name not in ["scatter_points", "contour"]:
+            if self.m.shape.name not in ["scatter_points", "contour", "hexbin"]:
                 # avoid use "autolim=True" since it can cause problems in
                 # case the data-limits are infinite (e.g. for projected
                 # datasets containing points outside the used projection)

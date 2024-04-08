@@ -1185,7 +1185,7 @@ class ScaleBar:
                 )
                 + self._m.ax.transData
             )
-
+            patch.set_clip_on(False)
             self._artists[f"text_{i}"] = self._m.ax.add_artist(patch)
             self._texts[f"text_{i}"] = txt
             self._m.BM.add_artist(self._artists[f"text_{i}"], layer=self._layer)
@@ -1333,6 +1333,12 @@ class ScaleBar:
         if pickable is True:
             self._make_pickable()
 
+        # make sure scalebar-artists are not clipped with respect
+        # to the spine of the axes
+        for _, a in self._artists.items():
+            if a is not None:
+                a.set_clip_on(False)
+
     def _get_scale_color_names(self):
         colors = []
         for i in self._scale_props["colors"]:
@@ -1413,10 +1419,16 @@ class ScaleBar:
             self._pick_drag = True
             # get the offset_position of the click with respect to the
             # reference point of the scalebar
-            lon0, lat0 = self._m._transf_plot_to_lonlat.transform(
-                event.xdata, event.ydata
-            )
-            self._pick_start_offset = self._lon - lon0, self._lat - lat0
+            xdata, ydata = event.xdata, event.ydata
+            if xdata is not None and ydata is not None:
+                lon0, lat0 = self._m._transf_plot_to_lonlat.transform(
+                    event.xdata, event.ydata
+                )
+                self._pick_start_offset = self._lon - lon0, self._lat - lat0
+            else:
+                # None event coordinates happen if you click outside
+                # the axes-spine
+                self._pick_start_offset = 0, 0
 
         elif event.button in ["up", "down"]:
             # pass scroll events that happen on top of the scalebar

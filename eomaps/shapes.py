@@ -21,6 +21,236 @@ from .helpers import register_modules
 _log = logging.getLogger(__name__)
 
 
+# a base class for shapes that support setting the number of intermediate points
+class _ShapeBase:
+    name = "none"
+
+    def __init__(self, m):
+        self._m = m
+        self._n = None
+
+        self._select_radius = True
+
+    def _get_auto_n(self):
+        s = self._m._data_manager._get_current_datasize()
+
+        if self.name == "rectangles":
+            # mesh currently only supports n=1
+            if self.mesh is True:
+                return 1
+
+            # if plot crs is same as input-crs there is no need for
+            # intermediate points since the rectangles are not curved!
+            if self._m._crs_plot == self._m.data_specs.crs:
+                return 1
+
+        if s < 10:
+            n = 100
+        elif s < 100:
+            n = 75
+        elif s < 1000:
+            n = 50
+        elif s < 10000:
+            n = 20
+        else:
+            n = 12
+
+        return n
+
+    @property
+    def n(self):
+        if self._n is None:
+            return self._get_auto_n()
+        else:
+            return self._n
+
+    @n.setter
+    def n(self, val):
+        if self.name == "rectangles" and self.mesh is True:
+            if val is not None and val != 1:
+                _log.info("EOmaps: rectangles with 'mesh=True' only support n=1")
+            self._n = 1
+        else:
+            self._n = val
+
+    @property
+    def _selected_radius(self):
+        # option to override radius-selection in case the shape is used
+        # to create markers (e.g. call is independent of plot-extent)
+        if self._select_radius is False:
+            return self.radius
+
+        # if radius was provided as a array (for individual shape radius)
+        # select values according to the dat-manager query to get values
+        # of visible points
+
+        # if no data is assigned, just return the radius
+        if not self._m._data_manager._current_data:
+            return self.radius
+
+        # check if multiple individual x-y radius was provided
+        q1 = isinstance(self.radius, tuple) and isinstance(self.radius[0], np.ndarray)
+        # chedk if multiple radius values were provided
+        q2 = isinstance(self.radius, np.ndarray)
+
+        if q1 or q2:
+            mask = self._m._data_manager._get_q()[0]
+
+            # quick exit if full data is in extent
+            if mask is True:
+                return self.radius
+
+        if q1:
+            radius = (self.radius[0][mask], self.radius[1][mask])
+        elif q2:
+            radius = self.radius[mask]
+        else:
+            radius = self.radius
+
+        return radius
+
+    def _wraparound(self, x, y, xs, ys, crs):
+        # ------------------------- implement some kind of "wraparound"
+        if self._m._crs_plot in (
+            self._m.CRS.Orthographic(),
+            self._m.CRS.Geostationary(),
+            self._m.CRS.NearsidePerspective(),
+        ):
+            # avoid masking in those crs
+            mask = np.full(xs.shape[0], True)
+        else:
+
+            # check if any points are in different halfspaces with respect to x
+            # and if so, mask the ones in the wrong halfspace
+            # (required for proper longitude wrapping)
+            # TODO this might be a lot easier (and faster) to implement!
+
+            xc = 0  # the center-point (e.g. (-180 + 180)/2 = 0 )
+
+            def getQ(x, xc):
+                quadrants = np.full_like(x, -1)
+
+                quadrant = x < xc
+                quadrants[quadrant] = 0
+                quadrant = x > xc
+                quadrants[quadrant] = 1
+
+                return quadrants
+
+            t_in_lonlat = self._m._get_transformer(crs, 4326)
+            t_plot_lonlat = self._m._get_transformer(self._m.crs_plot, 4326)
+
+            # transform the coordinates to lon/lat
+            xp, _ = t_in_lonlat.transform(x, y)
+            xsp, _ = t_plot_lonlat.transform(xs, ys)
+
+            quadrants, pts_quadrants = getQ(xp, xc), getQ(xsp, xc)
+
+            # mask any point that is in a different quadrant than the center point
+            maskx = pts_quadrants != quadrants[:, np.newaxis]
+            # take care of points that are on the center line (e.g. don't mask them)
+            # (use a +- 25 degree around 0 as threshold)
+            cpoints = np.broadcast_to(
+                np.isclose(xp, xc, atol=25)[:, np.newaxis], xs.shape
+            )
+
+            maskx[cpoints] = False
+            xs.mask[maskx] = True
+            ys.mask = xs.mask
+
+            # mask any datapoint that has less than 3 of the ellipse-points unmasked
+            mask = np.count_nonzero(~xs.mask, axis=1) >= 3
+
+        return xs, ys, mask
+
+
+class _CircularShapeBase(_ShapeBase):
+    name = "circular_shape_base"
+    radius_crs = None
+
+    def __init__(self, m):
+        super().__init__(m=m)
+
+    def __call__(self, radius=None, n=None, radius_crs=None):
+        if radius is None:
+            raise TypeError(
+                f"EOmaps: If 'm.set_shape.{self.name}(...)' is used, "
+                "you must provide a radius!"
+            )
+
+        from . import MapsGrid  # do this here to avoid circular imports!
+
+        for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+            shape = self.__class__(m)
+            shape.radius = radius
+            shape.radius_crs = radius_crs
+            shape.n = n
+
+            m._shape = shape
+
+    @property
+    def _initargs(self):
+        return dict(radius=self._radius, radius_crs=self.radius_crs, n=self._n)
+
+    @property
+    def radius(self):
+        return self._radius
+
+    @radius.setter
+    def radius(self, val):
+        # string is required to accept "estimate" as radius
+        # tuple is required to provide (rx, ry) explicitly
+        if isinstance(val, (int, float, str, tuple, np.number)):
+            self._radius = val
+        else:
+            self._radius = np.asanyarray(np.atleast_1d(val)).ravel()
+
+    def __repr__(self):
+        try:
+            s = f"{self.name}(radius={self.radius}, n={self.n})"
+        except AttributeError:
+            s = f"{self.name}(radius, n)"
+        except Exception:
+            s = object.__repr__(self)
+
+        return s
+
+    def _get_points(self, x, y, crs, radius, n=20):
+        raise NotImplementedError("get_points is not implemented")
+        xs, ys, mask = [], [], []
+        return xs, ys, mask
+
+    def get_coll(self, x, y, crs, **kwargs):
+        xs, ys, mask = self._get_points(
+            x=x,
+            y=y,
+            crs=crs,
+            radius=self._selected_radius,
+            radius_crs=self.radius_crs,
+            n=self.n,
+        )
+        # compress the coordinates (masked arrays produce artefacts on the boundary
+        # in case intermediate points are masked)
+        verts = (
+            np.column_stack((x.compressed(), y.compressed()))
+            for i, (x, y) in enumerate(zip(xs, ys))
+            if mask[i]
+        )
+        # remember masked points
+        self._m._data_mask = mask
+
+        color_and_array = Shapes._get_colors_and_array(kwargs, mask)
+
+        coll = PolyCollection(
+            verts,
+            # transOffset=self._m.ax.transData,
+            **color_and_array,
+            **kwargs,
+        )
+
+        return coll
+
+
 class _CollectionAccessor:
     """
     Accessor class to handle contours drawn by plt.contour.
@@ -361,97 +591,7 @@ class Shapes(object):
             color_vals["array"] = None
             return color_vals
 
-    # a base class for shapes that support setting the number of intermediate points
-    class _ShapeBase:
-        name = "none"
-
-        def __init__(self, m):
-            self._m = m
-            self._n = None
-
-            self._select_radius = True
-
-        def _get_auto_n(self):
-            s = self._m._data_manager._get_current_datasize()
-
-            if self.name == "rectangles":
-                # mesh currently only supports n=1
-                if self.mesh is True:
-                    return 1
-
-                # if plot crs is same as input-crs there is no need for
-                # intermediate points since the rectangles are not curved!
-                if self._m._crs_plot == self._m.data_specs.crs:
-                    return 1
-
-            if s < 10:
-                n = 100
-            elif s < 100:
-                n = 75
-            elif s < 1000:
-                n = 50
-            elif s < 10000:
-                n = 20
-            else:
-                n = 12
-
-            return n
-
-        @property
-        def n(self):
-            if self._n is None:
-                return self._get_auto_n()
-            else:
-                return self._n
-
-        @n.setter
-        def n(self, val):
-            if self.name == "rectangles" and self.mesh is True:
-                if val is not None and val != 1:
-                    _log.info("EOmaps: rectangles with 'mesh=True' only support n=1")
-                self._n = 1
-            else:
-                self._n = val
-
-        @property
-        def _selected_radius(self):
-            # option to override radius-selection in case the shape is used
-            # to create markers (e.g. call is independent of plot-extent)
-            if self._select_radius is False:
-                return self.radius
-
-            # if radius was provided as a array (for individual shape radius)
-            # select values according to the dat-manager query to get values
-            # of visible points
-
-            # if no data is assigned, just return the radius
-            if not self._m._data_manager._current_data:
-                return self.radius
-
-            # check if multiple individual x-y radius was provided
-            q1 = isinstance(self.radius, tuple) and isinstance(
-                self.radius[0], np.ndarray
-            )
-            # chedk if multiple radius values were provided
-            q2 = isinstance(self.radius, np.ndarray)
-
-            if q1 or q2:
-                mask = self._m._data_manager._get_q()[0]
-
-                # quick exit if full data is in extent
-                if mask is True:
-                    return self.radius
-
-            if q1:
-                radius = (self.radius[0][mask], self.radius[1][mask])
-            elif q2:
-                radius = self.radius[mask]
-            else:
-                radius = self.radius
-
-            return radius
-
-    class _GeodCircles(_ShapeBase):
+    class _GeodCircles(_CircularShapeBase):
         name = "geod_circles"
 
         def __init__(self, m):
@@ -479,46 +619,7 @@ class Shapes(object):
                 The class representing the plot-shape.
 
             """
-            if radius is None:
-                raise TypeError(
-                    "EOmaps: If 'm.set_shape.geod_circles(...)' is used, "
-                    "you must provide a radius!"
-                )
-
-            from . import MapsGrid  # do this here to avoid circular imports!
-
-            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-                shape = self.__class__(m)
-                shape.radius = radius
-                shape.n = n
-
-                m._shape = shape
-
-        @property
-        def _initargs(self):
-            return dict(radius=self._radius, n=self._n)
-
-        @property
-        def radius(self):
-            return self._radius
-
-        @radius.setter
-        def radius(self, val):
-            if isinstance(val, (int, float, np.number)):
-                self._radius = val
-            else:
-                self._radius = np.asanyarray(np.atleast_1d(val))
-
-        @property
-        def radius_crs(self):
-            return "geod"
-
-        def __repr__(self):
-            try:
-                s = f"geod_circles(radius={self.radius}, n={self.n})"
-            except AttributeError:
-                s = "geod_circles(radius, n)"
-            return s
+            super().__call__(radius=radius, n=n, radius_crs="geod")
 
         def _calc_geod_circle_points(self, lon, lat, radius, n=20, start_angle=0):
             """
@@ -567,14 +668,15 @@ class Shapes(object):
                 radians=False,
             )
 
-            return lons.T, lats.T
+            return lons, lats
 
-        def _get_geod_circle_points(self, x, y, crs, radius, n=20):
+        def _get_points(self, x, y, crs, radius, radius_crs="geod", n=20):
+            crs = self._m.get_crs(crs)
             x, y = np.asarray(x), np.asarray(y)
 
             # transform from in-crs to lon/lat
             radius_t = self._m._get_transformer(
-                self._m.get_crs(crs),
+                crs,
                 self._m.CRS.PlateCarree(globe=self._m.crs_plot.globe),
             )
             # transform from lon/lat to the plot_crs
@@ -589,60 +691,11 @@ class Shapes(object):
 
             xs, ys = np.ma.masked_invalid(plot_t.transform(lons, lats), copy=False)
 
-            if self._m._crs_plot in (
-                self._m.CRS.Orthographic(),
-                self._m.CRS.Geostationary(),
-                self._m.CRS.NearsidePerspective(),
-            ):
-                mask = np.full(lons.shape, True)
-            else:
-                # get the mask for invalid, very distorted or very large shapes
-                dx = xs.max(axis=0) - xs.min(axis=0)
-                dy = ys.max(axis=0) - ys.min(axis=0)
-                mask = (
-                    ~xs.mask.any(axis=0)
-                    & ~ys.mask.any(axis=0)
-                    & ((dx / dy) < 10)
-                    & (dx < np.max(radius) * 50)
-                    & (dy < np.max(radius) * 50)
-                )
-
-                mask = np.broadcast_to(mask[:, None].T, lons.shape)
+            xs, ys, mask = self._wraparound(x, y, xs, ys, crs)
 
             return xs, ys, mask
 
-        def get_coll(self, x, y, crs, **kwargs):
-            xs, ys, mask = self._get_geod_circle_points(
-                x, y, crs, self._selected_radius, self.n
-            )
-
-            # only plot polygons if they contain 2 or more vertices
-            vertmask = np.count_nonzero(mask, axis=0) > 2
-
-            # remember masked points
-            self._m._data_mask = vertmask
-
-            verts = np.stack((xs, ys)).T
-            verts = np.ma.masked_array(
-                verts,
-                np.broadcast_to(~mask[:, None].T.swapaxes(1, 2), verts.shape),
-            )
-            verts = list(
-                i.compressed().reshape(-1, 2) for i, m in zip(verts, vertmask) if m
-            )
-
-            color_and_array = Shapes._get_colors_and_array(kwargs, vertmask)
-
-            coll = PolyCollection(
-                verts,
-                # transOffset=self._m.ax.transData,
-                **color_and_array,
-                **kwargs,
-            )
-
-            return coll
-
-    class _Ellipses(_ShapeBase):
+    class _Ellipses(_CircularShapeBase):
         name = "ellipses"
 
         def __init__(self, m):
@@ -669,42 +722,12 @@ class Shapes(object):
                 If None, 100 is used for < 10k pixels and 20 otherwise.
                 The default is None.
             """
-            from . import MapsGrid  # do this here to avoid circular imports!
+            super().__call__(radius=radius, n=n, radius_crs=radius_crs)
 
-            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
-                shape = self.__class__(m)
-
-                shape._radius = radius
-                shape.radius_crs = radius_crs
-                shape.n = n
-
-                m._shape = shape
-
-        @property
-        def _initargs(self):
-            return dict(radius=self._radius, radius_crs=self.radius_crs, n=self._n)
-
-        @property
+        @_CircularShapeBase.radius.getter
         def radius(self):
             radius = Shapes._get_radius(self._m, self._radius, self.radius_crs)
             return radius
-
-        @radius.setter
-        def radius(self, val):
-            if isinstance(val, (list, np.ndarray)):
-                self._radius = np.asanyarray(val).ravel()
-            else:
-                self._radius = val
-
-        def __repr__(self):
-            try:
-                try:
-                    s = f"ellipses(radius={self.radius}, radius_crs={self.radius_crs}, n={self.n})"
-                except AttributeError:
-                    s = "ellipses(radius, radius_crs, n)"
-                return s
-            except:
-                return object.__repr__(self)
 
         def _calc_ellipse_points(self, x0, y0, a, b, theta, n, start_angle=0):
             """
@@ -749,7 +772,7 @@ class Shapes(object):
             )
             return (xs, ys)
 
-        def _get_ellipse_points(self, x, y, crs, radius, radius_crs="in", n=20):
+        def _get_points(self, x, y, crs, radius, radius_crs="in", n=20):
             crs = self._m.get_crs(crs)
             radius_crs = self._m.get_crs(radius_crs)
             # transform from crs to the plot_crs
@@ -767,7 +790,6 @@ class Shapes(object):
             # transform corner-points
             if radius_crs == crs:
                 p = (x, y)
-                theta = np.full_like(x, 0)
                 xs, ys = self._calc_ellipse_points(
                     p[0],
                     p[1],
@@ -780,7 +802,6 @@ class Shapes(object):
                 xs, ys = np.ma.masked_invalid(t_in_plot.transform(xs, ys), copy=False)
             else:
                 p = t_in_radius.transform(x, y)
-                theta = np.full_like(x, 0)
                 xs, ys = self._calc_ellipse_points(
                     p[0],
                     p[1],
@@ -795,85 +816,9 @@ class Shapes(object):
                     t_radius_plot.transform(xs, ys), copy=False
                 )
 
-            # ------------------------- implement some kind of "wraparound"
-            if self._m._crs_plot in (
-                self._m.CRS.Orthographic(),
-                self._m.CRS.Geostationary(),
-                self._m.CRS.NearsidePerspective(),
-            ):
-                # avoid masking in those crs
-                mask = np.full(xs.shape[0], True)
-            else:
+            xs, ys, mask = self._wraparound(x, y, xs, ys, crs)
 
-                # check if any points are in different halfspaces with respect to x
-                # and if so, mask the ones in the wrong halfspace
-                # (required for proper longitude wrapping)
-                # TODO this might be a lot easier (and faster) to implement!
-
-                xc = 0  # the center-point (e.g. (-180 + 180)/2 = 0 )
-
-                def getQ(x, xc):
-                    quadrants = np.full_like(x, -1)
-
-                    quadrant = x < xc
-                    quadrants[quadrant] = 0
-                    quadrant = x > xc
-                    quadrants[quadrant] = 1
-
-                    return quadrants
-
-                t_in_lonlat = self._m._get_transformer(crs, 4326)
-                t_plot_lonlat = self._m._get_transformer(self._m.crs_plot, 4326)
-
-                # transform the coordinates to lon/lat
-                xp, _ = t_in_lonlat.transform(x, y)
-                xsp, _ = t_plot_lonlat.transform(xs, ys)
-
-                quadrants, pts_quadrants = getQ(xp, xc), getQ(xsp, xc)
-
-                # mask any point that is in a different quadrant than the center point
-                maskx = pts_quadrants != quadrants[:, np.newaxis]
-                # take care of points that are on the center line (e.g. don't mask them)
-                # (use a +- 25 degree around 0 as threshold)
-                cpoints = np.broadcast_to(
-                    np.isclose(xp, xc, atol=25)[:, np.newaxis], xs.shape
-                )
-
-                maskx[cpoints] = False
-                xs.mask[maskx] = True
-                ys.mask = xs.mask
-
-                # mask any datapoint that has less than 4 of the ellipse-points unmasked
-                mask = ~(
-                    n - np.count_nonzero(xs.mask, axis=1) <= min(n / 2, 4)
-                ) & np.isfinite(theta)
             return xs, ys, mask
-
-        def get_coll(self, x, y, crs, **kwargs):
-            xs, ys, mask = self._get_ellipse_points(
-                x, y, crs, self._selected_radius, self.radius_crs, n=self.n
-            )
-
-            # compress the coordinates (masked arrays produce artefacts on the boundary
-            # in case intermediate points are masked)
-            verts = (
-                np.column_stack((x.compressed(), y.compressed()))
-                for i, (x, y) in enumerate(zip(xs, ys))
-                if mask[i]
-            )
-            # remember masked points
-            self._m._data_mask = mask
-
-            color_and_array = Shapes._get_colors_and_array(kwargs, mask)
-
-            coll = PolyCollection(
-                verts,
-                # transOffset=self._m.ax.transData,
-                **color_and_array,
-                **kwargs,
-            )
-
-            return coll
 
     class _Rectangles(_ShapeBase):
         name = "rectangles"
@@ -1135,6 +1080,87 @@ class Shapes(object):
             else:
                 return self._get_polygon_coll(x, y, crs, **kwargs)
 
+    class _Hexbin(object):
+        name = "hexbin"
+
+        def __init__(self, m):
+            self._m = m
+
+        def __call__(self, size=100, aggregator="mean"):
+            """
+            Draw a 2D hexagonal binning plot of the data.
+
+            All arguments are forwarded to `matplotlib.pyplot.hexbin()`.
+
+            Parameters
+            ----------
+            size : int, or (int, int), optional
+                If int, the number of hexagons in x-direction.
+                If a tuple of int is provided, the number of hexagons
+                in x- and y-direction
+
+                See matplotlib.pyplot.hexbin for more information about marker styles.
+            aggregator: str or callable
+                The function used to aggregate the data-values.
+                If a string is provided, it is identified as the associated numpy
+                function. The default is "mean".
+            """
+            from . import MapsGrid  # do this here to avoid circular imports!
+
+            for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+                shape = self.__class__(m)
+                shape._size = size
+                shape._aggregator = aggregator
+                m._shape = shape
+
+        @property
+        def _initargs(self):
+            return dict(size=self._size, aggregator=self._aggregator)
+
+        @property
+        def radius(self):
+            radius = Shapes._get_radius(self._m, "estimate", "in")
+            return radius
+
+        @property
+        def radius_crs(self):
+            return "in"
+
+        def get_coll(self, x, y, crs, **kwargs):
+            # hide edgecolors if they are not explicitly set (to avoid overlapping
+            # hexagons due to large edge linewidths)
+            # matplotlib's default is currently `ec="face", lw=1`
+            if not any(i in kwargs for i in ("ec", "edgecolor")):
+                special_kwargs = {"ec": "none"}
+            else:
+                special_kwargs = {}
+
+            color_and_array = Shapes._get_colors_and_array(kwargs, None)
+
+            if isinstance(self._aggregator, str):
+                reduce_C_function = getattr(np, self._aggregator)
+            else:
+                reduce_C_function = self._aggregator
+
+            color_and_array["C"] = color_and_array.pop("array", None)
+
+            if "extent" not in kwargs:
+                dm = self._m._data_manager
+
+                extent = (dm._x0min, dm._x0max, dm._y0min, dm._y0max)
+
+            coll = self._m.ax.hexbin(
+                x,
+                y,
+                gridsize=self._size,
+                reduce_C_function=reduce_C_function,
+                extent=kwargs.get("extent", extent),
+                **color_and_array,
+                **kwargs,
+                **special_kwargs,
+            )
+            return coll
+
     class _ScatterPoints(object):
         name = "scatter_points"
 
@@ -1166,7 +1192,7 @@ class Shapes(object):
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 shape = self.__class__(m)
-                shape._size = size
+                shape._size = np.asanyarray(size)  # always convert to numpy
                 shape._marker = marker
                 m._shape = shape
 
@@ -1177,9 +1203,7 @@ class Shapes(object):
         @property
         def _selected_size(self):
             # chedck if multiple size values were provided
-            q = isinstance(self._size, np.ndarray)
-
-            if q:
+            if np.size(self._size) > 1:
                 mask = self._m._data_manager._get_q()[0]
 
                 # quick exit if full data is in extent
@@ -2258,6 +2282,11 @@ class Shapes(object):
     @wraps(_ScatterPoints.__call__)
     def scatter_points(self, *args, **kwargs):
         shp = self._ScatterPoints(m=self._m)
+        return shp.__call__(*args, **kwargs)
+
+    @wraps(_Hexbin.__call__)
+    def hexbin(self, *args, **kwargs):
+        shp = self._Hexbin(m=self._m)
         return shp.__call__(*args, **kwargs)
 
     @wraps(_GeodCircles.__call__)

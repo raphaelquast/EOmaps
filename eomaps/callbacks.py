@@ -391,12 +391,17 @@ class _MoveClickPickCallbacks(_CallbacksBase):
 
         if printstr is not None:
             # create a new annotation
-            if not multipick:
-                bbox = dict(boxstyle="round", fc="w", ec=val_color)
-                bbox.update(kwargs.pop("bbox", dict()))
+            inp_bbox = kwargs.pop("bbox", dict())
+
+            if inp_bbox is not None:
+                if not multipick:
+                    bbox = dict(boxstyle="round", fc="w", ec=val_color)
+                    bbox.update(inp_bbox)
+                else:
+                    bbox = dict(boxstyle="round", fc="w", ec="k")
+                    bbox.update(inp_bbox)
             else:
-                bbox = dict(boxstyle="round", fc="w", ec="k")
-                bbox.update(kwargs.pop("bbox", dict()))
+                bbox = None
 
             styledict = dict(
                 xytext=(20, 20),
@@ -753,8 +758,9 @@ class _MoveClickPickCallbacks(_CallbacksBase):
         ax = self.m.ax
 
         # default boundary args
-        args = dict(fc="none", ec="k", lw=1.1)
-        args.update(kwargs)
+        kwargs.setdefault("fc", "none")
+        kwargs.setdefault("ec", "k")
+        kwargs.setdefault("lw", 1.1)
 
         if isinstance(how, str):
             # base transformations on transData to ensure correct treatment
@@ -859,7 +865,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
             raise TypeError(f"EOmaps: {how} is not a valid peek method!")
 
         if clip_path is not None:
-            patch = PathPatch(clip_path, ec="k", fc="none")
+            patch = PathPatch(clip_path, **kwargs)
             marker = self.m.ax.add_patch(patch)
             self.m.cb.click.add_temporary_artist(marker)
 
@@ -989,7 +995,7 @@ class _ClickCallbacks(_CallbacksBase):
         shp = self.m.set_shape._get(shape)
 
         if shape == "ellipses":
-            shp_pts = shp._get_ellipse_points(
+            shp_pts = shp._get_points(
                 x=np.atleast_1d(x),
                 y=np.atleast_1d(y),
                 crs=xy_crs,
@@ -1011,7 +1017,7 @@ class _ClickCallbacks(_CallbacksBase):
             bnd_verts = shp_pts[0][0]
 
         elif shape == "geod_circles":
-            shp_pts = shp._get_geod_circle_points(
+            shp_pts = shp._get_points(
                 x=np.atleast_1d(x),
                 y=np.atleast_1d(y),
                 crs=xy_crs,
