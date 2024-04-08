@@ -3082,6 +3082,20 @@ class Maps(metaclass=_MapsMeta):
             classify_specs=self.classify_specs,
         )
 
+        if norm is not None:
+            if "norm" in kwargs:
+                raise TypeError(
+                    "EOmaps: You cannot provide an explicit norm for the dataset if a "
+                    "classification scheme is used!"
+                )
+        else:
+            if "norm" in kwargs:
+                norm = kwargs.pop("norm")
+                norm.vmin = self._vmin
+                norm.vmax = self._vmax
+            else:
+                norm = plt.Normalize(vmin=self._vmin, vmax=self._vmax)
+
         # todo remove duplicate attributes
         self.classify_specs._cbcmap = cbcmap
         self.classify_specs._norm = norm
@@ -4338,7 +4352,7 @@ class Maps(metaclass=_MapsMeta):
             classified = False
             bins = None
             cbcmap = cmap
-            norm = mpl.colors.Normalize(vmin, vmax)
+            norm = None
 
         return cbcmap, norm, bins, classified
 
@@ -4559,7 +4573,7 @@ class Maps(metaclass=_MapsMeta):
             f"{self._data_manager.z_data.size} datapoints ({self.shape.name})"
         )
 
-        for key in ("array", "norm"):
+        for key in ("array",):
             assert (
                 key not in kwargs
             ), f"The key '{key}' is assigned internally by EOmaps!"
