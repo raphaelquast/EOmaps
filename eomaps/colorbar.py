@@ -1454,8 +1454,9 @@ class ColorBar(ColorBarBase):
             The default is 2.
         log : bool, optional
             Indicator if the y-axis of the plot should be logarithmic or not.
-            The default is False
+            The default is False.
         out_of_range_vals : str or None
+            Set how to treat histogram values outside the visible range of values.
 
             - if "mask": out-of range values will be masked.
               (e.g. values outside the colorbar limits are not represented in the
