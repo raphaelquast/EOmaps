@@ -1192,7 +1192,7 @@ class Shapes(object):
 
             for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
                 shape = self.__class__(m)
-                shape._size = size
+                shape._size = np.asanyarray(size)  # always convert to numpy
                 shape._marker = marker
                 m._shape = shape
 
@@ -1203,9 +1203,7 @@ class Shapes(object):
         @property
         def _selected_size(self):
             # chedck if multiple size values were provided
-            q = isinstance(self._size, np.ndarray)
-
-            if q:
+            if np.size(self._size) > 1:
                 mask = self._m._data_manager._get_q()[0]
 
                 # quick exit if full data is in extent
