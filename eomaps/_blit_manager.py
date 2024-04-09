@@ -1413,7 +1413,13 @@ class BlitManager(LayerParser):
             cv.restore_region(bg)
 
         for a in artists:
-            self.figure.draw_artist(a)
+            try:
+                self.figure.draw_artist(a)
+            except np.linalg.LinAlgError:
+                # Explicitly catch numpy LinAlgErrors resulting from singular matrices
+                # that can occur when colorbar histogram sizes are dynamically updated
+                if _log.getEffectiveLevel() <= logging.DEBUG:
+                    _log.debug(f"problem drawing artist {a}", exc_info=True)
 
         if blit:
             cv.blit()
