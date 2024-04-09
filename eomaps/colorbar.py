@@ -255,31 +255,26 @@ class ColorBarBase:
         self.ax_cb_plot.callbacks.connect("ylim_changed", ychanged)
 
     def _hide_singular_axes(self):
+        sing_hist = (self.ax_cb_plot.bbox.width <= 2) or (
+            self.ax_cb_plot.bbox.height <= 2
+        )
+        sing_cb = (self.ax_cb.bbox.width <= 2) or (self.ax_cb.bbox.height <= 2)
 
         sing_hist = (self.ax_cb_plot.bbox.width <= 2) or (
             self.ax_cb_plot.bbox.height <= 2
         )
         sing_cb = (self.ax_cb.bbox.width <= 2) or (self.ax_cb.bbox.height <= 2)
 
-        # trigger a draw to update axes positions before checking singularity
-        # (ignore any errors in here to avoid any remaining issues with singular axes
-        # if hist-updates are triggered faster than draw-events...)
-        try:
-            self._m.f.canvas.draw()
-        except Exception:
-            pass
-
-        sing_hist = (self.ax_cb_plot.bbox.width <= 2) or (
-            self.ax_cb_plot.bbox.height <= 2
-        )
-        sing_cb = (self.ax_cb.bbox.width <= 2) or (self.ax_cb.bbox.height <= 2)
-
-        if sing_hist:
+        # use additional constraint < 0.1 to re-show axes after they have been hidden
+        # (positions of hidden axes are not updated so we don't know the new position
+        # before re-drawing... and a re-draw is not wanted because it would fetch
+        # a new unnecessary background
+        if sing_hist and self._hist_size < 0.01:
             self.ax_cb_plot.set_visible(False)
         else:
             self.ax_cb_plot.set_visible(True)
 
-        if sing_cb:
+        if sing_cb and self._hist_size > 0.99:
             self.ax_cb.set_visible(False)
         else:
             self.ax_cb.set_visible(True)
