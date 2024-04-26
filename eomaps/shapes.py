@@ -575,7 +575,7 @@ class Shapes(object):
                 # explicit treatment for recarrays (to avoid performance issues)
                 # with matplotlib.colors.to_rgba_array()
                 # (recarrays are used to convert 3/4 arrays into an rgb(a) array
-                # in m._handle_explicit_colors() )
+                # in m._data_manager._handle_explicit_colors() )
                 if isinstance(color, np.recarray):
                     color_vals[c_key] = color[mask.reshape(color.shape)].view(
                         (float, len(color.dtype.names))
