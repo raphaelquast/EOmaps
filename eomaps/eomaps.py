@@ -5393,12 +5393,6 @@ class Maps(metaclass=_MapsMeta):
             self.crs_plot,
         )
 
-    @property
-    @lru_cache()
-    def _shape_drawer(self):
-        # initialize the shape-drawer
-        return ShapeDrawer(weakref.proxy(self))
-
     @staticmethod
     def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
         """
