@@ -193,8 +193,22 @@ class LayoutEditor:
 
         if self._snap_id > 0:
             sx, sy = self._snap
-            x0 = self.roundto(x0, sx)
-            y0 = self.roundto(y0, sy)
+            x0s = self.roundto(x0, sx)
+            y0s = self.roundto(y0, sy)
+
+            # check if snap on top/right edges is closer than on bottom edges
+            x1s = self.roundto(x0 + w, sx)
+            y1s = self.roundto(y0 + h, sy)
+
+            if abs(x0s - x0) >= abs(x1s - x0 - w):
+                x0 = x1s - w
+            else:
+                x0 = x0s
+
+            if abs(y0s - y0) >= abs(y1s - y0 - h):
+                y0 = y1s - h
+            else:
+                y0 = y0s
 
         bbox = Bbox.from_bounds(x0, y0, w, h).transformed(self.f.transFigure.inverted())
 
@@ -413,12 +427,25 @@ class LayoutEditor:
         if event.button != 1:
             return
 
+        # The first picked axes is used to determine the repositioning relative to
+        # the active snap-grid. All additional axes are repositioned accordingly
+        dx, dy = None, None
         for ax in self._ax_picked:
             if ax is None:
                 return
 
-            bbox = self._get_move_bbox(ax, event.x, event.y)
-            ax.set_position(bbox)
+            if dx is None:
+                bbox = self._get_move_bbox(ax, event.x, event.y)
+                # Get the distance that the axes was shifted
+                dx, dy = bbox.x0 - ax.get_position().x0, bbox.y0 - ax.get_position().y0
+                # Reposition the axes
+                ax.set_position(bbox)
+            else:
+                # Always adjust positions of axes with respect to the first
+                # re-positioned axes (to avoid changing the relative alignment
+                # of multiple picked axes due to grid-snapping)
+                newbbox = ax.get_position().translated(dx, dy)
+                ax.set_position(newbbox)
 
         self._add_to_history()
         self._color_axes()
