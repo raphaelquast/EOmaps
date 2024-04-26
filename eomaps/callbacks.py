@@ -631,7 +631,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
                 "rectangles", radius=radius, radius_crs=radius_crs, mesh=False, n=n
             )
         elif shape == "scatter_points":
-            marker = getattr(self.m.shape, "_marker", "o")
+            marker = getattr(self.m.shape, "_marker", kwargs.pop("marker", "o"))
             shp = self.m.set_shape._get("scatter_points", _size=radius, _marker=marker)
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
