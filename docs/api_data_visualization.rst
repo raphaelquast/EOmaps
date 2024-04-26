@@ -619,6 +619,7 @@ Shade Raster
     :nosignatures:
 
     Maps.set_shape.shade_raster
+    Maps.set_shade_dpi
 
 .. list-table::
    :header-rows: 1
@@ -640,6 +641,7 @@ Shade Raster
                              agg_hook=None,        # datashader aggregation hook callback
                              )
 
+
 .. _shp_shade_points:
 
 Shade Points
@@ -649,6 +651,7 @@ Shade Points
     :nosignatures:
 
     Maps.set_shape.shade_raster
+    Maps.set_shade_dpi
 
 .. list-table::
    :header-rows: 1
