@@ -2304,7 +2304,6 @@ class CallbackContainer:
         assignments["keymap.grid"] = ["g"]
         assignments["keymap.grid_minor"] = ["G"]
         assignments["keymap.home"] = ["h", "r"]
-        assignments["keymap.pan"] = ["p"]
         assignments["keymap.quit"] = ["q"]
         assignments["keymap.save"] = ["s"]
         assignments["keymap.xscale"] = ["k", "L"]
