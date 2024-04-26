@@ -122,3 +122,31 @@ def test_contour(data):
     #     m3_1.BM.add_bg_artist(a, layer=m3_1.layer)
 
     m.show_layer("base", "contours")
+
+
+@pytest.mark.usefixtures("close_all")
+@pytest.mark.parametrize("data", testdata, ids=ids)
+def test_shade_points(data):
+    m = Maps(ax=221, figsize=(10, 6))
+    m.set_data(**data)
+    m.set_shape.shade_points(aggregator="mean")
+    m.plot_map()
+    m.add_colorbar()
+
+    m2 = m.new_map(ax=222, inherit_data=True)
+    m.set_shape.shade_points(aggregator="max")
+    m2.plot_map(cmap="RdYlBu")
+    m2.add_colorbar()
+    m2.set_shade_dpi(10)
+
+    m3 = m.new_map(ax=223, inherit_data=True)
+    m.set_shape.shade_points(aggregator="max")
+    m3.plot_map(cmap="RdYlBu")
+    m3.add_colorbar()
+    m3.set_shade_dpi(50)
+
+    m4 = m.new_map(ax=224, inherit_data=True)
+    m.set_shape.shade_points(aggregator="max")
+    m4.set_classify.EqualInterval(k=5)
+    m4.plot_map(cmap="RdYlBu")
+    m4.add_colorbar()
