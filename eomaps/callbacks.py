@@ -176,9 +176,9 @@ class _CallbacksBase:
                 printstr = (
                     (f"# Picked {n_ids} points\n" if multipick else "")
                     + f"{xlabel} = {x}\n"
-                    + (f"{xlabel}_plot = {x0}\n" if not equal_crs else "")
                     + f"{ylabel} = {y}\n"
-                    + (f"{ylabel}_plot = {y0}\n" if not equal_crs else "")
+                    + (f"x_plot = {x0}\n" if not equal_crs else "")
+                    + (f"y_plot = {y0}\n" if not equal_crs else "")
                     + (f"ID = {ID}\n" if ID is not None else "")
                     + (f"{parameter} = {val}" if val is not None else "")
                 )
