@@ -631,8 +631,10 @@ class ColorBar(ColorBarBase):
 
     """
 
-    def __init__(self, *args, inherit_position=True, **kwargs):
+    def __init__(self, *args, inherit_position=True, layer=None, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self._layer = layer
 
         self._inherit_position = inherit_position
         self._dynamic_shade_indicator = False
@@ -640,7 +642,10 @@ class ColorBar(ColorBarBase):
     @property
     def layer(self):
         """The layer associated with the colorbar."""
-        return self._m.layer
+        if self._layer is None:
+            return self._m.layer
+        else:
+            return self._layer
 
     def _default_cb_tick_formatter(self, x, pos, precision=None):
         """
@@ -730,6 +735,9 @@ class ColorBar(ColorBarBase):
     def _set_map(self, m):
         self._m = m
 
+        if self._layer is None:
+            self._layer = self._m.layer
+
         self._parent_cb = self._identify_parent_cb()
 
         self._vmin = self._m.coll.norm.vmin
@@ -739,8 +747,6 @@ class ColorBar(ColorBarBase):
 
     def _add_axes_to_layer(self, dynamic):
         BM = self._m.BM
-
-        self._layer = self._m.layer
 
         # add all axes as artists
         self.ax_cb.set_navigate(False)
@@ -1359,6 +1365,7 @@ class ColorBar(ColorBarBase):
         hist_label=None,
         margin=None,
         divider_linestyle=None,
+        layer=None,
         **kwargs,
     ):
         """
@@ -1561,6 +1568,7 @@ class ColorBar(ColorBarBase):
             margin=margin,
             divider_linestyle=divider_linestyle,
             hist_size=hist_size,
+            layer=layer,
         )
         cb._set_map(m)
         cb._setup_axes(pos, m.ax)
