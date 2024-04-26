@@ -42,6 +42,7 @@ from .helpers import (
     _add_to_docstring,
     register_modules,
     _key_release_event,
+    _parse_log_level,
 )
 
 from ._blit_manager import BlitManager
@@ -565,32 +566,6 @@ class Maps(metaclass=_MapsMeta):
         except Exception:
             return object.__repr__(self)
 
-    def _parse_log_level(self, level):
-        """
-        Get the numerical log-level from string (or number).
-
-        Parameters
-        ----------
-        level : str or number
-            The log level
-
-        Returns
-        -------
-        int_level : float
-            The numerical value of the log level.
-
-        """
-        from logging import getLevelNamesMapping
-
-        levels = getLevelNamesMapping()
-
-        if isinstance(level, str) and level.upper() in levels:
-            use_level = levels[level.upper()]
-        else:
-            use_level = float(level)
-
-        return use_level
-
     def _log_on_event(self, level, msg, event):
         """
         Schedule a log message that will be shown on the next matplotlib event.
@@ -610,7 +585,7 @@ class Maps(metaclass=_MapsMeta):
             The event name (e.g. "button_release_event")
 
         """
-        level = self._parse_log_level(level)
+        level = _parse_log_level(level)
 
         messages = self._log_on_event_messages.setdefault(event, [])
         cid = self._log_on_event_cids.setdefault(event, None)

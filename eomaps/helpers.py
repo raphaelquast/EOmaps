@@ -28,6 +28,32 @@ mpl_version = version.parse(importlib.metadata.version("matplotlib"))
 _log = logging.getLogger(__name__)
 
 
+def _parse_log_level(level):
+    """
+    Get the numerical log-level from string (or number).
+
+    Parameters
+    ----------
+    level : str or number
+        The log level
+
+    Returns
+    -------
+    int_level : float
+        The numerical value of the log level.
+
+    """
+
+    levels = logging.getLevelNamesMapping()
+
+    if isinstance(level, str) and level.upper() in levels:
+        use_level = levels[level.upper()]
+    else:
+        use_level = float(level)
+
+    return use_level
+
+
 def _key_release_event(canvas, key, guiEvent=None):
     # copy of depreciated matplotlib functions for internal use
     s = "key_release_event"
