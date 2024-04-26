@@ -579,7 +579,7 @@ class _ClickContainer(_CallbackContainer):
             else:
                 _log.warning(
                     "EOmaps: No picked values found. Attach "
-                    "the 'get_vals' callback first!"
+                    "the 'get_values' callback first!"
                 )
 
         @property
