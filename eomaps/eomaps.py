@@ -479,6 +479,8 @@ class Maps(metaclass=_MapsMeta):
 
         self.set_shape = self.set_shape(weakref.proxy(self))
         self._shape = None
+        # the dpi used for shade shapes
+        self._shade_dpi = None
 
         # the radius is estimated when plot_map is called
         self._estimated_radius = None
@@ -4144,7 +4146,33 @@ class Maps(metaclass=_MapsMeta):
         # update the figure dimensions in case shading is used
         self._update_shade_axis_size()
 
+    def set_shade_dpi(self, dpi=None):
+        """
+        Set the dpi used by "shade shapes" to aggregate datasets.
+
+        This only affects the plot-shapes "shade_raster" and "shade_points".
+
+        Note
+        ----
+        If dpi=None is used (the default), datasets in exported figures will be
+        re-rendered with respect to the requested dpi of the exported image!
+
+        Parameters
+        ----------
+        dpi : int or None, optional
+            The dpi to use for data aggregation with shade shapes.
+            If None, the figure-dpi is used.
+
+            The default is None.
+
+        """
+        self._shade_dpi = dpi
+        self._update_shade_axis_size()
+
     def _update_shade_axis_size(self, dpi=None):
+        if self._shade_dpi is not None:
+            dpi = self._shade_dpi
+
         # set the axis-size that is used to determine the number of pixels used
         # when using "shade" shapes for ALL maps objects of a figure
         w, h = self.ax.bbox.width, self.ax.bbox.height
