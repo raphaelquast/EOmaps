@@ -3,12 +3,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import unittest
 import pytest
+import numpy as np
 
 
 def gen_test(name, code):
     @pytest.mark.mpl_image_compare(style="default")
     def test(*args, **kwargs):
         try:
+            np.random.seed(0)  # make tests descriptive
             exec(code)
 
             return locals()["m"]
