@@ -33,7 +33,7 @@ jobs:
       - name: Test Maps
         shell: bash -l {0}
         run: |
-          pip install -e .[all]
+          pip install -e .[test]
           python -m pytest -v --cov=eomaps --cov-report=xml --mpl --mpl-results-path=img_comparison_results
       - name: Upload Image Comparison Artefacts
         uses: actions/upload-artifact@v4
