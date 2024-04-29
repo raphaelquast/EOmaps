@@ -7,7 +7,7 @@ import numpy as np
 
 
 def gen_test(name, code):
-    @pytest.mark.mpl_image_compare(style="default")
+    @pytest.mark.mpl_image_compare()
     def test(*args, **kwargs):
         try:
             np.random.seed(0)  # make tests descriptive

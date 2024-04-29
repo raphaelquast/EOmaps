@@ -41,7 +41,7 @@ def close_all():
 
 @pytest.mark.usefixtures("close_all")
 @pytest.mark.parametrize("data", testdata, ids=ids)
-@pytest.mark.mpl_image_compare(style="default")
+@pytest.mark.mpl_image_compare()
 def test_hexbin(data):
     m = Maps(ax=221, figsize=(10, 6))
     m.set_data(**data)
@@ -70,7 +70,7 @@ def test_hexbin(data):
 
 @pytest.mark.usefixtures("close_all")
 @pytest.mark.parametrize("data", testdata, ids=ids)
-@pytest.mark.mpl_image_compare(style="default")
+@pytest.mark.mpl_image_compare()
 def test_contour(data):
     m = Maps(ax=221, figsize=(10, 6))
     m.subplots_adjust(left=0.01, right=0.99)
@@ -134,7 +134,7 @@ def test_contour(data):
 
 @pytest.mark.usefixtures("close_all")
 @pytest.mark.parametrize("data", testdata, ids=ids)
-@pytest.mark.mpl_image_compare(style="default")
+@pytest.mark.mpl_image_compare()
 def test_shade_points(data):
     m = Maps(ax=221, figsize=(10, 6))
 
