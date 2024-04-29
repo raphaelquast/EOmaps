@@ -115,7 +115,8 @@ class LayoutEditor:
     @modifier_pressed.setter
     def modifier_pressed(self, val):
         self._modifier_pressed = val
-        self.m.cb.execute_callbacks(not val)
+        if hasattr(self.m, "cb"):
+            self.m.cb.execute_callbacks(not val)
 
         if self._modifier_pressed:
             self.m.BM._disable_draw = True
@@ -804,7 +805,8 @@ class LayoutEditor:
         # reset the histogram-size of all colorbars to make sure previously hidden
         # axes (e.g. size=0) become visible if the size is now > 0.
         for m in self.ms:
-            for cb in m._colorbars:
+            # TODO
+            for cb in getattr(m, "_colorbars", []):
                 cb._set_hist_size(update_all=True)
 
         # remove snap-grid (if it's still visible)

@@ -9,51 +9,52 @@ import logging
 
 _log = logging.getLogger(__name__)
 
+from contextlib import ExitStack
 from functools import lru_cache, wraps
 from itertools import repeat, chain
-import copy
-from types import SimpleNamespace
 from pathlib import Path
-import weakref
-import gc
+from types import SimpleNamespace
 from textwrap import fill
-from contextlib import contextmanager, ExitStack
+
+import copy
 import importlib.metadata
+import weakref
 
 import numpy as np
-
-from pyproj import CRS, Transformer
+from pyproj import CRS
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec, SubplotSpec
-
 import matplotlib.patches as mpatches
 from matplotlib.path import Path as mpath
 
 from cartopy import crs as ccrs
 
+from ._maps_base import MapsBase
 from .helpers import (
     pairwise,
     cmap_alpha,
     progressbar,
     SearchTree,
     _TransformedBoundsLocator,
-    _add_to_docstring,
     register_modules,
     _key_release_event,
-    _parse_log_level,
+    _add_to_docstring,
 )
 
-from ._blit_manager import BlitManager
-from .layout_editor import LayoutEditor
 from .shapes import Shapes
 from .colorbar import ColorBar
-
-from ._containers import (
-    DataSpecs,
-    ClassifySpecs,
-)
+from ._containers import DataSpecs, ClassifySpecs
+from .ne_features import NaturalEarthFeatures
+from .cb_container import CallbackContainer, GeoDataFramePicker
+from .scalebar import ScaleBar
+from .compass import Compass
+from .reader import read_file, from_file, new_layer_from_file
+from .grid import GridFactory
+from .utilities import Utilities
+from .draw import ShapeDrawer
+from .annotation_editor import AnnotationEditor
+from ._data_manager import DataManager
 
 try:
     from ._webmap import refetch_wms_on_size_change, _cx_refetch_wms_on_size_change
@@ -64,55 +65,7 @@ except ImportError as ex:
     _cx_refetch_wms_on_size_change = None
     WebMapContainer = None
 
-from .ne_features import NaturalEarthFeatures
-
-from .cb_container import CallbackContainer, GeoDataFramePicker
-from .scalebar import ScaleBar
-from .compass import Compass
-from .projections import Equi7Grid_projection  # import to supercharge cartopy.ccrs
-from .reader import read_file, from_file, new_layer_from_file
-from .grid import GridFactory
-
-from .utilities import Utilities
-from .draw import ShapeDrawer
-from .annotation_editor import AnnotationEditor
-
-from ._data_manager import DataManager
-
 __version__ = importlib.metadata.version("eomaps")
-
-
-def _handle_backends():
-    # make sure that the backend is activated
-    # (backends are loaded lazily and values such as plt.isinteractive() might not
-    # yet show the correct value in case the backend is not yet fully loaded)
-
-    # This is especially important for the IPython/inline backend which explicitly
-    # calls plt.ion() when the backend is loaded.
-    # (see https://github.com/matplotlib/matplotlib/issues/26221)
-    plt.install_repl_displayhook()
-
-    active_backend = plt.get_backend()
-
-    # to avoid flickering in the layout editor in jupyter notebooks
-    if active_backend in ["module://ipympl.backend_nbagg"]:
-        plt.ioff()
-    else:
-        if Maps._use_interactive_mode is True:
-            plt.ion()
-            _log.debug(
-                "EOmaps: matplotlib's interactive mode is turned on. "
-                "Maps will show up immediately and the console is NOT blocking! "
-                "To change, use Maps.config(use_interactive_mode=True/False)."
-            )
-        elif Maps._use_interactive_mode is False:
-            plt.ioff()
-            _log.debug(
-                "EOmaps: matplotlib's interactive mode is turned off. "
-                "Call `m.show()` to show the map (and block the console)! "
-                "To change, use Maps.config(use_interactive_mode=True/False)."
-            )
-
 
 # hardcoded list of available mapclassify-classifiers
 # (to avoid importing it on startup)
@@ -135,91 +88,7 @@ _CLASSIFIERS = (
 )
 
 
-class _MapsMeta(type):
-
-    _use_interactive_mode = None
-    _always_on_top = False
-
-    _backend_warning_shown = False
-
-    def config(
-        cls,
-        snapshot_on_update=None,
-        companion_widget_key=None,
-        always_on_top=None,
-        use_interactive_mode=None,
-        log_level=None,
-    ):
-        """
-        Set global configuration parameters for figures created with EOmaps.
-
-        This function must be called before initializing any :py:class:`Maps` object!
-
-        >>> from eomaps import Maps
-        >>> Maps.config(always_on_top=True)
-
-        (parameters set to None are NOT updated!)
-
-        Parameters
-        ----------
-        snapshot_on_update : bool, optional
-            Only relevant when using an IPython console or a jupyter notebook together
-            with the `inline` backend! (e.g. using `%matplotlib inline`)
-
-            - If True, figure updates automatically trigger drawing a snapshot
-              of the current state of the figure to the active cell.
-            - If False, an explicit call to `m.show()` is required to draw the figure.
-
-            The default is True.
-        companion_widget_key : str, optional
-            The keyboard shortcut to use for activating the companion-widget.
-            The default is "w".
-        always_on_top : bool, optional
-            Only relevant if `PyQt5` is used as matplotlib backend.
-
-            - If True, the figure will be kept "always on top" of other applications.
-
-            The default is False.
-        use_interactive_mode : bool or None, optional
-            If True, matplotlibs interactive mode (`plt.ion()`) is activated by default
-            for all backends except jupyter-notebook backends (`inline` and `ipympl`).
-
-            If False, interactive mode is turned off (`plt.ioff()` and a call
-            to `m.show()` is required to trigger showing the figure!
-            Note that this will block the terminal!
-
-            If None, No changes are applied.
-
-            The default is True.
-        log_level : str or int, optional
-            The logging level.
-            If set, a StreamHandler will be attached to the logger that prints to
-            the active terminal at the specified log level.
-
-            See :py:meth:`set_loglevel` on how to customize logging format.
-
-            The default is None.
-        """
-
-        from . import set_loglevel
-
-        if companion_widget_key is not None:
-            Maps._companion_widget_key = companion_widget_key
-
-        if always_on_top is not None:
-            Maps._always_on_top = always_on_top
-
-        if snapshot_on_update is not None:
-            BlitManager._snapshot_on_update = snapshot_on_update
-
-        if use_interactive_mode is not None:
-            Maps._use_interactive_mode = use_interactive_mode
-
-        if log_level is not None:
-            set_loglevel(log_level)
-
-
-class Maps(metaclass=_MapsMeta):
+class Maps(MapsBase):
     """
     The base-class for generating plots with EOmaps.
 
@@ -372,6 +241,14 @@ class Maps(metaclass=_MapsMeta):
         preferred_wms_service="wms",
         **kwargs,
     ):
+        super().__init__(
+            crs=crs,
+            layer=layer,
+            f=f,
+            ax=ax,
+            **kwargs,
+        )
+
         self._log_on_event_messages = dict()
         self._log_on_event_cids = dict()
 
@@ -384,44 +261,29 @@ class Maps(metaclass=_MapsMeta):
             _log.debug("SignalContainer could not be initialized", exc_info=True)
             self._signal_container = None
 
-        # make sure the used layer-name is valid
-        layer = BlitManager._check_layer_name(layer)
-
         self._inherit_classification = None
 
-        if isinstance(ax, plt.Axes) and hasattr(ax, "figure"):
-            if isinstance(ax.figure, plt.Figure):
-                if f is not None:
-                    assert (
-                        f == ax.figure
-                    ), "EOmaps: The provided axis is in a different figure!"
-
-                self._f = ax.figure
-        else:
-            self._f = f
-
-        self._ax = None
-        self._parent = None
-        self._BM = None
         self._util = None
-        self._children = set()  # weakref.WeakSet()
-        self._after_add_child = list()
 
         self._colorbars = []
         self._coll = None  # slot for the collection created by m.plot_map()
 
-        self._layer = layer
-
-        # check if the self represents a new-layer or an object on an existing layer
-        if any(
-            i.layer == layer for i in (self.parent, *self.parent._children) if i != self
-        ):
-            self._is_sublayer = True
-        else:
-            self._is_sublayer = False
-
         self._companion_widget = None  # slot for the pyqt widget
+
         self._cid_keypress = None  # callback id for PyQt5 keypress callbacks
+        # attach a callback to show/hide the companion-widget with the "w" key
+        if self.parent._cid_keypress is None:
+            # NOTE the companion-widget is ONLY attached to the parent map
+            # since it will identify the clicked map automatically! The
+            # widget will only be initialized on Maps-objects that create
+            # NEW axes. This is required to make sure that any additional
+            # Maps-object on the same axes will then always use the
+            # same widget. (otherwise each layer would get its own widget)
+
+            self.parent._cid_keypress = self.f.canvas.mpl_connect(
+                "key_press_event", self.parent._on_keypress
+            )
+
         # a list to remember newly registered colormaps
         self._registered_cmaps = []
 
@@ -434,24 +296,6 @@ class Maps(metaclass=_MapsMeta):
             "wmts",
         ], "preferred_wms_service must be either 'wms' or 'wmts' !"
         self._preferred_wms_service = preferred_wms_service
-
-        if isinstance(ax, plt.Axes):
-            # set the plot_crs only if no explicit axes is provided
-            if crs is not None:
-                raise AssertionError(
-                    "You cannot set the crs if you already provide an explicit axes!"
-                )
-            if ax.projection == Maps.CRS.PlateCarree():
-                self._crs_plot = 4326
-            else:
-                self._crs_plot = ax.projection
-        else:
-            if crs is None or crs == Maps.CRS.PlateCarree():
-                crs = 4326
-
-            self._crs_plot = crs
-
-        self._crs_plot_cartopy = self._get_cartopy_crs(self._crs_plot)
 
         # default classify specs
         self.classify_specs = ClassifySpecs(weakref.proxy(self))
@@ -468,10 +312,10 @@ class Maps(metaclass=_MapsMeta):
         self._data_plotted = False
         self._set_extent_on_plot = True
 
-        self._layout_editor = None
-
         self.cb = self.cb(weakref.proxy(self))  # accessor for the callbacks
-        self._init_figure(ax=ax, plot_crs=crs, **kwargs)
+
+        # initialize the callbacks
+        self.cb._init_cbs()
 
         if WebMapContainer is not None:
             self.add_wms = self.add_wms(weakref.proxy(self))
@@ -495,25 +339,6 @@ class Maps(metaclass=_MapsMeta):
         if not hasattr(self.parent, "_execute_callbacks"):
             self.parent._execute_callbacks = True
 
-        # Make sure the figure-background patch is on an explicit layer
-        # This is used to avoid having the background patch on each fetched
-        # background while maintaining the capability of restoring it
-        if self.f.patch not in self.BM._bg_artists.get("__BG__", []):
-            self.f.patch.set_zorder(-2)
-            self.BM.add_bg_artist(self.f.patch, layer="__BG__")
-
-        if self.ax.patch not in self.BM._bg_artists.get("__BG__", []):
-            self.ax.patch.set_zorder(-1)
-            self.BM.add_bg_artist(self.ax.patch, layer="__BG__")
-
-        # Treat cartopy geo-spines separately in the blit-manager
-        # to avoid issues with overlapping spines that are drawn on each layer
-        # if multiple layers of a map are combined.
-        # (Note: spines need to be visible on each layer in case the layer
-        # is viewed on its own, but overlapping spines cause blurry boundaries)
-        # TODO find a better way to deal with this!
-        self._handle_spines()
-
         # evaluate and cache crs boundary bounds (for extent clipping)
         self._crs_boundary_bounds = self.crs_plot.boundary.bounds
 
@@ -531,126 +356,6 @@ class Maps(metaclass=_MapsMeta):
             self.util = Utilities(self)
         else:
             self.util = self.parent.util
-
-    def _handle_spines(self):
-        spine = self.ax.spines["geo"]
-        if spine not in self.BM._bg_artists.get("__SPINES__", []):
-            self.BM.add_bg_artist(spine, layer="__SPINES__")
-
-    def __getattribute__(self, key):
-        if key == "set_layout":
-            raise AttributeError(
-                "'Maps' object has no attribute 'set_layout'... "
-                "did you mean 'apply_layout'?"
-            )
-        else:
-            return object.__getattribute__(self, key)
-
-    def __enter__(self):
-        assert not self._is_sublayer, (
-            "EOmaps: using a Maps-object as a context-manager is only possible "
-            "if you create a NEW layer (not a Maps-object on an existing layer)!"
-        )
-
-        return self
-
-    def __exit__(self, type, value, traceback):
-        self.cleanup()
-        if self.parent == self:
-            plt.close(self.f)
-        gc.collect()
-
-    def __repr__(self):
-        try:
-            return f"<eomaps.Maps object on layer '{self.layer}'>"
-        except Exception:
-            return object.__repr__(self)
-
-    def _log_on_event(self, level, msg, event):
-        """
-        Schedule a log message that will be shown on the next matplotlib event.
-
-        Identical scheduled messages are only shown once per event!
-
-        {'CRITICAL': 50, 'FATAL': 50, 'ERROR': 40, 'WARN': 30, 'WARNING': 30,
-         'INFO': 20,  'DEBUG': 10, 'NOTSET': 0}
-
-        Parameters
-        ----------
-        level : int or str
-            The logging level.
-        msg : str
-            The message.
-        event : str
-            The event name (e.g. "button_release_event")
-
-        """
-        level = _parse_log_level(level)
-
-        messages = self._log_on_event_messages.setdefault(event, [])
-        cid = self._log_on_event_cids.setdefault(event, None)
-
-        # don't attach messages if they are already scheduled
-        if (level, msg) in messages:
-            return
-
-        messages.append((level, msg))
-
-        def log_message(*args, **kwargs):
-            cid = self._log_on_event_cids.get(event, None)
-            messages = self._log_on_event_messages.get(event, [])
-
-            if cid is not None:
-                self.f.canvas.mpl_disconnect(cid)
-                self._log_on_event_cids.pop(event, None)
-
-            while len(messages) > 0:
-                level, msg = messages.pop(0)
-                _log.log(level, msg)
-
-        if cid is None:
-            self._log_on_event_cids[event] = self.f.canvas.mpl_connect(
-                event, log_message
-            )
-
-    @property
-    def BM(self):
-        """The Blit-Manager used to dynamically update the plots."""
-        m = weakref.proxy(self)
-        if self.parent._BM is None:
-            self.parent._BM = BlitManager(m)
-            self.parent._BM._bg_layer = m.parent.layer
-        return self.parent._BM
-
-    @property
-    def layer(self):
-        """The layer-name associated with this Maps-object."""
-        return self._layer
-
-    @property
-    def all(self):
-        """
-        Get a Maps-object on the "all" layer.
-
-        Use it just as any other Maps-object. (It's the same as `Maps(layer="all")`)
-
-        >>> m.all.cb.click.attach.annotate()
-
-        """
-        if not hasattr(self, "_all"):
-            self._all = self.new_layer("all")
-        return self._all
-
-    @property
-    def ax(self):
-        """The matplotlib (cartopy) GeoAxes associated with this Maps-object."""
-        return self._ax
-
-    @property
-    def f(self):
-        """The matplotlib Figure associated with this Maps-object."""
-        # always return the figure of the parent object
-        return self._f
 
     @property
     def coll(self):
@@ -671,36 +376,6 @@ class Maps(metaclass=_MapsMeta):
             self._set_default_shape()
 
         return self._shape
-
-    @property
-    def parent(self):
-        """
-        The parent-object to which this Maps-object is connected to.
-
-        If None, `self` is returned!
-        """
-        if self._parent is None:
-            self._set_parent()
-
-        return self._parent
-
-    @property
-    def _edit_annotations(self):
-        if getattr(self.parent, "_edit_annotations_parent", None) is None:
-            self.parent._edit_annotations_parent = AnnotationEditor(self.parent)
-        return self.parent._edit_annotations_parent
-
-    @property
-    def _real_self(self):
-        # workaround to obtain a non-weak reference for the parent
-        # (e.g. self.parent._real_self is a non-weak ref to parent)
-        # see https://stackoverflow.com/a/49319989/9703451
-        return self
-
-    @property
-    def crs_plot(self):
-        """The crs used for plotting."""
-        return self._crs_plot_cartopy
 
     @property
     def colorbar(self):
@@ -724,6 +399,45 @@ class Maps(metaclass=_MapsMeta):
     def data(self, val):
         # for downward-compatibility
         self.data_specs.data = val
+
+    @lru_cache()
+    def get_crs(self, crs="plot"):
+        """
+        Get the pyproj CRS instance of a given crs specification.
+
+        Parameters
+        ----------
+        crs : "in", "out" or a crs definition
+            the crs to return
+
+            - if "in" : the crs defined in m.data_specs.crs
+            - if "out" or "plot" : the crs used for plotting
+
+        Returns
+        -------
+        crs : pyproj.CRS
+            the pyproj CRS instance
+
+        """
+        # check for strings first to avoid expensive equality checking for CRS objects!
+        if isinstance(crs, str):
+            if crs == "in":
+                crs = self.data_specs.crs
+            elif crs == "out" or crs == "plot":
+                crs = self.crs_plot
+
+        crs = CRS.from_user_input(crs)
+        return crs
+
+    @property
+    def _edit_annotations(self):
+        if getattr(self.parent, "_edit_annotations_parent", None) is None:
+            self.parent._edit_annotations_parent = AnnotationEditor(self.parent)
+        return self.parent._edit_annotations_parent
+
+    @wraps(AnnotationEditor.__call__)
+    def edit_annotations(self, b=True, **kwargs):
+        self._edit_annotations(b, **kwargs)
 
     @property
     @wraps(new_layer_from_file)
@@ -1160,67 +874,6 @@ class Maps(metaclass=_MapsMeta):
 
         return m2
 
-    def _get_always_on_top(self):
-        if "qt" in plt.get_backend().lower():
-            from qtpy import QtCore
-
-            w = self.f.canvas.window()
-            return bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint)
-
-        return False
-
-    def _set_always_on_top(self, q):
-        # keep pyqt window on top
-        try:
-            from qtpy import QtCore
-
-            if q:
-                # only do this if necessary to avoid flickering
-                # see https://stackoverflow.com/a/40007740/9703451
-                if not self._get_always_on_top():
-                    # in case pyqt is used as backend, also keep the figure on top
-                    if "qt" in plt.get_backend().lower():
-                        w = self.f.canvas.window()
-                        ws = w.size()
-                        w.setWindowFlags(
-                            w.windowFlags() | QtCore.Qt.WindowStaysOnTopHint
-                        )
-                        w.resize(ws)
-                        w.show()
-
-                    # handle the widget in case it was activated (possible also for
-                    # backends other than qt)
-                    if self._companion_widget is not None:
-                        cw = self._companion_widget.window()
-                        cws = cw.size()
-                        cw.setWindowFlags(
-                            cw.windowFlags() | QtCore.Qt.WindowStaysOnTopHint
-                        )
-                        cw.resize(cws)
-                        cw.show()
-
-            else:
-                if self._get_always_on_top():
-                    if "qt" in plt.get_backend().lower():
-                        w = self.f.canvas.window()
-                        ws = w.size()
-                        w.setWindowFlags(
-                            w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint
-                        )
-                        w.resize(ws)
-                        w.show()
-
-                    if self._companion_widget is not None:
-                        cw = self._companion_widget.window()
-                        cws = cw.size()
-                        cw.setWindowFlags(
-                            cw.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint
-                        )
-                        cw.resize(cws)
-                        cw.show()
-        except Exception:
-            pass
-
     def set_data(
         self,
         data=None,
@@ -1474,6 +1127,54 @@ class Maps(metaclass=_MapsMeta):
         register_modules("mapclassify")
         self.classify_specs._set_scheme_and_args(scheme, **kwargs)
 
+    def inherit_data(self, m):
+        """
+        Use the data of another Maps-object (without copying).
+
+        NOTE
+        ----
+        If the data is inherited, any change in the data of the parent
+        Maps-object will be reflected in this Maps-object as well!
+
+        Parameters
+        ----------
+        m : eomaps.Maps or None
+            The Maps-object that provides the data.
+        """
+        if m is not None:
+            self.data_specs = m.data_specs
+
+            def set_data(*args, **kwargs):
+                raise AssertionError(
+                    "EOmaps: You cannot set data for a Maps object that "
+                    "inherits data!"
+                )
+
+            self.set_data = set_data
+
+    def inherit_classification(self, m):
+        """
+        Use the classification of another Maps-object when plotting the data.
+
+        NOTE
+        ----
+        If the classification is inherited, the following arguments
+        for `m.plot_map()` will have NO effect (they are inherited):
+
+            - "cmap"
+            - "vmin"
+            - "vmax"
+
+        Parameters
+        ----------
+        m : eomaps.Maps or None
+            The Maps-object that provides the classification specs.
+        """
+        if m is not None:
+            self._inherit_classification = self._proxy(m)
+        else:
+            self._inherit_classification = None
+
     def set_extent_to_location(self, location, annotate=False, user_agent=None):
         """
         Set the map-extent based on a given location query.
@@ -1539,10 +1240,114 @@ class Maps(metaclass=_MapsMeta):
         else:
             _log.info(f"Centering Map to:\n    {r['display_name']}")
 
-    @staticmethod
-    def _set_clipboard_kwargs(**kwargs):
-        # use Maps to make sure InsetMaps do the same thing!
-        Maps._clipboard_kwargs = kwargs
+    def set_frame(self, rounded=0, **kwargs):
+        """
+        Set the properties of the map boundary and the background patch.
+
+        Parameters
+        ----------
+        rounded : float, optional
+            If provided, use a rectangle with rounded corners as map boundary
+            line. The corners will be rounded with respect to the provided
+            fraction (0=no rounding, 1=max. radius). The default is None.
+        kwargs :
+            Additional kwargs to style the boundary line (e.g. the spine)
+            and the background patch
+
+            Possible args for the boundary-line:
+
+            - "edgecolor" or "ec": The line color
+            - "linewidth" or "lw": The line width
+            - "linestyle" or "ls": The line style
+            - "path_effects": A list of path-effects to apply to the line
+
+            Possible args for the background-patch:
+
+            - "facecolor" or "fc": The color of the background patch
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.ocean()
+        >>> m.set_frame(fc="r", ec="b", lw=3, rounded=.2)
+
+        >>> import matplotlib.patheffects as pe
+        >>> m = Maps()
+        >>> m.add_feature.preset.ocean(fc="k")
+        >>> m.set_frame(
+        >>>     facecolor=(.8, .8, 0, .5), edgecolor="w", linewidth=2,
+        >>>     rounded=.5,
+        >>>     path_effects=[pe.withStroke(linewidth=7, foreground="m")])
+
+        """
+
+        for key in ("fc", "facecolor"):
+            if key in kwargs:
+                self.ax.patch.set_facecolor(kwargs.pop(key))
+
+        self.ax.spines["geo"].update(kwargs)
+
+        if rounded:
+            assert (
+                rounded <= 1
+            ), "EOmaps: rounded corner fraction must be between 0 and 1"
+
+            self.ax._EOmaps_rounded_spine_frac = rounded
+            theta = np.linspace(0, np.pi / 2, 50)  # use 50 intermediate points
+            s, c = np.sin(theta), np.cos(theta)
+
+            # attach a function to dynamically update the corners of the
+            # map boundary prior to fetching a background
+            # Note: this function is only attached once and the relevant
+            # properties are fetched from the axes!
+            if not getattr(self.ax, "_EOmaps_rounded_spine_attached", False):
+
+                def cb(*args, **kwargs):
+                    if self.ax._EOmaps_rounded_spine_frac == 0:
+                        return
+
+                    x0, x1, y0, y1 = self.get_extent(self.crs_plot)
+                    r = min(x1 - x0, y1 - y0) * self.ax._EOmaps_rounded_spine_frac / 2
+
+                    xs = [
+                        x0,
+                        *(x0 + r - r * c),
+                        x0 + r,
+                        x1 - r,
+                        *(x1 - r + r * s),
+                        x1,
+                        x1,
+                        *(x1 - r + r * c),
+                        x1 - r,
+                        x0 + r,
+                        *(x0 + r - r * s),
+                        x0,
+                    ]
+
+                    ys = [
+                        y1 - r,
+                        *(y1 - r + r * s),
+                        y1,
+                        y1,
+                        *(y1 - r + r * c),
+                        y1 - r,
+                        y0 + r,
+                        *(y0 + r - r * s),
+                        y0,
+                        y0,
+                        *(y0 + r - r * c),
+                        y0 + r,
+                    ]
+
+                    path = mpath(np.column_stack((xs, ys)))
+                    self.ax.set_boundary(path, transform=self.crs_plot)
+
+                self.BM._before_fetch_bg_actions.append(cb)
+                self.ax._EOmaps_rounded_spine_attached = True
+
+        self.redraw("__SPINES__")
+        self.redraw("__BG__")
 
     @staticmethod
     def set_clipboard_kwargs(**kwargs):
@@ -1592,6 +1397,11 @@ class Maps(metaclass=_MapsMeta):
             except Exception:
                 _log.exception("UPS")
 
+    @staticmethod
+    def _set_clipboard_kwargs(**kwargs):
+        # use Maps to make sure InsetMaps do the same thing!
+        Maps._clipboard_kwargs = kwargs
+
     def add_title(self, title, x=0.5, y=1.01, **kwargs):
         """
         Convenience function to add a title to the map.
@@ -1625,154 +1435,6 @@ class Maps(metaclass=_MapsMeta):
         kwargs.setdefault("transform", self.ax.transAxes)
 
         self.text(x, y, title, layer=self.layer, **kwargs)
-
-    @lru_cache()
-    def get_crs(self, crs="plot"):
-        """
-        Get the pyproj CRS instance of a given crs specification.
-
-        Parameters
-        ----------
-        crs : "in", "out" or a crs definition
-            the crs to return
-
-            - if "in" : the crs defined in m.data_specs.crs
-            - if "out" or "plot" : the crs used for plotting
-
-        Returns
-        -------
-        crs : pyproj.CRS
-            the pyproj CRS instance
-
-        """
-        # check for strings first to avoid expensive equality checking for CRS objects!
-        if isinstance(crs, str):
-            if crs == "in":
-                crs = self.data_specs.crs
-            elif crs == "out" or crs == "plot":
-                crs = self.crs_plot
-
-        crs = CRS.from_user_input(crs)
-        return crs
-
-    @wraps(LayoutEditor.get_layout)
-    def get_layout(self, *args, **kwargs):
-        """Get the current layout."""
-        return self.parent._layout_editor.get_layout(*args, **kwargs)
-
-    @wraps(LayoutEditor.apply_layout)
-    def apply_layout(self, *args, **kwargs):
-        """Apply a given layout."""
-        return self.parent._layout_editor.apply_layout(*args, **kwargs)
-
-    def edit_layout(self, filepath=None):
-        """
-        Activate the "layout-editor" to quickly re-arrange the positions of subplots.
-
-        - This is the same as pressing "alt + l" on the keyboard!
-        - To exit the editor, press "escape" or "alt + l" on the keyboard!
-
-        Parameters
-        ----------
-        filepath : str, pathlib.Path or None, optional
-            A path to a file that will be used to store the layout after you exit
-            the layout-editor.
-            This file can then be used to apply the layout to the map with
-
-            >>> m.apply_layout(filepath=filepath)
-
-            NOTE: The file will be overwritten if it already exists!!
-            The default is None.
-
-        """
-        self.parent._layout_editor._make_draggable(filepath=filepath)
-
-    @wraps(AnnotationEditor.__call__)
-    def edit_annotations(self, b=True, **kwargs):
-        self._edit_annotations(b, **kwargs)
-
-    @contextmanager
-    def _disable_autoscale(self, set_extent):
-        if set_extent is False:
-            init_extent = self.get_extent()
-
-        try:
-
-            yield
-        finally:
-            if set_extent is False:
-                self.set_extent(init_extent)
-
-    def _handle_gdf(
-        self,
-        gdf,
-        val_key=None,
-        only_valid=True,
-        clip=False,
-        reproject="gpd",
-        verbose=False,
-    ):
-        (gpd,) = register_modules("geopandas")
-
-        if isinstance(gdf, (str, Path)):
-            gdf = gpd.read_file(gdf)
-
-        if only_valid:
-            gdf = gdf[gdf.is_valid]
-
-        try:
-            # explode the GeoDataFrame to avoid picking multi-part geometries
-            gdf = gdf.explode(index_parts=False)
-        except Exception:
-            # geopandas sometimes has problems exploding geometries...
-            # if it does not work, just continue with the Multi-geometries!
-            _log.error("EOmaps: Exploding geometries did not work!")
-            pass
-
-        if clip:
-            gdf = self._clip_gdf(gdf, clip)
-        if reproject == "gpd":
-            gdf = gdf.to_crs(self.crs_plot)
-        elif reproject == "cartopy":
-            # optionally use cartopy's re-projection routines to re-project
-            # geometries
-
-            cartopy_crs = self._get_cartopy_crs(gdf.crs)
-            if self.ax.projection != cartopy_crs:
-                # TODO this results in problems and sometimes masks way too much!!
-                # select only polygons that actually intersect with the CRS-boundary
-                # mask = gdf.buffer(1).intersects(
-                #     gpd.GeoDataFrame(
-                #         geometry=[self.ax.projection.domain], crs=self.ax.projection
-                #     )
-                #     .to_crs(gdf.crs)
-                #     .geometry[0]
-                # )
-                # gdf = gdf.copy()[mask]
-
-                geoms = gdf.geometry
-                if len(geoms) > 0:
-                    proj_geoms = []
-
-                    if verbose:
-                        for g in progressbar(geoms, "EOmaps: re-projecting... ", 20):
-                            proj_geoms.append(
-                                self.ax.projection.project_geometry(g, cartopy_crs)
-                            )
-                    else:
-                        for g in geoms:
-                            proj_geoms.append(
-                                self.ax.projection.project_geometry(g, cartopy_crs)
-                            )
-                    gdf = gdf.set_geometry(proj_geoms)
-                    gdf = gdf.set_crs(self.ax.projection, allow_override=True)
-                gdf = gdf[~gdf.is_empty]
-        else:
-            raise AssertionError(
-                f"EOmaps: '{reproject}' is not a valid reproject-argument."
-            )
-
-        return gdf
 
     def add_gdf(
         self,
@@ -1958,7 +1620,6 @@ class Maps(metaclass=_MapsMeta):
                     "EOmaps: {n_invald} invalid GeoDataFrame geometries are ignored!"
                 )
 
-        # with self._disable_autoscale(set_extent):
         if set_extent:
             extent = np.array(
                 [
@@ -2041,6 +1702,179 @@ class Maps(metaclass=_MapsMeta):
                 else:
                     self.BM.add_artist(art, layer)
         return artists
+
+    def _handle_gdf(
+        self,
+        gdf,
+        val_key=None,
+        only_valid=True,
+        clip=False,
+        reproject="gpd",
+        verbose=False,
+    ):
+        (gpd,) = register_modules("geopandas")
+
+        if isinstance(gdf, (str, Path)):
+            gdf = gpd.read_file(gdf)
+
+        if only_valid:
+            gdf = gdf[gdf.is_valid]
+
+        try:
+            # explode the GeoDataFrame to avoid picking multi-part geometries
+            gdf = gdf.explode(index_parts=False)
+        except Exception:
+            # geopandas sometimes has problems exploding geometries...
+            # if it does not work, just continue with the Multi-geometries!
+            _log.error("EOmaps: Exploding geometries did not work!")
+            pass
+
+        if clip:
+            gdf = self._clip_gdf(gdf, clip)
+        if reproject == "gpd":
+            gdf = gdf.to_crs(self.crs_plot)
+        elif reproject == "cartopy":
+            # optionally use cartopy's re-projection routines to re-project
+            # geometries
+
+            cartopy_crs = self._get_cartopy_crs(gdf.crs)
+            if self.ax.projection != cartopy_crs:
+                geoms = gdf.geometry
+                if len(geoms) > 0:
+                    proj_geoms = []
+
+                    if verbose:
+                        for g in progressbar(geoms, "EOmaps: re-projecting... ", 20):
+                            proj_geoms.append(
+                                self.ax.projection.project_geometry(g, cartopy_crs)
+                            )
+                    else:
+                        for g in geoms:
+                            proj_geoms.append(
+                                self.ax.projection.project_geometry(g, cartopy_crs)
+                            )
+                    gdf = gdf.set_geometry(proj_geoms)
+                    gdf = gdf.set_crs(self.ax.projection, allow_override=True)
+                gdf = gdf[~gdf.is_empty]
+        else:
+            raise AssertionError(
+                f"EOmaps: '{reproject}' is not a valid reproject-argument."
+            )
+
+        return gdf
+
+    def _clip_gdf(self, gdf, how="crs"):
+        """
+        Clip the shapes of a GeoDataFrame with respect to the given boundaries.
+
+        Parameters
+        ----------
+        gdf : geopandas.GeoDataFrame
+            The GeoDataFrame containing the geometries.
+        how : str, optional
+            Identifier how the clipping should be performed.
+
+            If a suffix "_invert" is added to the string, the polygon will be
+            inverted (via a symmetric-difference to the clip-shape)
+
+            - clipping with geopandas:
+              - "crs" : use the actual crs boundary polygon
+              - "crs_bounds" : use the boundary-envelope of the crs
+              - "extent" : use the current plot-extent
+
+            - clipping with gdal (always uses the crs domain as clip-shape):
+              - "gdal_Intersection"
+              - "gdal_SymDifference"
+              - "gdal_Difference"
+              - "gdal_Union"
+
+            The default is "crs".
+
+        Returns
+        -------
+        gdf
+            A GeoDataFrame with the clipped geometries
+        """
+        (gpd,) = register_modules("geopandas")
+
+        if how.startswith("gdal"):
+            methods = ["SymDifference", "Intersection", "Difference", "Union"]
+            # "SymDifference", "Intersection", "Difference"
+            method = how.split("_")[1]
+            assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
+            try:
+                from osgeo import gdal
+                from shapely import wkt
+            except ImportError:
+                raise ImportError(
+                    "EOmaps: Missing dependency: 'osgeo'\n"
+                    + "...clipping with gdal requires 'osgeo.gdal'"
+                )
+
+            e = self.ax.projection.domain
+            e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
+            if not e2.IsValid():
+                e2 = e2.MakeValid()
+
+            # only reproject geometries if crs cannot be identified
+            # as the initially provided (or cartopy converted) crs
+            if gdf.crs != self.crs_plot and gdf.crs != self._crs_plot:
+                gdf = gdf.to_crs(self.crs_plot)
+
+            clipgeoms = []
+            for g in gdf.geometry:
+                g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
+
+                if g2 is None:
+                    continue
+
+                if not g2.IsValid():
+                    g2 = g2.MakeValid()
+
+                i = getattr(g2, method)(e2)
+
+                if how.endswith("_invert"):
+                    i = i.SymDifference(e2)
+
+                gclip = wkt.loads(i.ExportToWkt())
+                clipgeoms.append(gclip)
+
+            gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
+
+            return gdf
+
+        if how == "crs" or how == "crs_invert":
+            clip_shp = gpd.GeoDataFrame(
+                geometry=[self.ax.projection.domain], crs=self.crs_plot
+            ).to_crs(gdf.crs)
+        elif how == "extent" or how == "extent_invert":
+            self.BM.update()
+            x0, x1, y0, y1 = self.get_extent()
+            clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
+                gdf.crs
+            )
+        elif how == "crs_bounds" or how == "crs_bounds_invert":
+            x0, x1, y0, y1 = self.get_extent()
+            clip_shp = self._make_rect_poly(
+                *self.crs_plot.boundary.bounds, self.crs_plot
+            ).to_crs(gdf.crs)
+        else:
+            raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
+
+        clip_shp = clip_shp.buffer(0)  # use this to make sure the geometry is valid
+
+        # add 1% of the extent-diameter as buffer
+        bnd = clip_shp.boundary.bounds
+        d = np.sqrt((bnd.maxx - bnd.minx) ** 2 + (bnd.maxy - bnd.miny) ** 2)
+        clip_shp = clip_shp.buffer(d / 100)
+
+        # clip the geo-dataframe with the buffered clipping shape
+        clipgdf = gdf.clip(clip_shp)
+
+        if how.endswith("_invert"):
+            clipgdf = clipgdf.symmetric_difference(clip_shp)
+
+        return clipgdf
 
     def add_marker(
         self,
@@ -2717,182 +2551,45 @@ class Maps(metaclass=_MapsMeta):
         """Add gridlines to the Map."""
         return self.parent._grid.add_grid(m=self, *args, **kwargs)
 
-    def _get_alpha_cmap_name(self, alpha):
-        # get a unique name for the colormap
-        try:
-            ncmaps = max(
-                [
-                    int(i.rsplit("_", 1)[1])
-                    for i in plt.colormaps()
-                    if i.startswith("EOmaps_alpha_")
-                ]
-            )
-        except Exception:
-            ncmaps = 0
-
-        return f"EOmaps_alpha_{ncmaps + 1}"
-
-    def set_extent(self, extents, crs=None):
+    def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
         """
-        Set the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+        Indicate a rectangular extent in a given crs on the map.
 
         Parameters
         ----------
-        extent : array-like
-            The extent in the given crs (x0, x1, y0, y1).
-        crs : a crs identifier, optional
-            The coordinate-system in which the extent is evaluated.
-
-            - if None, epsg=4326 (e.g. lon/lat projection) is used
-
-            The default is None.
-
+        x0, y0, y1, y1 : float
+            the boundaries of the shape
+        npts : int, optional
+            The number of points used to draw the polygon-lines.
+            (e.g. to correctly display the distortion of the extent-rectangle when
+            it is re-projected to another coordinate-system)
+            The default is 100.
+        crs : any, optional
+            A coordinate-system identifier.
+            The default is 4326 (e.g. lon/lat).
+        kwargs :
+            Additional keyword-arguments passed to `m.add_gdf()`.
         """
-        # just a wrapper to make sure that previously set extents are not
-        # reset when plotting data!
+        register_modules("geopandas")
 
-        # ( e.g. once .set_extent is called .plot_map does NOT set the extent!)
-        if crs is not None:
-            crs = self._get_cartopy_crs(crs)
-        else:
-            crs = Maps.CRS.PlateCarree()
+        gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
+        self.add_gdf(gdf, **kwargs)
 
-        self.ax.set_extent(extents, crs=crs)
-        self._set_extent_on_plot = False
+    @wraps(plt.Figure.text)
+    def text(self, *args, layer=None, **kwargs):
+        """Add text to the map."""
+        kwargs.setdefault("animated", True)
+        kwargs.setdefault("horizontalalignment", "center")
+        kwargs.setdefault("verticalalignment", "center")
 
-    def get_extent(self, crs=None):
-        """
-        Get the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+        a = self.f.text(*args, **kwargs)
 
-        Parameters
-        ----------
-        crs : a crs identifier, optional
-            The coordinate-system in which the extent is evaluated.
+        if layer is None:
+            layer = self.layer
+        self.BM.add_artist(a, layer=layer)
+        self.BM.update()
 
-            - if None, the extent is provided in epsg=4326 (e.g. lon/lat projection)
-
-            The default is None.
-
-        Returns
-        -------
-        extent : The extent in the given crs (x0, x1, y0, y1).
-
-        """
-
-        # fast track if plot-crs is requested
-        if crs == self.crs_plot:
-            x0, x1, y0, y1 = (*self.ax.get_xlim(), *self.ax.get_ylim())
-
-            bnds = self._crs_boundary_bounds
-            # clip the map-extent with respect to the boundary bounds
-            # (to avoid returning values outside the crs bounds)
-            try:
-                x0, x1 = np.clip([x0, x1], bnds[0], bnds[2])
-                y0, y1 = np.clip([y0, y1], bnds[1], bnds[3])
-            except Exception:
-                _log.debug(
-                    "EOmaps: Error while trying to clip map extent", exc_info=True
-                )
-        else:
-            if crs is not None:
-                crs = self._get_cartopy_crs(crs)
-            else:
-                crs = self._get_cartopy_crs(4326)
-
-            x0, x1, y0, y1 = self.ax.get_extent(crs=crs)
-
-        return x0, x1, y0, y1
-
-    def _calc_vmin_vmax(self, vmin=None, vmax=None):
-        if self.data is None:
-            return vmin, vmax
-
-        calc_min, calc_max = vmin is None, vmax is None
-
-        # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
-        if (
-            self.data_specs.encoding is not None
-            and isinstance(self._data_manager.z_data, np.ndarray)
-            and issubclass(self._data_manager.z_data.dtype.type, np.integer)
-        ):
-
-            # note the specific way how to check for integer-dtype based on issubclass
-            # since isinstance() fails to identify all integer dtypes!!
-            #   isinstance(np.dtype("uint8"), np.integer)       (incorrect) False
-            #   issubclass(np.dtype("uint8").type, np.integer)  (correct)   True
-            # for details, see https://stackoverflow.com/a/934652/9703451
-
-            fill_value = self.data_specs.encoding.get("_FillValue", None)
-            if fill_value and any([calc_min, calc_max]):
-                # find values that are not fill-values
-                use_vals = self._data_manager.z_data[
-                    self._data_manager.z_data != fill_value
-                ]
-
-                if calc_min:
-                    vmin = np.min(use_vals)
-                if calc_max:
-                    vmax = np.max(use_vals)
-
-                return vmin, vmax
-
-        # use nanmin/nanmax for all other arrays
-        if calc_min:
-            vmin = np.nanmin(self._data_manager.z_data)
-        if calc_max:
-            vmax = np.nanmax(self._data_manager.z_data)
-
-        return vmin, vmax
-
-    def _set_vmin_vmax(self, vmin=None, vmax=None):
-        # don't encode nan-vailes to avoid setting the fill-value as vmin/vmax
-        if vmin is not None:
-            vmin = self._encode_values(vmin)
-        if vmax is not None:
-            vmax = self._encode_values(vmax)
-
-        # handle inherited bounds
-        if self._inherit_classification is not None:
-            if not (vmin is None and vmax is None):
-                raise TypeError(
-                    "EOmaps: 'vmin' and 'vmax' cannot be set explicitly "
-                    "if the classification is inherited!"
-                )
-
-            # in case data is NOT inherited, warn if vmin/vmax is None
-            # (different limits might cause a different appearance of the data!)
-            if self.data_specs._m == self:
-                if self._vmin is None:
-                    _log.warning("EOmaps: Inherited value for 'vmin' is None!")
-                if self._vmax is None:
-                    _log.warning(
-                        "EOmaps: Inherited inherited value for 'vmax' is None!"
-                    )
-
-            self._vmin = self._inherit_classification._vmin
-            self._vmax = self._inherit_classification._vmax
-            return
-
-        if not self.shape.name.startswith("shade_"):
-            # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
-            self._vmin, self._vmax = self._calc_vmin_vmax(vmin=vmin, vmax=vmax)
-        else:
-            # get the name of the used aggretation reduction
-            aggname = self.shape.aggregator.__class__.__name__
-            if aggname in ["first", "last", "max", "min", "mean", "mode"]:
-                # set vmin/vmax in case the aggregation still represents data-values
-                self._vmin, self._vmax = self._calc_vmin_vmax(vmin=vmin, vmax=vmax)
-            else:
-                # set vmin/vmax for aggregations that do NOT represent data values
-                # allow vmin/vmax = None (e.g. autoscaling)
-                self._vmin, self._vmax = vmin, vmax
-                if "count" in aggname:
-                    # if the reduction represents a count, don't count empty pixels
-                    if vmin and vmin <= 0:
-                        _log.warning(
-                            "EOmaps: setting vmin=1 to avoid counting empty pixels..."
-                        )
-                        self._vmin = 1
+        return a
 
     def plot_map(
         self,
@@ -3122,1446 +2819,6 @@ class Maps(metaclass=_MapsMeta):
         self._emit_signal("dataPlotted")
 
         self.BM.update()
-
-    def make_dataset_pickable(
-        self,
-    ):
-        """
-        Make the associated dataset pickable **without plotting** it first.
-
-        After executing this function, `m.cb.pick` callbacks can be attached to the
-        `Maps` object.
-
-        NOTE
-        ----
-        This function is ONLY necessary if you want to use pick-callbacks **without**
-        actually plotting the data**! Otherwise a call to `m.plot_map()` is sufficient!
-
-        - Each `Maps` object can always have only one pickable dataset.
-        - The used data is always the dataset that was assigned in the last call to
-          `m.plot_map()` or `m.make_dataset_pickable()`.
-        - To get multiple pickable datasets, use an individual layer for each of the
-          datasets (e.g. first `m2 = m.new_layer()` and then assign the data to `m2`)
-
-        Examples
-        --------
-        >>> m = Maps()
-        >>> m.add_feature.preset.coastline()
-        >>> ...
-        >>> # a dataset that should be pickable but NOT visible...
-        >>> m2 = m.new_layer()
-            >>> m2.set_data(*np.linspace([0, -180,-90,], [100, 180, 90], 100).T)
-        >>> m2.make_dataset_pickable()
-        >>> m2.cb.pick.attach.annotate()  # get an annotation for the invisible dataset
-        >>> # ...call m2.plot_map() to make the dataset visible...
-        """
-        if self.coll is not None:
-            _log.error(
-                "EOmaps: There is already a dataset plotted on this Maps-object. "
-                "You MUST use a new layer (`m2 = m.new_layer()`) to use "
-                "`m2.make_dataset_pickable()`!"
-            )
-            return
-
-        # ---------------------- prepare the data
-        self._data_manager = DataManager(self._proxy(self))
-        self._data_manager.set_props(layer=self.layer, only_pick=True)
-
-        x0, x1 = self._data_manager.x0.min(), self._data_manager.x0.max()
-        y0, y1 = self._data_manager.y0.min(), self._data_manager.y0.max()
-
-        # use a transparent rectangle of the data-extent as artist for picking
-        (art,) = self.ax.fill([x0, x1, x1, x0], [y0, y0, y1, y1], fc="none", ec="none")
-
-        self._coll = art
-
-        self.tree = SearchTree(m=self._proxy(self))
-        self.cb.pick._set_artist(art)
-        self.cb.pick._init_cbs()
-        self.cb._methods.add("pick")
-
-        self._coll_kwargs = dict()
-        self._coll_dynamic = True
-
-        # set _data_plotted to True to trigger updates in the data-manager
-        self._data_plotted = True
-
-    def show_layer(self, *args, clear=True):
-        """
-        Show a single layer or (transparently) overlay multiple selected layers.
-
-        Parameters
-        ----------
-        args : str, tuple
-
-            - if str: The name of the layer to show.
-            - if tuple: A combination of a layer-name and a transparency assignment
-              ( < layer name >, < transparency [0-1] > )
-
-        Examples
-        --------
-        Show a **single layer** by providing the name of the layer as string:
-
-        >>> m.show_layer("A")
-
-        To show **multiple layers**, use one of the following options:
-
-        Provide multiple layer-names (stacking is done from left to right), e.g.:
-
-        >>> m.show_layer("A", "B", "C")
-
-        Provide the combined layer-name, e.g.:
-
-        >>> m.show_layer("A|B|C")
-
-        To **transparently overlay multiple layers**, use one of the following options:
-
-        Provide tuples of layer-names and transparency-assignments, e.g.:
-
-        >>> m.show_layer("A", ("B", 0.5), ("C", 0.25))
-
-        Provide the combined layer-name, e.g.:
-
-        >>> m.show_layer("A|B{0.5}|C{0.25}")
-
-        See Also
-        --------
-        Maps.util.layer_selector : Add a button-widget to switch layers to the map.
-        Maps.util.layer_slider : Add a slider to switch layers to the map.
-
-        """
-        name = self.BM._get_combined_layer_name(*args)
-        if not isinstance(name, str):
-            _log.info("EOmaps: All layer-names are converted to strings!")
-            name = str(name)
-
-        # check if all layers exist
-        existing_layers = self._get_layers()
-        layers_to_show, _ = self.BM._parse_multi_layer_str(name)
-
-        # don't check private layer-names
-        layers_to_show = [i for i in layers_to_show if not i.startswith("_")]
-        missing_layers = set(layers_to_show).difference(set(existing_layers))
-        if len(missing_layers) > 0:
-            lstr = " - " + "\n - ".join(map(str, existing_layers))
-
-            _log.error(
-                f"EOmaps: The layers {missing_layers} do not exist...\n"
-                + f"Use one of: \n{lstr}"
-            )
-            return
-
-        # invoke the bg_layer setter of the blit-manager
-        self.BM.bg_layer = name
-        self.BM.update()
-
-        # plot a snapshot to jupyter notebook cell if inline backend is used
-        if not self.BM._snapshot_on_update and plt.get_backend() in [
-            "module://matplotlib_inline.backend_inline"
-        ]:
-            self.snapshot(clear=clear)
-
-    def show(self, clear=True):
-        """
-        Show the map (only required for non-interactive matplotlib backends).
-
-        This is just a convenience function to call matplotlib's `plt.show()`!
-
-        To switch the currently visible layer, see :py:meth:`Maps.show_layer`
-
-        Parameters
-        ----------
-        clear : bool, optional
-            Only relevant if the `inline` backend is used in a jupyter-notebook
-            or an Ipython console.
-
-            If True, clear the active cell before plotting a snapshot of the figure.
-            The default is True.
-        See Also
-        --------
-        show_layer : Set the currently visible layer.
-        """
-
-        try:
-            __IPYTHON__
-        except NameError:
-            plt.show()
-        else:
-            active_backend = plt.get_backend()
-            # print a snapshot to the active ipython cell in case the
-            # inline-backend is used
-            if active_backend in ["module://matplotlib_inline.backend_inline"]:
-                self.snapshot(clear=clear)
-            else:
-                plt.show()
-
-    def snapshot(self, *layer, transparent=False, clear=False):
-        """
-        Print a static image of the figure to the active IPython display.
-
-        This is useful if you want to print a snapshot of the current state of the map
-        to the active Jupyter Notebook cell or the currently active IPython console
-        while using a backend that creates popup-plots (e.g. `qt` or `tkinter`)
-
-        ONLY use this if you work in an interactive IPython terminal, a Jupyter
-        Notebook or a Jupyter Lab environment!
-
-        Parameters
-        ----------
-        *layer: str or None
-            The layer to show on the snapshot.
-            Any positional arguments are used as layer-assignments similar
-            to `m.show_layer()`
-            If None, the currently visible layer is used.
-            The default is None.
-        transparent: bool
-            Indicator if the snapshot should have a transparent background or not.
-            The default is False.
-        clear: bool
-            Indicator if the current cell-output should be cleared prior
-            to showing the snapshot or not. The default is False
-
-        Examples
-        --------
-        >>> m = Maps(layer="base")
-        >>> m.add_feature.preset.coastline()
-        >>> m2 = m.new_layer("ocean")
-        >>> m.add_feature.preset.ocean()
-        >>> m.snapshot("base", ("ocean", .5), transparent=True)
-
-        """
-        if getattr(self, "_snapshotting", False):
-            # this is necessary to avoid recursions with show_layer
-            # in jupyter-notebook inline backend
-            return
-
-        try:
-            self._snapshotting = True
-
-            from PIL import Image
-
-            with ExitStack() as stack:
-                # don't clear on layer-changes
-                stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
-
-                if len(layer) == 0:
-                    layer = None
-
-                # hide companion-widget indicator
-                self._indicate_companion_map(False)
-
-                if layer is not None:
-                    layer = self.BM._get_combined_layer_name(*layer)
-
-                # add the figure background patch as the bottom layer
-                initial_layer = self.BM.bg_layer
-
-                if transparent is False:
-                    showlayer_name = self.BM._get_showlayer_name(layer=layer)
-                    layer_with_bg = self.BM._get_combined_layer_name(
-                        "__BG__", showlayer_name
-                    )
-                    self.show_layer(layer_with_bg)
-                    sn = self._get_snapshot()
-                    # restore the previous layer
-                    self.BM._refetch_layer(layer_with_bg)
-                    self.show_layer(initial_layer)
-                else:
-                    if layer is not None:
-                        self.show_layer(layer)
-                        sn = self._get_snapshot()
-                        self.show_layer(initial_layer)
-                    else:
-                        sn = self._get_snapshot()
-            try:
-                from IPython.display import display_png, clear_output
-
-                if clear:
-                    clear_output(wait=True)
-                # use display_png to avoid issues with transparent snapshots
-                display_png(Image.fromarray(sn, "RGBA"), raw=False)
-
-            except Exception:
-                _log.exception(
-                    "Unable to display the snapshot... is the script "
-                    "running in an IPython console?",
-                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                )
-        except Exception:
-            _log.exception(
-                "Encountered an error while trying to create a snapshot.",
-                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-            )
-        finally:
-            self._snapshotting = False
-
-    @wraps(plt.Figure.text)
-    def text(self, *args, layer=None, **kwargs):
-        """Add text to the map."""
-        kwargs.setdefault("animated", True)
-        kwargs.setdefault("horizontalalignment", "center")
-        kwargs.setdefault("verticalalignment", "center")
-
-        a = self.f.text(*args, **kwargs)
-
-        if layer is None:
-            layer = self.layer
-        self.BM.add_artist(a, layer=layer)
-        self.BM.update()
-
-        return a
-
-    @_add_to_docstring(
-        insert={
-            "Other Parameters": (
-                "refetch_wms : bool\n"
-                "    If True, re-fetch EOmaps WebMap services with respect to "
-                "the dpi of the exported figure before exporting the image. "
-                "\n\n    NOTE: This might fail for high-dpi exports and might "
-                "result in a completely different appearance of the wms-images "
-                "in the exported file! "
-                "\n\n    See `m.refetch_wms_on_size_change()` for more details. "
-                "The default is False",
-                1,
-            )
-        }
-    )
-    @wraps(plt.savefig)
-    def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
-        """Save the figure."""
-        # get the currently visible layer (to restore it after saving is done)
-        initial_layer = self.BM.bg_layer
-
-        if plt.get_backend() == "agg":
-            # make sure that a draw-event was triggered when using the agg backend
-            # (to avoid export-issues with some shapes)
-            # TODO properly assess why this is necessary!
-            self.f.canvas.draw_idle()
-
-        with ExitStack() as stack:
-            if refetch_wms is False:
-                if _cx_refetch_wms_on_size_change is not None:
-                    stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
-
-                # don't clear on layer-changes
-                stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
-
-            # hide companion-widget indicator
-            self._indicate_companion_map(False)
-
-            # add the figure background patch as the bottom layer
-            transparent = kwargs.get("transparent", False)
-            if transparent is False:
-                showlayer_name = self.BM._get_showlayer_name(initial_layer)
-                layer_with_bg = self.BM._get_combined_layer_name(
-                    "__BG__", showlayer_name
-                )
-                self.show_layer(layer_with_bg)
-
-            dpi = kwargs.get("dpi", None)
-
-            redraw = False
-            if dpi is not None and dpi != self.f.dpi or "bbox_inches" in kwargs:
-                redraw = True
-
-                # clear all cached background layers before saving to make sure they
-                # are re-drawn with the correct dpi-settings
-                self.BM._refetch_bg = True
-
-                # set the shading-axis-size to reflect the used dpi setting
-                self._update_shade_axis_size(dpi=dpi)
-
-            # get all layer names that should be drawn
-            savelayers, alphas = self.BM._parse_multi_layer_str(
-                self.BM._get_showlayer_name(self.BM.bg_layer)
-            )
-
-            # make sure inset-maps are drawn on top of normal maps
-            savelayers.sort(key=lambda x: x.startswith("__inset_"))
-
-            for m in (self.parent, *self.parent._children):
-                # re-enable normal axis draw cycle by making axes non-animated.
-                # This is needed for backward-compatibility, since saving a figure
-                # ignores the animated attribute for axis-children but not for the axis
-                # itself. See:
-                # https://github.com/matplotlib/matplotlib/issues/26007#issuecomment-1568812089
-                stack.enter_context(m.ax._cm_set(animated=False))
-
-                # handle colorbars
-                for cb in m._colorbars:
-                    for a in (cb.ax_cb, cb.ax_cb_plot):
-                        stack.enter_context(a._cm_set(animated=False))
-
-                # set if data should be rasterized on vector export
-                if m.coll is not None:
-                    stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
-
-            # explicitly set axes to non-animated to re-enable draw cycle
-            for a in m.BM._managed_axes:
-                stack.enter_context(a._cm_set(animated=False))
-
-            zorder = 0
-            for layer, alpha in zip(savelayers, alphas):
-                # get all (sorted) artists of a layer
-                if layer.startswith("__inset"):
-                    artists = self.BM.get_bg_artists(["__inset_all", layer])
-                else:
-                    if layer.startswith("__"):
-                        artists = self.BM.get_bg_artists([layer])
-                    else:
-                        artists = self.BM.get_bg_artists(["all", layer])
-
-                for a in artists:
-                    if isinstance(a, plt.Axes):
-                        continue
-                    zorder += 1
-                    stack.enter_context(a._cm_set(zorder=zorder, animated=False))
-
-                    if alpha < 1:
-                        current_alpha = a.get_alpha()
-                        if current_alpha is None:
-                            current_alpha = alpha
-                        else:
-                            current_alpha = current_alpha * alpha
-
-                        stack.enter_context(a._cm_set(alpha=current_alpha))
-
-            for key, val in self.BM._bg_artists.items():
-                if key not in ["all", "__inset_all", *savelayers]:
-                    for a in val:
-                        stack.enter_context(a._cm_set(visible=False, animated=True))
-
-            if any(l.startswith("__inset") for l in savelayers):
-                if "__inset_all" not in savelayers:
-                    savelayers.append("__inset_all")
-                    alphas.append(1)
-            if "all" not in savelayers:
-                savelayers.append("all")
-                alphas.append(1)
-
-            # always draw dynamic artists on top of background artists
-            for layer, alpha in zip(savelayers, alphas):
-                # get all (sorted) artists of a layer
-                artists = self.BM.get_artists([layer])
-
-                for a in artists:
-                    zorder += 1
-                    stack.enter_context(a._cm_set(zorder=zorder, animated=False))
-
-            for key, val in self.BM._artists.items():
-                if key not in savelayers:
-                    for a in val:
-                        stack.enter_context(a._cm_set(visible=False, animated=True))
-
-            # trigger a redraw of all savelayers to make sure unmanaged artists
-            # and ordinary matplotlib axes are properly drawn
-            self.redraw(*savelayers)
-            # flush events prior to savefig to avoid issues with pending draw events
-            # that cause wrong positioning of grid-labels and missing artists!
-            self.f.canvas.flush_events()
-            self.f._mpl_orig_savefig(*args, **kwargs)
-
-        if redraw is True:
-            # reset the shading-axis-size to the used figure dpi
-            self._update_shade_axis_size()
-
-            # restore the previous layer if background was added on save
-            if transparent is False:
-                self.show_layer(initial_layer)
-
-            # redraw after the save to ensure that backgrounds are correctly cached
-            self.redraw()
-
-    def fetch_layers(self, layers=None):
-        """
-        Fetch (and cache) the layers of a map.
-
-        This is particularly useful if you want to use sliders or buttons to quickly
-        switch between the layers (e.g. once the backgrounds are cached, switching
-        layers will be fast).
-
-        Note: After zooming or re-sizing the map, the cache is cleared and
-        you need to call this function again.
-
-        Parameters
-        ----------
-        layers : list or None, optional
-            A list of layer-names that should be fetched.
-            If None, all layers (except the "all" layer) are fetched.
-            The default is None.
-
-        See Also
-        --------
-        Maps.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
-
-        """
-        active_layer = self.BM._bg_layer
-        all_layers = self._get_layers()
-
-        if layers is None:
-            layers = all_layers
-            if "all" in layers:
-                layers.remove("all")  # don't explicitly fetch the "all" layer
-        else:
-            if not set(layers).issubset(all_layers):
-                raise AssertionError(
-                    "EOmaps: Unable to fetch the following layers:\n - "
-                    + "\n - ".join(set(layers).difference(all_layers))
-                )
-
-        nlayers = len(layers)
-        assert nlayers > 0, "EOmaps: There are no layers to fetch."
-
-        for i, l in enumerate(layers):
-            _log.info(f"EOmaps: fetching layer {i + 1}/{nlayers}: {l}")
-            self.show_layer(l)
-
-        self.show_layer(active_layer)
-        self.BM.update()
-
-    def join_limits(self, *args):
-        """
-        Join the x- and y- limits of the maps (crs must be equal!).
-
-        Parameters
-        ----------
-        *args :
-            the axes to join.
-        """
-        for m in args:
-            if m is not self:
-                self._join_axis_limits(weakref.proxy(m))
-
-    def copy(
-        self,
-        data_specs=False,
-        classify_specs=True,
-        shape=True,
-        **kwargs,
-    ):
-        """
-        Create a (deep)copy of the Maps object that shares selected specifications.
-
-        -> useful to quickly create plots with similar configurations
-
-        Parameters
-        ----------
-        data_specs, classify_specs, shape : bool or "shared", optional
-            Indicator if the corresponding properties should be copied.
-
-            - if True: ALL corresponding properties are copied
-
-            By default, "classify_specs" and the "shape" are copied.
-
-        kwargs :
-            Additional kwargs passed to `m = Maps(**kwargs)`
-            (e.g. crs, f, ax, orientation, layer)
-
-        Returns
-        -------
-        copy_cls : eomaps.Maps object
-            a new Maps class.
-        """
-        copy_cls = Maps(**kwargs)
-
-        if data_specs is True:
-            data_specs = list(self.data_specs.keys())
-            copy_cls.set_data(
-                **{key: copy.deepcopy(val) for key, val in self.data_specs}
-            )
-
-        if shape is True:
-            if self.shape is not None:
-                getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
-
-        if classify_specs is True:
-            classify_specs = list(self.classify_specs.keys())
-            copy_cls.set_classify_specs(
-                scheme=self.classify_specs.scheme, **self.classify_specs
-            )
-
-        return copy_cls
-
-    def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
-        """
-        Indicate a rectangular extent in a given crs on the map.
-
-        Parameters
-        ----------
-        x0, y0, y1, y1 : float
-            the boundaries of the shape
-        npts : int, optional
-            The number of points used to draw the polygon-lines.
-            (e.g. to correctly display the distortion of the extent-rectangle when
-            it is re-projected to another coordinate-system)
-            The default is 100.
-        crs : any, optional
-            A coordinate-system identifier.
-            The default is 4326 (e.g. lon/lat).
-        kwargs :
-            Additional keyword-arguments passed to `m.add_gdf()`.
-        """
-        register_modules("geopandas")
-
-        gdf = self._make_rect_poly(x0, y0, x1, y1, self.get_crs(crs), npts)
-        self.add_gdf(gdf, **kwargs)
-
-    def redraw(self, *args):
-        """
-        Force a re-draw of cached background layers.
-
-        - Use this at the very end of your code to trigger a final re-draw
-          to make sure artists not managed by EOmaps are properly drawn!
-
-        Note
-        ----
-        Don't use this to interactively update artists on a map!
-        since it will trigger a re-draw background-layers!
-
-        To dynamically re-draw an artist whenever you interact with the map, use:
-
-        >>> m.BM.add_artist(artist)
-
-        To make an artist temporary (e.g. remove it on the next event), use
-        one of :
-
-        >>> m.cb.click.add_temporary_artist(artist)
-        >>> m.cb.pick.add_temporary_artist(artist)
-        >>> m.cb.keypress.add_temporary_artist(artist)
-        >>> m.cb.move.add_temporary_artist(artist)
-
-        Parameters
-        ----------
-        *args : str
-            Positional arguments provided to redraw are identified as layer-names
-            that should be re-drawn. If no arguments are provided, all layers
-            are re-drawn!
-
-        """
-        if len(args) == 0:
-            # in case no argument is provided, force a complete re-draw of
-            # all layers (and datasets) of the map
-            self.BM._refetch_bg = True
-            self._data_manager.last_extent = None
-        else:
-            # only re-fetch the required layers
-            for l in args:
-                self.BM._refetch_layer(l)
-
-        self.f.canvas.draw_idle()
-
-    @wraps(GridSpec.update)
-    def subplots_adjust(self, **kwargs):
-        """Adjust the margins of subplots."""
-        self.parent._gridspec.update(**kwargs)
-        # after changing margins etc. a redraw is required
-        # to fetch the updated background!
-
-        self.redraw()
-
-    def on_layer_activation(self, func, layer=None, persistent=False, **kwargs):
-        """
-        Attach a callback that is executed if the associated layer is activated.
-
-        Useful to "lazily" populate layers with features that are expensive to
-        create (e.g. fetching data from files etc.).
-
-        Parameters
-        ----------
-        func : callable
-            The callable to use.
-            The call-signature is:
-
-            >>> def func(m, **kwargs):
-            >>>    # m... the Maps-object used for calling this function
-
-            NOTE: The Maps-object that is passed to the function is determined by
-            the 'layer' argument!
-        layer : str or None, optional
-            If provided, a NEW layer will be created and passed to the execution of the
-            function. Otherwise, the calling Maps-object is used.
-
-            To clarify: The following two code-snippets are equivalent:
-
-            >>> m = Maps()
-            >>> m2 = m.new_layer("my_layer")
-            >>> m2.on_layer_activation(func)
-
-            >>> m = Maps()
-            >>> m.on_layer_activation(func, layer="my_layer")
-
-        persistent : bool, optional
-            Indicator if the function should be called only once (False) or if it
-            should be called each time the layer is activated (True).
-            The default is False.
-        kwargs :
-            Additional keyword-arguments passed to the call of the function.
-
-        See Also
-        --------
-        Maps.layer : The layer-name associated with the Maps-object
-        Maps.fetch_layers : Fetch and cache all layers of the map
-
-        Examples
-        --------
-        >>> m = Maps()
-        >>> m.add_feature.preset.coastline()
-        >>>
-        >>> def f(m, ocean_color, coastline_color):
-        >>>     print(f"EOmaps: creating features for the layer {m.layer}")
-        >>>     m.add_feature.preset.coastline(ec=coastline_color)
-        >>>     m.add_feature.preset.ocean(fc=ocean_color)
-        >>>
-        >>> # create a new (initially empty) layer "ocean"
-        >>> m2 = m.new_layer("ocean")
-        >>> # add features to the layer only if it is activated
-        >>> m2.on_layer_activation(f, ocean_color="b", coastline_color="r")
-        >>> s = m.util.layer_selector()
-
-        """
-        if layer is None:
-            layer = self.layer
-            m = self
-        else:
-            layer = str(layer)
-            m = self.new_layer(layer)
-
-        def cb(m, layer):
-            func(m=m, **kwargs)
-
-        self.BM.on_layer(func=cb, layer=layer, persistent=persistent, m=m)
-
-    def cleanup(self):
-        """
-        Cleanup all references to the object so that it can be safely deleted.
-
-        This function is primarily used internally to clear objects if the figure
-        is closed.
-
-        Note
-        ----
-        Executing this function will remove ALL attached callbacks
-        and delete all assigned datasets & pre-computed values.
-
-        ONLY execute this if you do not need to do anything with the layer
-        """
-        try:
-            # disconnect callback on xlim-change (only relevant for parent)
-            if not self._is_sublayer:
-                try:
-                    if hasattr(self, "_cid_xlim"):
-                        self.ax.callbacks.disconnect(self._cid_xlim)
-                        del self._cid_xlim
-                except Exception:
-                    _log.error(
-                        "EOmaps-cleanup: Problem while clearing xlim-cid",
-                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                    )
-
-            # clear data-specs and all cached properties of the data
-            try:
-                self._coll = None
-                self._data_manager.cleanup()
-
-                if hasattr(self, "tree"):
-                    del self.tree
-                self.data_specs.delete()
-            except Exception:
-                _log.error(
-                    "EOmaps-cleanup: Problem while clearing data specs",
-                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                )
-
-            # disconnect all click, pick and keypress callbacks
-            try:
-                self.cb._reset_cids()
-                # cleanup callback-containers
-                self.cb._clear_callbacks()
-            except Exception:
-                _log.error(
-                    "EOmaps-cleanup: Problem while clearing callbacks",
-                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                )
-
-            # cleanup all artists and cached background-layers from the blit-manager
-            if not self._is_sublayer:
-                self.BM._cleanup_layer(self.layer)
-
-            # remove the child from the parent Maps object
-            if self in self.parent._children:
-                self.parent._children.remove(self)
-        except Exception:
-            _log.error(
-                "EOmaps: Cleanup problem!",
-                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-            )
-
-    def _save_to_clipboard(self, **kwargs):
-        """
-        Export the figure to the clipboard.
-
-        Parameters
-        ----------
-        kwargs :
-            Keyword-arguments passed to :py:meth:`Maps.savefig`
-        """
-        import io
-        import mimetypes
-        from qtpy.QtCore import QMimeData
-        from qtpy.QtWidgets import QApplication
-        from qtpy.QtGui import QImage
-
-        # guess the MIME type from the provided file-extension
-        fmt = kwargs.get("format", "png")
-        mimetype, _ = mimetypes.guess_type(f"dummy.{fmt}")
-
-        message = f"EOmaps: Exporting figure as '{fmt}' to clipboard..."
-        _log.info(message)
-
-        if self._companion_widget is not None:
-            self._companion_widget.window().statusBar().showMessage(message, 2000)
-
-        with io.BytesIO() as buffer:
-            self.savefig(buffer, **kwargs)
-            data = QMimeData()
-
-            cb = QApplication.clipboard()
-
-            # TODO check why files copied with setMimeData(...) cannot be pasted
-            # properly in other apps
-            if fmt in ["svg", "svgz", "pdf", "eps"]:
-                data.setData(mimetype, buffer.getvalue())
-                cb.clear(mode=cb.Clipboard)
-                cb.setMimeData(data, mode=cb.Clipboard)
-            else:
-                cb.setImage(QImage.fromData(buffer.getvalue()))
-
-    def _on_keypress(self, event):
-        if plt.get_backend().lower() == "webagg":
-            return
-
-        # NOTE: callback is only attached to the parent Maps object!
-        if event.key == self._companion_widget_key:
-            try:
-                self._open_companion_widget((event.x, event.y))
-            except Exception:
-                _log.exception(
-                    "EOmaps: Encountered a problem while trying to open "
-                    "the companion widget",
-                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                )
-        elif event.key == "ctrl+c":
-            try:
-                self._save_to_clipboard(**Maps._clipboard_kwargs)
-            except Exception:
-                _log.exception(
-                    "EOmaps: Encountered a problem while trying to export the figure "
-                    "to the clipboard.",
-                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                )
-
-    def _init_figure(self, ax=None, plot_crs=None, **kwargs):
-        if self.parent.f is None:
-            # do this on any new figure since "%matpltolib inline" tries to re-activate
-            # interactive mode all the time!
-            _handle_backends()
-
-            self._f = plt.figure(**kwargs)
-            # to hide canvas header in jupyter notebooks (default figure label)
-            self._f.canvas.header_visible = False
-
-            # override Figure.savefig with Maps.savefig but keep original
-            # method accessible via Figure._mpl_orig_savefig
-            # (this ensures that using the save-buttons in the gui or pressing
-            # control+s will redirect the save process to the eomaps routine)
-            self._f._mpl_orig_savefig = self._f.savefig
-            self._f.savefig = self.savefig
-
-            _log.debug("EOmaps: New figure created")
-
-            # make sure we keep a "real" reference otherwise overwriting the
-            # variable of the parent Maps-object while keeping the figure open
-            # causes all weakrefs to be garbage-collected!
-            self.parent.f._EOmaps_parent = self.parent._real_self
-
-            newfig = True
-        else:
-            newfig = False
-            if not hasattr(self.parent.f, "_EOmaps_parent"):
-                self.parent.f._EOmaps_parent = self.parent._real_self
-            self.parent._add_child(self)
-
-        # attach a callback to show/hide the companion-widget with the "w" key
-        if self.parent._cid_keypress is None:
-            # NOTE the companion-widget is ONLY attached to the parent map
-            # since it will identify the clicked map automatically! The
-            # widget will only be initialized on Maps-objects that create
-            # NEW axes. This is required to make sure that any additional
-            # Maps-object on the same axes will then always use the
-            # same widget. (otherwise each layer would get its own widget)
-
-            self.parent._cid_keypress = self.f.canvas.mpl_connect(
-                "key_press_event", self.parent._on_keypress
-            )
-
-        if isinstance(ax, plt.Axes):
-            # check if the axis is already used by another maps-object
-            if ax not in (i.ax for i in (self.parent, *self.parent._children)):
-                newax = True
-                ax.set_animated(True)
-                # make sure axes are drawn once to properly set transforms etc.
-                # (otherwise pan/zoom, ax.contains_point etc. will not work)
-                ax.draw(self.f.canvas.get_renderer())
-
-            else:
-                newax = False
-        else:
-            newax = True
-            # create a new axis
-            if ax is None:
-                gs = GridSpec(
-                    nrows=1, ncols=1, left=0.01, right=0.99, bottom=0.05, top=0.95
-                )
-                gsspec = [gs[:]]
-            elif isinstance(ax, SubplotSpec):
-                gsspec = [ax]
-            elif isinstance(ax, (list, tuple)) and len(ax) == 4:
-                # absolute position
-                l, b, w, h = ax
-
-                gs = GridSpec(
-                    nrows=1, ncols=1, left=l, bottom=b, right=l + w, top=b + h
-                )
-                gsspec = [gs[:]]
-            elif isinstance(ax, int) and len(str(ax)) == 3:
-                gsspec = [ax]
-            elif isinstance(ax, tuple) and len(ax) == 3:
-                gsspec = ax
-            else:
-                raise TypeError("EOmaps: The provided value for 'ax' is invalid.")
-
-            projection = self._get_cartopy_crs(plot_crs)
-
-            ax = self.f.add_subplot(
-                *gsspec,
-                projection=projection,
-                aspect="equal",
-                adjustable="box",
-                label=self._get_ax_label(),
-                animated=True,
-            )
-            # make sure axes are drawn once to properly set transforms etc.
-            # (otherwise pan/zoom, ax.contains_point etc. will not work)
-            ax.draw(self.f.canvas.get_renderer())
-
-        self._ax = ax
-        self._gridspec = ax.get_gridspec()
-
-        # add support for "frameon" kwarg
-        if kwargs.get("frameon", True) is False:
-            self.ax.spines["geo"].set_edgecolor("none")
-
-        # initialize the callbacks
-        self.cb._init_cbs()
-
-        if newax:  # only if a new axis has been created
-            self._new_axis_map = True
-
-            # explicitly set initial limits to global to avoid issues if NE-features
-            # are added (and clipped) before actual limits are set
-            self.ax.set_global()
-
-            self._cid_xlim = self.ax.callbacks.connect(
-                "xlim_changed", self._on_xlims_change
-            )
-            self._cid_xlim = self.ax.callbacks.connect(
-                "ylim_changed", self._on_ylims_change
-            )
-        else:
-            self._new_axis_map = False
-
-        if self.parent == self:  # use == instead of "is" since the parent is a proxy!
-            # only attach resize- and close-callbacks if we initialize a parent
-            # Maps-object
-            # attach a callback that is executed when the figure is closed
-            self._cid_onclose = self.f.canvas.mpl_connect("close_event", self._on_close)
-            # attach a callback that is executed if the figure canvas is resized
-            self._cid_resize = self.f.canvas.mpl_connect(
-                "resize_event", self._on_resize
-            )
-
-        # if we haven't attached an axpicker so far, do it!
-        if self.parent._layout_editor is None:
-            self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
-
-        active_backend = plt.get_backend()
-
-        if active_backend == "module://matplotlib_inline.backend_inline":
-            # close the figure to avoid duplicated (empty) plots created
-            # by the inline-backend manager in jupyter notebooks
-            plt.close(self.f)
-
-    def _get_ax_label(self):
-        return "map"
-
-    def _on_xlims_change(self, *args, **kwargs):
-        self.BM._refetch_bg = True
-
-    def _on_ylims_change(self, *args, **kwargs):
-        self.BM._refetch_bg = True
-
-    def _on_resize(self, event):
-        # make sure the background is re-fetched if the canvas has been resized
-        # (required for peeking layers after the canvas has been resized
-        #  and for webagg and nbagg backends to correctly re-draw the layer)
-
-        self.BM._refetch_bg = True
-        self.BM._refetch_blank = True
-
-        # update the figure dimensions in case shading is used
-        self._update_shade_axis_size()
-
-    def set_shade_dpi(self, dpi=None):
-        """
-        Set the dpi used by "shade shapes" to aggregate datasets.
-
-        This only affects the plot-shapes "shade_raster" and "shade_points".
-
-        Note
-        ----
-        If dpi=None is used (the default), datasets in exported figures will be
-        re-rendered with respect to the requested dpi of the exported image!
-
-        Parameters
-        ----------
-        dpi : int or None, optional
-            The dpi to use for data aggregation with shade shapes.
-            If None, the figure-dpi is used.
-
-            The default is None.
-
-        """
-        self._shade_dpi = dpi
-        self._update_shade_axis_size()
-
-    def _update_shade_axis_size(self, dpi=None):
-        if self._shade_dpi is not None:
-            dpi = self._shade_dpi
-
-        # set the axis-size that is used to determine the number of pixels used
-        # when using "shade" shapes for ALL maps objects of a figure
-        w, h = self.ax.bbox.width, self.ax.bbox.height
-        fig_dpi = self.f.dpi
-
-        for m in (self.parent, *self.parent._children):
-            if m.coll is not None and m.shape.name.startswith("shade_"):
-                # TODO for now, only handle numeric dpi-values to avoid issues.
-                # (savefig also seems to support strings like "figure" etc.)
-                if isinstance(dpi, (int, float, np.number)):
-                    m.coll.plot_width = int(w / fig_dpi * dpi)
-                    m.coll.plot_height = int(h / fig_dpi * dpi)
-                else:
-                    m.coll.plot_width = int(w)
-                    m.coll.plot_height = int(h)
-
-    def _on_close(self, event):
-        # reset attributes that might use up a lot of memory when the figure is closed
-        for m in [self.parent, *self.parent._children]:
-            if hasattr(m.f, "_EOmaps_parent"):
-                m.f._EOmaps_parent = None
-
-            m.cleanup()
-
-            # close the pyqt widget if there is one
-            if m._companion_widget is not None:
-                m._companion_widget.close()
-
-        # de-register colormaps
-        for cmap in self._registered_cmaps:
-            plt.colormaps.unregister(cmap)
-
-        # run garbage-collection to immediately free memory
-        gc.collect
-
-    def _join_axis_limits(self, m):
-        if self.ax.projection != m.ax.projection:
-            _log.warning(
-                "EOmaps: joining axis-limits is only possible for "
-                + "axes with the same projection!"
-            )
-            return
-
-        self.ax._EOmaps_joined_action = False
-        m.ax._EOmaps_joined_action = False
-
-        # Declare and register callbacks
-        def child_xlims_change(event_ax):
-            if event_ax._EOmaps_joined_action is not m.ax:
-                m.ax._EOmaps_joined_action = event_ax
-                m.ax.set_xlim(event_ax.get_xlim())
-            event_ax._EOmaps_joined_action = False
-
-        def child_ylims_change(event_ax):
-            if event_ax._EOmaps_joined_action is not m.ax:
-                m.ax._EOmaps_joined_action = event_ax
-                m.ax.set_ylim(event_ax.get_ylim())
-            event_ax._EOmaps_joined_action = False
-
-        def parent_xlims_change(event_ax):
-            if event_ax._EOmaps_joined_action is not self.ax:
-                self.ax._EOmaps_joined_action = event_ax
-                self.ax.set_xlim(event_ax.get_xlim())
-            event_ax._EOmaps_joined_action = False
-
-        def parent_ylims_change(event_ax):
-            if event_ax._EOmaps_joined_action is not self.ax:
-                self.ax._EOmaps_joined_action = event_ax
-                self.ax.set_ylim(event_ax.get_ylim())
-
-            event_ax._EOmaps_joined_action = False
-
-        self.ax.callbacks.connect("xlim_changed", child_xlims_change)
-        self.ax.callbacks.connect("ylim_changed", child_ylims_change)
-
-        m.ax.callbacks.connect("xlim_changed", parent_xlims_change)
-        m.ax.callbacks.connect("ylim_changed", parent_ylims_change)
-
-    def _add_child(self, m):
-        self.parent._children.add(m)
-
-        # execute hooks to notify the gui that a new child was added
-        for action in self._after_add_child:
-            try:
-                action()
-            except Exception:
-                _log.exception("EOmaps: Problem executing 'on_add_child' action:")
-
-    def inherit_classification(self, m):
-        """
-        Use the classification of another Maps-object when plotting the data.
-
-        NOTE
-        ----
-        If the classification is inherited, the following arguments
-        for `m.plot_map()` will have NO effect (they are inherited):
-
-            - "cmap"
-            - "vmin"
-            - "vmax"
-
-        Parameters
-        ----------
-        m : eomaps.Maps or None
-            The Maps-object that provides the classification specs.
-        """
-        if m is not None:
-            self._inherit_classification = self._proxy(m)
-        else:
-            self._inherit_classification = None
-
-    def inherit_data(self, m):
-        """
-        Use the data of another Maps-object (without copying).
-
-        NOTE
-        ----
-        If the data is inherited, any change in the data of the parent
-        Maps-object will be reflected in this Maps-object as well!
-
-        Parameters
-        ----------
-        m : eomaps.Maps or None
-            The Maps-object that provides the data.
-        """
-        if m is not None:
-            self.data_specs = m.data_specs
-
-            def set_data(*args, **kwargs):
-                raise AssertionError(
-                    "EOmaps: You cannot set data for a Maps object that "
-                    "inherits data!"
-                )
-
-            self.set_data = set_data
-
-    def _classify_data(
-        self,
-        z_data=None,
-        cmap=None,
-        vmin=None,
-        vmax=None,
-        classify_specs=None,
-    ):
-
-        if self._inherit_classification is not None:
-            try:
-                return (
-                    self._inherit_classification._cbcmap,
-                    self._inherit_classification._norm,
-                    self._inherit_classification._bins,
-                    self._inherit_classification._classified,
-                )
-            except AttributeError:
-                raise AssertionError(
-                    "EOmaps: A Maps object can only inherit the classification "
-                    "if the parent Maps object called `m.plot_map()` first!!"
-                )
-
-        if z_data is None:
-            z_data = self._data_manager.z_data
-
-        if isinstance(cmap, str):
-            cmap = plt.get_cmap(cmap).copy()
-        else:
-            cmap = cmap.copy()
-
-        # evaluate classification
-        if classify_specs is not None and classify_specs.scheme is not None:
-            (mapclassify,) = register_modules("mapclassify")
-
-            classified = True
-            if self.classify_specs.scheme == "UserDefined":
-                bins = self.classify_specs.bins
-            else:
-                # use "np.ma.compressed" to make sure values excluded via
-                # masked-arrays are not used to evaluate classification levels
-                # (normal arrays are passed through!)
-                mapc = getattr(mapclassify, classify_specs.scheme)(
-                    np.ma.compressed(z_data[~np.isnan(z_data)]), **classify_specs
-                )
-                bins = mapc.bins
-
-            bins = np.unique(np.clip(bins, vmin, vmax))
-
-            if vmin < min(bins):
-                bins = [vmin, *bins]
-
-            if vmax > max(bins):
-                bins = [*bins, vmax]
-
-            cbcmap = cmap
-            norm = mpl.colors.BoundaryNorm(bins, cmap.N)
-
-            self._emit_signal("cmapsChanged")
-
-            if cmap._rgba_bad:
-                cbcmap.set_bad(cmap._rgba_bad)
-            if cmap._rgba_over:
-                cbcmap.set_over(cmap._rgba_over)
-            if cmap._rgba_under:
-                cbcmap.set_under(cmap._rgba_under)
-
-        else:
-            classified = False
-            bins = None
-            cbcmap = cmap
-            norm = None
-
-        return cbcmap, norm, bins, classified
-
-    def _set_parent(self):
-        """Identify the parent object."""
-        assert self._parent is None, "EOmaps: There is already a parent Maps object!"
-        # check if the figure to which the Maps-object is added already has a parent
-        parent = None
-        if getattr(self._f, "_EOmaps_parent", False):
-            parent = self._proxy(self._f._EOmaps_parent)
-
-        if parent is None:
-            parent = self
-
-        self._parent = self._proxy(parent)
-
-        if parent not in [self, None]:
-            # add the child to the topmost parent-object
-            self.parent._add_child(self)
-
-    def _set_default_shape(self):
-        if self.data is not None:
-            # size = np.size(self.data)
-            size = np.size(self._data_manager.z_data)
-            shape = np.shape(self._data_manager.z_data)
-
-            if len(shape) == 2 and size > 200_000:
-                self.set_shape.raster()
-            else:
-                if size > 500_000:
-                    if all(
-                        register_modules(
-                            "datashader", "datashader.mpl_ext", raise_exception=False
-                        )
-                    ):
-                        # shade_points should work for any dataset
-                        self.set_shape.shade_points()
-                    else:
-                        _log.warning(
-                            "EOmaps: Attempting to plot a large dataset "
-                            f"({size} datapoints) but the 'datashader' library "
-                            "could not be imported! The plot might take long "
-                            "to finish! ... defaulting to 'ellipses' "
-                            "as plot-shape."
-                        )
-                        self.set_shape.ellipses()
-                else:
-                    self.set_shape.ellipses()
-        else:
-            self.set_shape.ellipses()
-
-    def _find_ID(self, ID):
-        # explicitly treat range-like indices (for very large datasets)
-        ids = self._data_manager.ids
-        if isinstance(ids, range):
-            ind, mask = [], []
-            for i in np.atleast_1d(ID):
-                if i in ids:
-
-                    found = ids.index(i)
-                    ind.append(found)
-                    mask.append(found)
-                else:
-                    ind.append(None)
-
-        elif isinstance(ids, (list, np.ndarray)):
-            mask = np.isin(ids, ID)
-            ind = np.where(mask)[0]
-
-        return mask, ind
-
-    def _clip_gdf(self, gdf, how="crs"):
-        """
-        Clip the shapes of a GeoDataFrame with respect to the given boundaries.
-
-        Parameters
-        ----------
-        gdf : geopandas.GeoDataFrame
-            The GeoDataFrame containing the geometries.
-        how : str, optional
-            Identifier how the clipping should be performed.
-
-            If a suffix "_invert" is added to the string, the polygon will be
-            inverted (via a symmetric-difference to the clip-shape)
-
-            - clipping with geopandas:
-              - "crs" : use the actual crs boundary polygon
-              - "crs_bounds" : use the boundary-envelope of the crs
-              - "extent" : use the current plot-extent
-
-            - clipping with gdal (always uses the crs domain as clip-shape):
-              - "gdal_Intersection"
-              - "gdal_SymDifference"
-              - "gdal_Difference"
-              - "gdal_Union"
-
-            The default is "crs".
-
-        Returns
-        -------
-        gdf
-            A GeoDataFrame with the clipped geometries
-        """
-        (gpd,) = register_modules("geopandas")
-
-        if how.startswith("gdal"):
-            methods = ["SymDifference", "Intersection", "Difference", "Union"]
-            # "SymDifference", "Intersection", "Difference"
-            method = how.split("_")[1]
-            assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
-            try:
-                from osgeo import gdal
-                from shapely import wkt
-            except ImportError:
-                raise ImportError(
-                    "EOmaps: Missing dependency: 'osgeo'\n"
-                    + "...clipping with gdal requires 'osgeo.gdal'"
-                )
-
-            e = self.ax.projection.domain
-            e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
-            if not e2.IsValid():
-                e2 = e2.MakeValid()
-
-            # only reproject geometries if crs cannot be identified
-            # as the initially provided (or cartopy converted) crs
-            if gdf.crs != self.crs_plot and gdf.crs != self._crs_plot:
-                gdf = gdf.to_crs(self.crs_plot)
-
-            clipgeoms = []
-            for g in gdf.geometry:
-                g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
-
-                if g2 is None:
-                    continue
-
-                if not g2.IsValid():
-                    g2 = g2.MakeValid()
-
-                i = getattr(g2, method)(e2)
-
-                if how.endswith("_invert"):
-                    i = i.SymDifference(e2)
-
-                gclip = wkt.loads(i.ExportToWkt())
-                clipgeoms.append(gclip)
-
-            gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
-
-            return gdf
-
-        if how == "crs" or how == "crs_invert":
-            clip_shp = gpd.GeoDataFrame(
-                geometry=[self.ax.projection.domain], crs=self.crs_plot
-            ).to_crs(gdf.crs)
-        elif how == "extent" or how == "extent_invert":
-            self.BM.update()
-            x0, x1, y0, y1 = self.get_extent()
-            clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
-                gdf.crs
-            )
-        elif how == "crs_bounds" or how == "crs_bounds_invert":
-            x0, x1, y0, y1 = self.get_extent()
-            clip_shp = self._make_rect_poly(
-                *self.crs_plot.boundary.bounds, self.crs_plot
-            ).to_crs(gdf.crs)
-        else:
-            raise TypeError(f"EOmaps: '{how}' is not a valid clipping method")
-
-        clip_shp = clip_shp.buffer(0)  # use this to make sure the geometry is valid
-
-        # add 1% of the extent-diameter as buffer
-        bnd = clip_shp.boundary.bounds
-        d = np.sqrt((bnd.maxx - bnd.minx) ** 2 + (bnd.maxy - bnd.miny) ** 2)
-        clip_shp = clip_shp.buffer(d / 100)
-
-        # clip the geo-dataframe with the buffered clipping shape
-        clipgdf = gdf.clip(clip_shp)
-
-        if how.endswith("_invert"):
-            clipgdf = clipgdf.symmetric_difference(clip_shp)
-
-        return clipgdf
-
-    def _get_mcl_subclass(self, s):
-        # get a subclass that inherits the docstring from the corresponding
-        # mapclassify classifier
-
-        class scheme:
-            @wraps(s)
-            def __init__(_, *args, **kwargs):
-                pass
-
-            def __new__(cls, **kwargs):
-                if "y" in kwargs:
-                    _log.error(
-                        "EOmaps: The values (e.g. the 'y' parameter) are "
-                        + "assigned internally... only provide additional "
-                        + "parameters that specify the classification scheme!"
-                    )
-                    kwargs.pop("y")
-
-                self.classify_specs._set_scheme_and_args(scheme=s.__name__, **kwargs)
-
-        scheme.__doc__ = s.__doc__
-        return scheme
 
     def _plot_map(
         self,
@@ -4832,130 +3089,494 @@ class Maps(metaclass=_MapsMeta):
         if dynamic is True:
             self.BM.update(clear=False)
 
-    def _encode_values(self, val):
+    def set_shade_dpi(self, dpi=None):
         """
-        Encode values with respect to the provided  "scale_factor" and "add_offset".
+        Set the dpi used by "shade shapes" to aggregate datasets.
 
-        Encoding is performed via the formula:
+        This only affects the plot-shapes "shade_raster" and "shade_points".
 
-            `encoded_value = val / scale_factor - add_offset`
-
-        NOTE: the data-type is not altered!!
-        (e.g. no integer-conversion is performed, only values are adjusted)
+        Note
+        ----
+        If dpi=None is used (the default), datasets in exported figures will be
+        re-rendered with respect to the requested dpi of the exported image!
 
         Parameters
         ----------
-        val : array-like
-            The data-values to encode
+        dpi : int or None, optional
+            The dpi to use for data aggregation with shade shapes.
+            If None, the figure-dpi is used.
 
-        Returns
-        -------
-        encoded_values
-            The encoded data values
+            The default is None.
+
         """
-        encoding = self.data_specs.encoding
+        self._shade_dpi = dpi
+        self._update_shade_axis_size()
 
-        if encoding is not None and encoding is not False:
-            try:
-                scale_factor = encoding.get("scale_factor", None)
-                add_offset = encoding.get("add_offset", None)
-                fill_value = encoding.get("_FillValue", None)
+    def _update_shade_axis_size(self, dpi=None):
+        if self._shade_dpi is not None:
+            dpi = self._shade_dpi
 
-                if val is None:
-                    return fill_value
+        # set the axis-size that is used to determine the number of pixels used
+        # when using "shade" shapes for ALL maps objects of a figure
+        w, h = self.ax.bbox.width, self.ax.bbox.height
+        fig_dpi = self.f.dpi
 
-                if add_offset:
-                    val = val - add_offset
-                if scale_factor:
-                    val = val / scale_factor
+        for m in (self.parent, *self.parent._children):
+            if m.coll is not None and m.shape.name.startswith("shade_"):
+                # TODO for now, only handle numeric dpi-values to avoid issues.
+                # (savefig also seems to support strings like "figure" etc.)
+                if isinstance(dpi, (int, float, np.number)):
+                    m.coll.plot_width = int(w / fig_dpi * dpi)
+                    m.coll.plot_height = int(h / fig_dpi * dpi)
+                else:
+                    m.coll.plot_width = int(w)
+                    m.coll.plot_height = int(h)
 
-                return val
-            except Exception:
-                _log.exception(f"EOmaps: Error while trying to encode the data: {val}")
-                return val
-        else:
-            return val
-
-    def _decode_values(self, val):
+    def make_dataset_pickable(
+        self,
+    ):
         """
-        Decode data-values with respect to the provided "scale_factor" and "add_offset".
+        Make the associated dataset pickable **without plotting** it first.
 
-        Decoding is performed via the formula:
+        After executing this function, `m.cb.pick` callbacks can be attached to the
+        `Maps` object.
 
-            `actual_value = add_offset + scale_factor * val`
+        NOTE
+        ----
+        This function is ONLY necessary if you want to use pick-callbacks **without**
+        actually plotting the data**! Otherwise a call to `m.plot_map()` is sufficient!
 
-        The encoding is defined in `m.data_specs.encoding`
+        - Each `Maps` object can always have only one pickable dataset.
+        - The used data is always the dataset that was assigned in the last call to
+          `m.plot_map()` or `m.make_dataset_pickable()`.
+        - To get multiple pickable datasets, use an individual layer for each of the
+          datasets (e.g. first `m2 = m.new_layer()` and then assign the data to `m2`)
 
-        Parameters
-        ----------
-        val : array-like
-            The encoded data-values
-
-        Returns
-        -------
-        decoded_values
-            The decoded data values
+        Examples
+        --------
+        >>> m = Maps()
+        >>> m.add_feature.preset.coastline()
+        >>> ...
+        >>> # a dataset that should be pickable but NOT visible...
+        >>> m2 = m.new_layer()
+            >>> m2.set_data(*np.linspace([0, -180,-90,], [100, 180, 90], 100).T)
+        >>> m2.make_dataset_pickable()
+        >>> m2.cb.pick.attach.annotate()  # get an annotation for the invisible dataset
+        >>> # ...call m2.plot_map() to make the dataset visible...
         """
-        if val is None:
-            return None
-
-        encoding = self.data_specs.encoding
-        if not any(encoding is i for i in (None, False)):
-            try:
-                scale_factor = encoding.get("scale_factor", None)
-                add_offset = encoding.get("add_offset", None)
-
-                if scale_factor:
-                    val = val * scale_factor
-                if add_offset:
-                    val = val + add_offset
-
-                return val
-            except Exception:
-                _log.exception(f"EOmaps: Error while trying to decode the data {val}.")
-                return val
-        else:
-            return val
-
-    def _get_layers(self, exclude=None, exclude_private=True):
-        # return a list of all (empty and non-empty) layer-names
-        layers = set((m.layer for m in (self.parent, *self.parent._children)))
-        # add layers that are not yet activated (but have an activation
-        # method defined...)
-        layers = layers.union(set(self.BM._on_layer_activation[True]))
-        layers = layers.union(set(self.BM._on_layer_activation[False]))
-
-        # add all (possibly still invisible) layers with artists defined
-        # (ONLY do this for unique layers... skip multi-layers )
-        layers = layers.union(
-            chain(
-                *(
-                    self.BM._parse_multi_layer_str(i)[0]
-                    for i in (*self.BM._bg_artists, *self.BM._artists)
-                )
+        if self.coll is not None:
+            _log.error(
+                "EOmaps: There is already a dataset plotted on this Maps-object. "
+                "You MUST use a new layer (`m2 = m.new_layer()`) to use "
+                "`m2.make_dataset_pickable()`!"
             )
-        )
+            return
 
-        # exclude private layers
-        if exclude_private:
-            # for python <3.9 compatibility
-            def remove_prefix(text, prefix):
-                if text.startswith(prefix):
-                    return text[len(prefix) :]
-                return text
+        # ---------------------- prepare the data
+        self._data_manager = DataManager(self._proxy(self))
+        self._data_manager.set_props(layer=self.layer, only_pick=True)
 
-            layers = {remove_prefix(i, "__inset_") for i in layers}
-            layers = {i for i in layers if not i.startswith("__")}
+        x0, x1 = self._data_manager.x0.min(), self._data_manager.x0.max()
+        y0, y1 = self._data_manager.y0.min(), self._data_manager.y0.max()
 
-        if exclude:
-            for i in exclude:
-                if i in layers:
-                    layers.remove(i)
+        # use a transparent rectangle of the data-extent as artist for picking
+        (art,) = self.ax.fill([x0, x1, x1, x0], [y0, y0, y1, y1], fc="none", ec="none")
 
-        # sort the layers
-        layers = sorted(layers, key=lambda x: str(x))
+        self._coll = art
 
-        return layers
+        self.tree = SearchTree(m=self._proxy(self))
+        self.cb.pick._set_artist(art)
+        self.cb.pick._init_cbs()
+        self.cb._methods.add("pick")
+
+        self._coll_kwargs = dict()
+        self._coll_dynamic = True
+
+        # set _data_plotted to True to trigger updates in the data-manager
+        self._data_plotted = True
+
+    def copy(
+        self,
+        data_specs=False,
+        classify_specs=True,
+        shape=True,
+        **kwargs,
+    ):
+        """
+        Create a (deep)copy of the Maps object that shares selected specifications.
+
+        -> useful to quickly create plots with similar configurations
+
+        Parameters
+        ----------
+        data_specs, classify_specs, shape : bool or "shared", optional
+            Indicator if the corresponding properties should be copied.
+
+            - if True: ALL corresponding properties are copied
+
+            By default, "classify_specs" and the "shape" are copied.
+
+        kwargs :
+            Additional kwargs passed to `m = Maps(**kwargs)`
+            (e.g. crs, f, ax, orientation, layer)
+
+        Returns
+        -------
+        copy_cls : eomaps.Maps object
+            a new Maps class.
+        """
+        copy_cls = Maps(**kwargs)
+
+        if data_specs is True:
+            data_specs = list(self.data_specs.keys())
+            copy_cls.set_data(
+                **{key: copy.deepcopy(val) for key, val in self.data_specs}
+            )
+
+        if shape is True:
+            if self.shape is not None:
+                getattr(copy_cls.set_shape, self.shape.name)(**self.shape._initargs)
+
+        if classify_specs is True:
+            classify_specs = list(self.classify_specs.keys())
+            copy_cls.set_classify_specs(
+                scheme=self.classify_specs.scheme, **self.classify_specs
+            )
+
+        return copy_cls
+
+    def redraw(self, *args):
+        self._data_manager.last_extent = None
+        super().redraw(*args)
+
+    def snapshot(self, *args, **kwargs):
+        # hide companion-widget indicator
+        for m in (self.parent, *self.parent._children):
+            # hide companion-widget indicator
+            m._indicate_companion_map(False)
+
+        super().snapshot(*args, **kwargs)
+
+    @_add_to_docstring(
+        insert={
+            "Other Parameters": (
+                "refetch_wms : bool\n"
+                "    If True, re-fetch EOmaps WebMap services with respect to "
+                "the dpi of the exported figure before exporting the image. "
+                "\n\n    NOTE: This might fail for high-dpi exports and might "
+                "result in a completely different appearance of the wms-images "
+                "in the exported file! "
+                "\n\n    See `m.refetch_wms_on_size_change()` for more details. "
+                "The default is False",
+                1,
+            )
+        }
+    )
+    @wraps(MapsBase.savefig)
+    def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
+        with ExitStack() as stack:
+            # re-fetch webmap servies if required
+            if refetch_wms is False:
+                if _cx_refetch_wms_on_size_change is not None:
+                    stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
+
+            for m in (self.parent, *self.parent._children):
+                # hide companion-widget indicator
+                m._indicate_companion_map(False)
+
+                # handle colorbars
+                for cb in m._colorbars:
+                    for a in (cb.ax_cb, cb.ax_cb_plot):
+                        stack.enter_context(a._cm_set(animated=False))
+
+                # set if data should be rasterized on vector export
+                if m.coll is not None:
+                    stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
+
+            dpi = kwargs.get("dpi", None)
+
+            shade_dpi_changed = False
+            if dpi is not None and dpi != self.f.dpi:
+                shade_dpi_changed = True
+                # set the shading-axis-size to reflect the used dpi setting
+                self._update_shade_axis_size(dpi=dpi)
+
+            super().savefig(*args, **kwargs)
+
+        if shade_dpi_changed:
+            # reset the shading-axis-size to the used figure dpi
+            self._update_shade_axis_size()
+
+    def cleanup(self):
+        """
+        Cleanup all references to the object so that it can be safely deleted.
+
+        This function is primarily used internally to clear objects if the figure
+        is closed.
+
+        Note
+        ----
+        Executing this function will remove ALL attached callbacks
+        and delete all assigned datasets & pre-computed values.
+
+        ONLY execute this if you do not need to do anything with the layer
+        """
+
+        # close the pyqt widget if there is one
+        if self._companion_widget is not None:
+            self._companion_widget.close()
+
+        # de-register colormaps
+        for cmap in self._registered_cmaps:
+            plt.colormaps.unregister(cmap)
+
+        try:
+            # clear data-specs and all cached properties of the data
+            try:
+                self._coll = None
+                self._data_manager.cleanup()
+
+                if hasattr(self, "tree"):
+                    del self.tree
+                self.data_specs.delete()
+            except Exception:
+                _log.error(
+                    "EOmaps-cleanup: Problem while clearing data specs",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+
+            # disconnect all click, pick and keypress callbacks
+            try:
+                self.cb._reset_cids()
+                # cleanup callback-containers
+                self.cb._clear_callbacks()
+            except Exception:
+                _log.error(
+                    "EOmaps-cleanup: Problem while clearing callbacks",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+
+        except Exception:
+            _log.error(
+                "EOmaps: Cleanup problem!",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
+
+        super().cleanup()
+
+    def _save_to_clipboard(self, **kwargs):
+        """
+        Export the figure to the clipboard.
+
+        Parameters
+        ----------
+        kwargs :
+            Keyword-arguments passed to :py:meth:`Maps.savefig`
+        """
+        import io
+        import mimetypes
+        from qtpy.QtCore import QMimeData
+        from qtpy.QtWidgets import QApplication
+        from qtpy.QtGui import QImage
+
+        # guess the MIME type from the provided file-extension
+        fmt = kwargs.get("format", "png")
+        mimetype, _ = mimetypes.guess_type(f"dummy.{fmt}")
+
+        message = f"EOmaps: Exporting figure as '{fmt}' to clipboard..."
+        _log.info(message)
+
+        # TODO remove dependency on companion widget here
+        if getattr(self, "_companion_widget", None) is not None:
+            self._companion_widget.window().statusBar().showMessage(message, 2000)
+
+        with io.BytesIO() as buffer:
+            self.savefig(buffer, **kwargs)
+            data = QMimeData()
+
+            cb = QApplication.clipboard()
+
+            # TODO check why files copied with setMimeData(...) cannot be pasted
+            # properly in other apps
+            if fmt in ["svg", "svgz", "pdf", "eps"]:
+                data.setData(mimetype, buffer.getvalue())
+                cb.clear(mode=cb.Clipboard)
+                cb.setMimeData(data, mode=cb.Clipboard)
+            else:
+                cb.setImage(QImage.fromData(buffer.getvalue()))
+
+    def _on_keypress(self, event):
+        if plt.get_backend().lower() == "webagg":
+            return
+
+        # NOTE: callback is only attached to the parent Maps object!
+        if event.key == self._companion_widget_key:
+            try:
+                self._open_companion_widget((event.x, event.y))
+            except Exception:
+                _log.exception(
+                    "EOmaps: Encountered a problem while trying to open "
+                    "the companion widget",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+        elif event.key == "ctrl+c":
+            try:
+                self._save_to_clipboard(**Maps._clipboard_kwargs)
+            except Exception:
+                _log.exception(
+                    "EOmaps: Encountered a problem while trying to export the figure "
+                    "to the clipboard.",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+
+    def _classify_data(
+        self,
+        z_data=None,
+        cmap=None,
+        vmin=None,
+        vmax=None,
+        classify_specs=None,
+    ):
+
+        if self._inherit_classification is not None:
+            try:
+                return (
+                    self._inherit_classification._cbcmap,
+                    self._inherit_classification._norm,
+                    self._inherit_classification._bins,
+                    self._inherit_classification._classified,
+                )
+            except AttributeError:
+                raise AssertionError(
+                    "EOmaps: A Maps object can only inherit the classification "
+                    "if the parent Maps object called `m.plot_map()` first!!"
+                )
+
+        if z_data is None:
+            z_data = self._data_manager.z_data
+
+        if isinstance(cmap, str):
+            cmap = plt.get_cmap(cmap).copy()
+        else:
+            cmap = cmap.copy()
+
+        # evaluate classification
+        if classify_specs is not None and classify_specs.scheme is not None:
+            (mapclassify,) = register_modules("mapclassify")
+
+            classified = True
+            if self.classify_specs.scheme == "UserDefined":
+                bins = self.classify_specs.bins
+            else:
+                # use "np.ma.compressed" to make sure values excluded via
+                # masked-arrays are not used to evaluate classification levels
+                # (normal arrays are passed through!)
+                mapc = getattr(mapclassify, classify_specs.scheme)(
+                    np.ma.compressed(z_data[~np.isnan(z_data)]), **classify_specs
+                )
+                bins = mapc.bins
+
+            bins = np.unique(np.clip(bins, vmin, vmax))
+
+            if vmin < min(bins):
+                bins = [vmin, *bins]
+
+            if vmax > max(bins):
+                bins = [*bins, vmax]
+
+            cbcmap = cmap
+            norm = mpl.colors.BoundaryNorm(bins, cmap.N)
+
+            self._emit_signal("cmapsChanged")
+
+            if cmap._rgba_bad:
+                cbcmap.set_bad(cmap._rgba_bad)
+            if cmap._rgba_over:
+                cbcmap.set_over(cmap._rgba_over)
+            if cmap._rgba_under:
+                cbcmap.set_under(cmap._rgba_under)
+
+        else:
+            classified = False
+            bins = None
+            cbcmap = cmap
+            norm = None
+
+        return cbcmap, norm, bins, classified
+
+    def _get_mcl_subclass(self, s):
+        # get a subclass that inherits the docstring from the corresponding
+        # mapclassify classifier
+
+        class scheme:
+            @wraps(s)
+            def __init__(_, *args, **kwargs):
+                pass
+
+            def __new__(cls, **kwargs):
+                if "y" in kwargs:
+                    _log.error(
+                        "EOmaps: The values (e.g. the 'y' parameter) are "
+                        + "assigned internally... only provide additional "
+                        + "parameters that specify the classification scheme!"
+                    )
+                    kwargs.pop("y")
+
+                self.classify_specs._set_scheme_and_args(scheme=s.__name__, **kwargs)
+
+        scheme.__doc__ = s.__doc__
+        return scheme
+
+    def _set_default_shape(self):
+        if self.data is not None:
+            # size = np.size(self.data)
+            size = np.size(self._data_manager.z_data)
+            shape = np.shape(self._data_manager.z_data)
+
+            if len(shape) == 2 and size > 200_000:
+                self.set_shape.raster()
+            else:
+                if size > 500_000:
+                    if all(
+                        register_modules(
+                            "datashader", "datashader.mpl_ext", raise_exception=False
+                        )
+                    ):
+                        # shade_points should work for any dataset
+                        self.set_shape.shade_points()
+                    else:
+                        _log.warning(
+                            "EOmaps: Attempting to plot a large dataset "
+                            f"({size} datapoints) but the 'datashader' library "
+                            "could not be imported! The plot might take long "
+                            "to finish! ... defaulting to 'ellipses' "
+                            "as plot-shape."
+                        )
+                        self.set_shape.ellipses()
+                else:
+                    self.set_shape.ellipses()
+        else:
+            self.set_shape.ellipses()
+
+    def _find_ID(self, ID):
+        # explicitly treat range-like indices (for very large datasets)
+        ids = self._data_manager.ids
+        if isinstance(ids, range):
+            ind, mask = [], []
+            for i in np.atleast_1d(ID):
+                if i in ids:
+
+                    found = ids.index(i)
+                    ind.append(found)
+                    mask.append(found)
+                else:
+                    ind.append(None)
+
+        elif isinstance(ids, (list, np.ndarray)):
+            mask = np.isin(ids, ID)
+            ind = np.where(mask)[0]
+
+        return mask, ind
 
     @lru_cache()
     def _get_nominatim_response(self, q, user_agent=None):
@@ -4978,14 +3599,6 @@ class Maps(metaclass=_MapsMeta):
             raise TypeError(f"Unable to resolve the location: {q}")
 
         return resp[0]
-
-    def _get_snapshot(self, layer=None):
-        if layer is None:
-            buf = self.f.canvas.print_to_buffer()
-            x = np.frombuffer(buf[0], dtype=np.uint8).reshape(buf[1][1], buf[1][0], 4)
-        else:
-            x = self.BM._get_array(layer)[::-1, ...]
-        return x
 
     def _indicate_companion_map(self, visible):
         if hasattr(self, "_companion_map_indicator"):
@@ -5166,65 +3779,66 @@ class Maps(metaclass=_MapsMeta):
                     exc_info=True,
                 )
 
-    @staticmethod
-    def _proxy(obj):
-        # None cannot be weak-referenced!
-        if obj is None:
-            return None
+    def _get_always_on_top(self):
+        if "qt" in plt.get_backend().lower():
+            from qtpy import QtCore
 
-        # create a proxy if the object is not yet a proxy
-        if type(obj) is not weakref.ProxyType:
-            return weakref.proxy(obj)
-        else:
-            return obj
+            w = self.f.canvas.window()
+            return bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint)
 
-    @staticmethod
-    @lru_cache()
-    def _get_cartopy_crs(crs):
-        if isinstance(crs, Maps.CRS.CRS):  # already a cartopy CRS
-            cartopy_proj = crs
-        elif crs == 4326:
-            cartopy_proj = ccrs.PlateCarree()
-        elif crs == 3857:
-            cartopy_proj = ccrs.Mercator.GOOGLE
-        elif isinstance(crs, (int, np.integer)):
-            cartopy_proj = ccrs.epsg(crs)
-        elif isinstance(crs, CRS):  # pyproj CRS
-            cartopy_proj = None
-            for (
-                subgrid,
-                equi7crs,
-            ) in Maps.CRS.Equi7Grid_projection._pyproj_crs_generator():
-                if equi7crs == crs:
-                    cartopy_proj = Maps.CRS.Equi7Grid_projection(subgrid)
-                    break
-            if cartopy_proj is None:
-                cartopy_proj = ccrs.CRS(crs)
+        return False
 
-        else:
-            raise AssertionError(f"EOmaps: cannot identify the CRS for: {crs}")
+    def _set_always_on_top(self, q):
+        # keep pyqt window on top
+        try:
+            from qtpy import QtCore
 
-        return cartopy_proj
+            if q:
+                # only do this if necessary to avoid flickering
+                # see https://stackoverflow.com/a/40007740/9703451
+                if not self._get_always_on_top():
+                    # in case pyqt is used as backend, also keep the figure on top
+                    if "qt" in plt.get_backend().lower():
+                        w = self.f.canvas.window()
+                        ws = w.size()
+                        w.setWindowFlags(
+                            w.windowFlags() | QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        w.resize(ws)
+                        w.show()
 
-    @staticmethod
-    @lru_cache()
-    def _get_transformer(crs_from, crs_to):
-        # create a pyproj Transformer object and cache it for later use
-        return Transformer.from_crs(crs_from, crs_to, always_xy=True)
+                    # handle the widget in case it was activated (possible also for
+                    # backends other than qt)
+                    if self._companion_widget is not None:
+                        cw = self._companion_widget.window()
+                        cws = cw.size()
+                        cw.setWindowFlags(
+                            cw.windowFlags() | QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        cw.resize(cws)
+                        cw.show()
 
-    @property
-    def _transf_plot_to_lonlat(self):
-        return self._get_transformer(
-            self.crs_plot,
-            self.get_crs(self.crs_plot.as_geodetic()),
-        )
+            else:
+                if self._get_always_on_top():
+                    if "qt" in plt.get_backend().lower():
+                        w = self.f.canvas.window()
+                        ws = w.size()
+                        w.setWindowFlags(
+                            w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        w.resize(ws)
+                        w.show()
 
-    @property
-    def _transf_lonlat_to_plot(self):
-        return self._get_transformer(
-            self.get_crs(self.crs_plot.as_geodetic()),
-            self.crs_plot,
-        )
+                    if self._companion_widget is not None:
+                        cw = self._companion_widget.window()
+                        cws = cw.size()
+                        cw.setWindowFlags(
+                            cw.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        cw.resize(cws)
+                        cw.show()
+        except Exception:
+            pass
 
     @staticmethod
     def _make_rect_poly(x0, y0, x1, y1, crs=None, npts=100):
@@ -5287,111 +3901,193 @@ class Maps(metaclass=_MapsMeta):
             """Set the behavior for WebMap services on axis or figure size changes."""
             refetch_wms_on_size_change(*args, **kwargs)
 
-    def set_frame(self, rounded=0, **kwargs):
+    def _get_alpha_cmap_name(self, alpha):
+        # get a unique name for the colormap
+        try:
+            ncmaps = max(
+                [
+                    int(i.rsplit("_", 1)[1])
+                    for i in plt.colormaps()
+                    if i.startswith("EOmaps_alpha_")
+                ]
+            )
+        except Exception:
+            ncmaps = 0
+
+        return f"EOmaps_alpha_{ncmaps + 1}"
+
+    def _encode_values(self, val):
         """
-        Set the properties of the map boundary and the background patch.
+        Encode values with respect to the provided  "scale_factor" and "add_offset".
+
+        Encoding is performed via the formula:
+
+            `encoded_value = val / scale_factor - add_offset`
+
+        NOTE: the data-type is not altered!!
+        (e.g. no integer-conversion is performed, only values are adjusted)
 
         Parameters
         ----------
-        rounded : float, optional
-            If provided, use a rectangle with rounded corners as map boundary
-            line. The corners will be rounded with respect to the provided
-            fraction (0=no rounding, 1=max. radius). The default is None.
-        kwargs :
-            Additional kwargs to style the boundary line (e.g. the spine)
-            and the background patch
+        val : array-like
+            The data-values to encode
 
-            Possible args for the boundary-line:
-
-            - "edgecolor" or "ec": The line color
-            - "linewidth" or "lw": The line width
-            - "linestyle" or "ls": The line style
-            - "path_effects": A list of path-effects to apply to the line
-
-            Possible args for the background-patch:
-
-            - "facecolor" or "fc": The color of the background patch
-
-        Examples
-        --------
-
-        >>> m = Maps()
-        >>> m.add_feature.preset.ocean()
-        >>> m.set_frame(fc="r", ec="b", lw=3, rounded=.2)
-
-        >>> import matplotlib.patheffects as pe
-        >>> m = Maps()
-        >>> m.add_feature.preset.ocean(fc="k")
-        >>> m.set_frame(
-        >>>     facecolor=(.8, .8, 0, .5), edgecolor="w", linewidth=2,
-        >>>     rounded=.5,
-        >>>     path_effects=[pe.withStroke(linewidth=7, foreground="m")])
-
+        Returns
+        -------
+        encoded_values
+            The encoded data values
         """
+        encoding = self.data_specs.encoding
 
-        for key in ("fc", "facecolor"):
-            if key in kwargs:
-                self.ax.patch.set_facecolor(kwargs.pop(key))
+        if encoding is not None and encoding is not False:
+            try:
+                scale_factor = encoding.get("scale_factor", None)
+                add_offset = encoding.get("add_offset", None)
+                fill_value = encoding.get("_FillValue", None)
 
-        self.ax.spines["geo"].update(kwargs)
+                if val is None:
+                    return fill_value
 
-        if rounded:
-            assert (
-                rounded <= 1
-            ), "EOmaps: rounded corner fraction must be between 0 and 1"
+                if add_offset:
+                    val = val - add_offset
+                if scale_factor:
+                    val = val / scale_factor
 
-            self.ax._EOmaps_rounded_spine_frac = rounded
-            theta = np.linspace(0, np.pi / 2, 50)  # use 50 intermediate points
-            s, c = np.sin(theta), np.cos(theta)
+                return val
+            except Exception:
+                _log.exception(f"EOmaps: Error while trying to encode the data: {val}")
+                return val
+        else:
+            return val
 
-            # attach a function to dynamically update the corners of the
-            # map boundary prior to fetching a background
-            # Note: this function is only attached once and the relevant
-            # properties are fetched from the axes!
-            if not getattr(self.ax, "_EOmaps_rounded_spine_attached", False):
+    def _decode_values(self, val):
+        """
+        Decode data-values with respect to the provided "scale_factor" and "add_offset".
 
-                def cb(*args, **kwargs):
-                    if self.ax._EOmaps_rounded_spine_frac == 0:
-                        return
+        Decoding is performed via the formula:
 
-                    x0, x1, y0, y1 = self.get_extent(self.crs_plot)
-                    r = min(x1 - x0, y1 - y0) * self.ax._EOmaps_rounded_spine_frac / 2
+            `actual_value = add_offset + scale_factor * val`
 
-                    xs = [
-                        x0,
-                        *(x0 + r - r * c),
-                        x0 + r,
-                        x1 - r,
-                        *(x1 - r + r * s),
-                        x1,
-                        x1,
-                        *(x1 - r + r * c),
-                        x1 - r,
-                        x0 + r,
-                        *(x0 + r - r * s),
-                        x0,
-                    ]
+        The encoding is defined in `m.data_specs.encoding`
 
-                    ys = [
-                        y1 - r,
-                        *(y1 - r + r * s),
-                        y1,
-                        y1,
-                        *(y1 - r + r * c),
-                        y1 - r,
-                        y0 + r,
-                        *(y0 + r - r * s),
-                        y0,
-                        y0,
-                        *(y0 + r - r * c),
-                        y0 + r,
-                    ]
+        Parameters
+        ----------
+        val : array-like
+            The encoded data-values
 
-                    path = mpath(np.column_stack((xs, ys)))
-                    self.ax.set_boundary(path, transform=self.crs_plot)
+        Returns
+        -------
+        decoded_values
+            The decoded data values
+        """
+        if val is None:
+            return None
 
-                self.BM._before_fetch_bg_actions.append(cb)
-                self.ax._EOmaps_rounded_spine_attached = True
+        encoding = self.data_specs.encoding
+        if not any(encoding is i for i in (None, False)):
+            try:
+                scale_factor = encoding.get("scale_factor", None)
+                add_offset = encoding.get("add_offset", None)
 
-        self.redraw("__SPINES__")
-        self.redraw("__BG__")
+                if scale_factor:
+                    val = val * scale_factor
+                if add_offset:
+                    val = val + add_offset
+
+                return val
+            except Exception:
+                _log.exception(f"EOmaps: Error while trying to decode the data {val}.")
+                return val
+        else:
+            return val
+
+    def _calc_vmin_vmax(self, vmin=None, vmax=None):
+        if self.data is None:
+            return vmin, vmax
+
+        calc_min, calc_max = vmin is None, vmax is None
+
+        # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
+        if (
+            self.data_specs.encoding is not None
+            and isinstance(self._data_manager.z_data, np.ndarray)
+            and issubclass(self._data_manager.z_data.dtype.type, np.integer)
+        ):
+
+            # note the specific way how to check for integer-dtype based on issubclass
+            # since isinstance() fails to identify all integer dtypes!!
+            #   isinstance(np.dtype("uint8"), np.integer)       (incorrect) False
+            #   issubclass(np.dtype("uint8").type, np.integer)  (correct)   True
+            # for details, see https://stackoverflow.com/a/934652/9703451
+
+            fill_value = self.data_specs.encoding.get("_FillValue", None)
+            if fill_value and any([calc_min, calc_max]):
+                # find values that are not fill-values
+                use_vals = self._data_manager.z_data[
+                    self._data_manager.z_data != fill_value
+                ]
+
+                if calc_min:
+                    vmin = np.min(use_vals)
+                if calc_max:
+                    vmax = np.max(use_vals)
+
+                return vmin, vmax
+
+        # use nanmin/nanmax for all other arrays
+        if calc_min:
+            vmin = np.nanmin(self._data_manager.z_data)
+        if calc_max:
+            vmax = np.nanmax(self._data_manager.z_data)
+
+        return vmin, vmax
+
+    def _set_vmin_vmax(self, vmin=None, vmax=None):
+        # don't encode nan-vailes to avoid setting the fill-value as vmin/vmax
+        if vmin is not None:
+            vmin = self._encode_values(vmin)
+        if vmax is not None:
+            vmax = self._encode_values(vmax)
+
+        # handle inherited bounds
+        if self._inherit_classification is not None:
+            if not (vmin is None and vmax is None):
+                raise TypeError(
+                    "EOmaps: 'vmin' and 'vmax' cannot be set explicitly "
+                    "if the classification is inherited!"
+                )
+
+            # in case data is NOT inherited, warn if vmin/vmax is None
+            # (different limits might cause a different appearance of the data!)
+            if self.data_specs._m == self:
+                if self._vmin is None:
+                    _log.warning("EOmaps: Inherited value for 'vmin' is None!")
+                if self._vmax is None:
+                    _log.warning(
+                        "EOmaps: Inherited inherited value for 'vmax' is None!"
+                    )
+
+            self._vmin = self._inherit_classification._vmin
+            self._vmax = self._inherit_classification._vmax
+            return
+
+        if not self.shape.name.startswith("shade_"):
+            # ignore fill_values when evaluating vmin/vmax on integer-encoded datasets
+            self._vmin, self._vmax = self._calc_vmin_vmax(vmin=vmin, vmax=vmax)
+        else:
+            # get the name of the used aggretation reduction
+            aggname = self.shape.aggregator.__class__.__name__
+            if aggname in ["first", "last", "max", "min", "mean", "mode"]:
+                # set vmin/vmax in case the aggregation still represents data-values
+                self._vmin, self._vmax = self._calc_vmin_vmax(vmin=vmin, vmax=vmax)
+            else:
+                # set vmin/vmax for aggregations that do NOT represent data values
+                # allow vmin/vmax = None (e.g. autoscaling)
+                self._vmin, self._vmax = vmin, vmax
+                if "count" in aggname:
+                    # if the reduction represents a count, don't count empty pixels
+                    if vmin and vmin <= 0:
+                        _log.warning(
+                            "EOmaps: setting vmin=1 to avoid counting empty pixels..."
+                        )
+                        self._vmin = 1

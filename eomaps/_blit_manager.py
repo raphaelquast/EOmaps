@@ -268,7 +268,9 @@ class BlitManager(LayerParser):
 
     def _get_all_map_axes(self):
         maxes = {
-            m.ax for m in (self._m.parent, *self._m.parent._children) if m._new_axis_map
+            m.ax
+            for m in (self._m.parent, *self._m.parent._children)
+            if getattr(m, "_new_axis_map", False)
         }
         return maxes
 
@@ -430,7 +432,7 @@ class BlitManager(LayerParser):
         for m in [self._m.parent, *self._m.parent._children]:
             layer_visible = self._layer_is_subset(val, m.layer)
 
-            for cb in m._colorbars:
+            for cb in getattr(m, "_colorbars", []):
                 cb._hide_singular_axes()
 
                 if layer_visible:
@@ -727,8 +729,9 @@ class BlitManager(LayerParser):
 
         # update axes spines and patches since they are used to clip artists!
         for ax in self._get_all_map_axes():
-            ax.spines["geo"]._adjust_location()
-            ax.patch._adjust_location()
+            if "geo" in ax.spines:
+                ax.spines["geo"]._adjust_location()
+                ax.patch._adjust_location()
 
         # use contextmanagers to make sure the background patches are not stored
         # in the buffer regions!
@@ -978,8 +981,11 @@ class BlitManager(LayerParser):
             and not layer.startswith("__inset_")
         ):
             layer = "__inset_" + str(layer)
+
         if layer in self._bg_artists and art in self._bg_artists[layer]:
-            _log.info(f"EOmaps: Background-artist '{art}' already added")
+            _log.info(
+                f"EOmaps: Background-artist '{art}' already added on layer '{layer}'"
+            )
             return
 
         art.set_animated(True)
