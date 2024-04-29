@@ -22,17 +22,10 @@ from matplotlib.gridspec import GridSpec, SubplotSpec
 
 _log = logging.getLogger(__name__)
 
-from .helpers import _add_to_docstring, _parse_log_level
+from .helpers import _parse_log_level
 from .layout_editor import LayoutEditor
 from ._blit_manager import BlitManager
 from .projections import Equi7Grid_projection  # import also supercharges cartopy.ccrs
-
-# TODO this should be in Maps, not in MapsBase
-try:
-    from ._webmap import _cx_refetch_wms_on_size_change
-except ImportError as ex:
-    _log.error(f"EOmaps: Unable to import dependencies required for WebMaps: {ex}")
-    _cx_refetch_wms_on_size_change = None
 
 
 def _handle_backends():
@@ -820,10 +813,6 @@ class MapsBase(metaclass=_MapsMeta):
                 if len(layer) == 0:
                     layer = None
 
-                # hide companion-widget indicator
-                if hasattr(self, "_indicate_companion_map"):
-                    self._indicate_companion_map(False)
-
                 if layer is not None:
                     layer = self.BM._get_combined_layer_name(*layer)
 
@@ -831,14 +820,13 @@ class MapsBase(metaclass=_MapsMeta):
                 initial_layer = self.BM.bg_layer
 
                 if transparent is False:
-                    showlayer_name = self.BM._get_showlayer_name(layer=layer)
-                    layer_with_bg = self.BM._get_combined_layer_name(
-                        "__BG__", showlayer_name
+                    showlayer_name = self.BM._get_showlayer_name(
+                        layer=layer, transparent=transparent
                     )
-                    self.show_layer(layer_with_bg)
+                    self.show_layer(showlayer_name)
                     sn = self._get_snapshot()
                     # restore the previous layer
-                    self.BM._refetch_layer(layer_with_bg)
+                    self.BM._refetch_layer(showlayer_name)
                     self.show_layer(initial_layer)
                 else:
                     if layer is not None:
@@ -918,24 +906,12 @@ class MapsBase(metaclass=_MapsMeta):
 
         self.redraw()
 
-    @_add_to_docstring(
-        insert={
-            "Other Parameters": (
-                "refetch_wms : bool\n"
-                "    If True, re-fetch EOmaps WebMap services with respect to "
-                "the dpi of the exported figure before exporting the image. "
-                "\n\n    NOTE: This might fail for high-dpi exports and might "
-                "result in a completely different appearance of the wms-images "
-                "in the exported file! "
-                "\n\n    See `m.refetch_wms_on_size_change()` for more details. "
-                "The default is False",
-                1,
-            )
-        }
-    )
     @wraps(plt.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
+
+        dpi = kwargs.get("dpi", None)
+
         # get the currently visible layer (to restore it after saving is done)
         initial_layer = self.BM.bg_layer
 
@@ -946,26 +922,14 @@ class MapsBase(metaclass=_MapsMeta):
             self.f.canvas.draw_idle()
 
         with ExitStack() as stack:
-            if refetch_wms is False:
-                if _cx_refetch_wms_on_size_change is not None:
-                    stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
 
-                # don't clear on layer-changes
-                stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
+            # don't clear on layer-changes
+            stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
 
-            # hide companion-widget indicator
-            self._indicate_companion_map(False)
-
-            # add the figure background patch as the bottom layer
+            # add the figure background patch as the bottom layer if transparent=False
             transparent = kwargs.get("transparent", False)
-            if transparent is False:
-                showlayer_name = self.BM._get_showlayer_name(initial_layer)
-                layer_with_bg = self.BM._get_combined_layer_name(
-                    "__BG__", showlayer_name
-                )
-                self.show_layer(layer_with_bg)
-
-            dpi = kwargs.get("dpi", None)
+            showlayer_name = self.BM._get_showlayer_name(initial_layer, transparent)
+            self.show_layer(showlayer_name)
 
             redraw = False
             if dpi is not None and dpi != self.f.dpi or "bbox_inches" in kwargs:
@@ -975,37 +939,11 @@ class MapsBase(metaclass=_MapsMeta):
                 # are re-drawn with the correct dpi-settings
                 self.BM._refetch_bg = True
 
-                # set the shading-axis-size to reflect the used dpi setting
-                self._update_shade_axis_size(dpi=dpi)
-
             # get all layer names that should be drawn
-            savelayers, alphas = self.BM._parse_multi_layer_str(
-                self.BM._get_showlayer_name(self.BM.bg_layer)
-            )
+            savelayers, alphas = self.BM._parse_multi_layer_str(showlayer_name)
 
             # make sure inset-maps are drawn on top of normal maps
             savelayers.sort(key=lambda x: x.startswith("__inset_"))
-
-            for m in (self.parent, *self.parent._children):
-                # re-enable normal axis draw cycle by making axes non-animated.
-                # This is needed for backward-compatibility, since saving a figure
-                # ignores the animated attribute for axis-children but not for the axis
-                # itself. See:
-                # https://github.com/matplotlib/matplotlib/issues/26007#issuecomment-1568812089
-                stack.enter_context(m.ax._cm_set(animated=False))
-
-                # handle colorbars
-                for cb in m._colorbars:
-                    for a in (cb.ax_cb, cb.ax_cb_plot):
-                        stack.enter_context(a._cm_set(animated=False))
-
-                # set if data should be rasterized on vector export
-                if m.coll is not None:
-                    stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
-
-            # explicitly set axes to non-animated to re-enable draw cycle
-            for a in m.BM._managed_axes:
-                stack.enter_context(a._cm_set(animated=False))
 
             zorder = 0
             for layer, alpha in zip(savelayers, alphas):
@@ -1023,7 +961,6 @@ class MapsBase(metaclass=_MapsMeta):
                         continue
                     zorder += 1
                     stack.enter_context(a._cm_set(zorder=zorder, animated=False))
-
                     if alpha < 1:
                         current_alpha = a.get_alpha()
                         if current_alpha is None:
@@ -1032,11 +969,6 @@ class MapsBase(metaclass=_MapsMeta):
                             current_alpha = current_alpha * alpha
 
                         stack.enter_context(a._cm_set(alpha=current_alpha))
-
-            for key, val in self.BM._bg_artists.items():
-                if key not in ["all", "__inset_all", *savelayers]:
-                    for a in val:
-                        stack.enter_context(a._cm_set(visible=False, animated=True))
 
             if any(l.startswith("__inset") for l in savelayers):
                 if "__inset_all" not in savelayers:
@@ -1055,27 +987,38 @@ class MapsBase(metaclass=_MapsMeta):
                     zorder += 1
                     stack.enter_context(a._cm_set(zorder=zorder, animated=False))
 
-            for key, val in self.BM._artists.items():
+            # hide all artists on non-visible layers
+            for key, val in chain(
+                self.BM._bg_artists.items(), self.BM._artists.items()
+            ):
                 if key not in savelayers:
                     for a in val:
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
+            for m in (self.parent, *self.parent._children):
+                # re-enable normal axis draw cycle by making axes non-animated.
+                # This is needed for backward-compatibility, since saving a figure
+                # ignores the animated attribute for axis-children but not for the axis
+                # itself. See:
+                # https://github.com/matplotlib/matplotlib/issues/26007#issuecomment-1568812089
+                stack.enter_context(m.ax._cm_set(animated=False))
+
+            # explicitly set axes to non-animated to re-enable draw cycle
+            for a in m.BM._managed_axes:
+                stack.enter_context(a._cm_set(animated=False))
+
             # trigger a redraw of all savelayers to make sure unmanaged artists
             # and ordinary matplotlib axes are properly drawn
-            self.redraw(*savelayers)
             # flush events prior to savefig to avoid issues with pending draw events
             # that cause wrong positioning of grid-labels and missing artists!
             self.f.canvas.flush_events()
+            self.redraw(*savelayers)
             self.f._mpl_orig_savefig(*args, **kwargs)
 
+        # restore the previous layer (if background was added on save)
+        self.show_layer(initial_layer)
+
         if redraw is True:
-            # reset the shading-axis-size to the used figure dpi
-            self._update_shade_axis_size()
-
-            # restore the previous layer if background was added on save
-            if transparent is False:
-                self.show_layer(initial_layer)
-
             # redraw after the save to ensure that backgrounds are correctly cached
             self.redraw()
 
@@ -1172,47 +1115,6 @@ class MapsBase(metaclass=_MapsMeta):
             self.get_crs(self.crs_plot.as_geodetic()),
             self.crs_plot,
         )
-
-    def _save_to_clipboard(self, **kwargs):
-        """
-        Export the figure to the clipboard.
-
-        Parameters
-        ----------
-        kwargs :
-            Keyword-arguments passed to :py:meth:`Maps.savefig`
-        """
-        import io
-        import mimetypes
-        from qtpy.QtCore import QMimeData
-        from qtpy.QtWidgets import QApplication
-        from qtpy.QtGui import QImage
-
-        # guess the MIME type from the provided file-extension
-        fmt = kwargs.get("format", "png")
-        mimetype, _ = mimetypes.guess_type(f"dummy.{fmt}")
-
-        message = f"EOmaps: Exporting figure as '{fmt}' to clipboard..."
-        _log.info(message)
-
-        # TODO remove dependency on companion widget here
-        if getattr(self, "_companion_widget", None) is not None:
-            self._companion_widget.window().statusBar().showMessage(message, 2000)
-
-        with io.BytesIO() as buffer:
-            self.savefig(buffer, **kwargs)
-            data = QMimeData()
-
-            cb = QApplication.clipboard()
-
-            # TODO check why files copied with setMimeData(...) cannot be pasted
-            # properly in other apps
-            if fmt in ["svg", "svgz", "pdf", "eps"]:
-                data.setData(mimetype, buffer.getvalue())
-                cb.clear(mode=cb.Clipboard)
-                cb.setMimeData(data, mode=cb.Clipboard)
-            else:
-                cb.setImage(QImage.fromData(buffer.getvalue()))
 
     def on_layer_activation(self, func, layer=None, persistent=False, **kwargs):
         """

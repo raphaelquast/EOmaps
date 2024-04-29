@@ -9,17 +9,18 @@ import logging
 
 _log = logging.getLogger(__name__)
 
+from contextlib import ExitStack
 from functools import lru_cache, wraps
 from itertools import repeat, chain
-import copy
-from types import SimpleNamespace
 from pathlib import Path
-import weakref
+from types import SimpleNamespace
 from textwrap import fill
+
+import copy
 import importlib.metadata
+import weakref
 
 import numpy as np
-
 from pyproj import CRS
 
 import matplotlib as mpl
@@ -38,6 +39,7 @@ from .helpers import (
     _TransformedBoundsLocator,
     register_modules,
     _key_release_event,
+    _add_to_docstring,
 )
 
 from .shapes import Shapes
@@ -3246,6 +3248,64 @@ class Maps(MapsBase):
     def redraw(self, *args):
         self._data_manager.last_extent = None
         super().redraw(*args)
+
+    def snapshot(self, *args, **kwargs):
+        # hide companion-widget indicator
+        for m in (self.parent, *self.parent._children):
+            # hide companion-widget indicator
+            m._indicate_companion_map(False)
+
+        super().snapshot(*args, **kwargs)
+
+    @_add_to_docstring(
+        insert={
+            "Other Parameters": (
+                "refetch_wms : bool\n"
+                "    If True, re-fetch EOmaps WebMap services with respect to "
+                "the dpi of the exported figure before exporting the image. "
+                "\n\n    NOTE: This might fail for high-dpi exports and might "
+                "result in a completely different appearance of the wms-images "
+                "in the exported file! "
+                "\n\n    See `m.refetch_wms_on_size_change()` for more details. "
+                "The default is False",
+                1,
+            )
+        }
+    )
+    @wraps(MapsBase.savefig)
+    def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
+        with ExitStack() as stack:
+            # re-fetch webmap servies if required
+            if refetch_wms is False:
+                if _cx_refetch_wms_on_size_change is not None:
+                    stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
+
+            for m in (self.parent, *self.parent._children):
+                # hide companion-widget indicator
+                m._indicate_companion_map(False)
+
+                # handle colorbars
+                for cb in m._colorbars:
+                    for a in (cb.ax_cb, cb.ax_cb_plot):
+                        stack.enter_context(a._cm_set(animated=False))
+
+                # set if data should be rasterized on vector export
+                if m.coll is not None:
+                    stack.enter_context(m.coll._cm_set(rasterized=rasterize_data))
+
+            dpi = kwargs.get("dpi", None)
+
+            shade_dpi_changed = False
+            if dpi is not None and dpi != self.f.dpi:
+                shade_dpi_changed = True
+                # set the shading-axis-size to reflect the used dpi setting
+                self._update_shade_axis_size(dpi=dpi)
+
+            super().savefig(*args, **kwargs)
+
+        if shade_dpi_changed:
+            # reset the shading-axis-size to the used figure dpi
+            self._update_shade_axis_size()
 
     def cleanup(self):
         """
