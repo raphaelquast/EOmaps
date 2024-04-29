@@ -775,7 +775,9 @@ class GridLabels:
                             continue
 
                         line_in_bnds = l[:, 1].clip(bndmin[1], bndmax[1])
-                        line_center = (line_in_bnds.min() + line_in_bnds.max()) / 2
+                        line_center = (
+                            np.nanmin(line_in_bnds) + np.nanmax(line_in_bnds)
+                        ) / 2
                         top = y > line_center
                         if top:
                             if not ("t" in self._where):
@@ -788,8 +790,9 @@ class GridLabels:
                             continue
 
                         line_in_bnds = l[:, 0].clip(bndmin[0], bndmax[0])
-                        line_center = (line_in_bnds.min() + line_in_bnds.max()) / 2
-
+                        line_center = (
+                            np.nanmin(line_in_bnds) + np.nanmax(line_in_bnds)
+                        ) / 2
                         right = x > line_center
                         if right:
                             if not ("r" in self._where):
