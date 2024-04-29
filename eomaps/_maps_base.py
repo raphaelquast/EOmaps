@@ -275,10 +275,11 @@ class MapsBase(metaclass=_MapsMeta):
         self.BM._refetch_bg = True
         self.BM._refetch_blank = True
 
-        # update the figure dimensions in case shading is used
+        # update the figure dimensions in case shading is used.
+        # Avoid flushing events during resize
         # TODO
         if hasattr(self, "_update_shade_axis_size"):
-            self._update_shade_axis_size()
+            self._update_shade_axis_size(flush=False)
 
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed

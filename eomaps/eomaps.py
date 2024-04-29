@@ -2908,7 +2908,7 @@ class Maps(MapsBase):
             _log.error("EOmaps: there was no data to plot")
             return
 
-        plot_width, plot_height = int(self.ax.bbox.width), int(self.ax.bbox.height)
+        plot_width, plot_height = self._get_shade_axis_size()
 
         # get rid of unnecessary dimensions in the numpy arrays
         zdata = zdata.squeeze()
@@ -3112,25 +3112,40 @@ class Maps(MapsBase):
         self._shade_dpi = dpi
         self._update_shade_axis_size()
 
-    def _update_shade_axis_size(self, dpi=None):
+    def _get_shade_axis_size(self, dpi=None, flush=True):
+        if flush:
+            # flush events before evaluating shade sizes to make sure axes dimensions have
+            # been properly updated
+            self.f.canvas.flush_events()
+
         if self._shade_dpi is not None:
             dpi = self._shade_dpi
 
+        fig_dpi = self.f.dpi
+        w, h = self.ax.bbox.width, self.ax.bbox.height
+
+        # TODO for now, only handle numeric dpi-values to avoid issues.
+        # (savefig also seems to support strings like "figure" etc.)
+        if isinstance(dpi, (int, float, np.number)):
+            width = int(w / fig_dpi * dpi)
+            height = int(h / fig_dpi * dpi)
+        else:
+            width = int(w)
+            height = int(h)
+
+        return width, height
+
+    def _update_shade_axis_size(self, dpi=None, flush=True):
+        # method to update all shade-dpis
+        # NOTE: provided dpi value is only used if no explicit "_shade_dpi" is set!
+
         # set the axis-size that is used to determine the number of pixels used
         # when using "shade" shapes for ALL maps objects of a figure
-        w, h = self.ax.bbox.width, self.ax.bbox.height
-        fig_dpi = self.f.dpi
-
         for m in (self.parent, *self.parent._children):
             if m.coll is not None and m.shape.name.startswith("shade_"):
-                # TODO for now, only handle numeric dpi-values to avoid issues.
-                # (savefig also seems to support strings like "figure" etc.)
-                if isinstance(dpi, (int, float, np.number)):
-                    m.coll.plot_width = int(w / fig_dpi * dpi)
-                    m.coll.plot_height = int(h / fig_dpi * dpi)
-                else:
-                    m.coll.plot_width = int(w)
-                    m.coll.plot_height = int(h)
+                w, h = m._get_shade_axis_size(dpi=dpi, flush=flush)
+                m.coll.plot_width = w
+                m.coll.plot_height = h
 
     def make_dataset_pickable(
         self,
