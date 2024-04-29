@@ -2,12 +2,16 @@
 from pathlib import Path
 import matplotlib.pyplot as plt
 import unittest
+import pytest
 
 
 def gen_test(name, code):
+    @pytest.mark.mpl_image_compare(style="default")
     def test(*args, **kwargs):
         try:
             exec(code)
+
+            return locals()["m"]
         except Exception as ex:
             raise AssertionError(f"Example '{name}' failed.") from ex
         finally:

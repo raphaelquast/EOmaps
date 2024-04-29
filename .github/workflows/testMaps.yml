@@ -34,7 +34,12 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install -e .[all]
-          python -m pytest -v --cov=eomaps --cov-report=xml
+          python -m pytest -v --cov=eomaps --cov-report=xml --mpl --mpl-results-path=img_comparison_results
+      - name: Upload Image Comparison Artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: img_comparison_results
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
