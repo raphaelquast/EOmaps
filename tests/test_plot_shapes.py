@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 
 from eomaps import Maps
 
+np.random.seed(0)
+
 # TODO add proper (extensive) tests for each shape!
 
 x, y = np.linspace(-40, 40, 50), np.linspace(-25, 30, 150)
