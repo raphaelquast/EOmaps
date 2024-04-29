@@ -3304,6 +3304,47 @@ class Maps(MapsBase):
 
         super().cleanup()
 
+    def _save_to_clipboard(self, **kwargs):
+        """
+        Export the figure to the clipboard.
+
+        Parameters
+        ----------
+        kwargs :
+            Keyword-arguments passed to :py:meth:`Maps.savefig`
+        """
+        import io
+        import mimetypes
+        from qtpy.QtCore import QMimeData
+        from qtpy.QtWidgets import QApplication
+        from qtpy.QtGui import QImage
+
+        # guess the MIME type from the provided file-extension
+        fmt = kwargs.get("format", "png")
+        mimetype, _ = mimetypes.guess_type(f"dummy.{fmt}")
+
+        message = f"EOmaps: Exporting figure as '{fmt}' to clipboard..."
+        _log.info(message)
+
+        # TODO remove dependency on companion widget here
+        if getattr(self, "_companion_widget", None) is not None:
+            self._companion_widget.window().statusBar().showMessage(message, 2000)
+
+        with io.BytesIO() as buffer:
+            self.savefig(buffer, **kwargs)
+            data = QMimeData()
+
+            cb = QApplication.clipboard()
+
+            # TODO check why files copied with setMimeData(...) cannot be pasted
+            # properly in other apps
+            if fmt in ["svg", "svgz", "pdf", "eps"]:
+                data.setData(mimetype, buffer.getvalue())
+                cb.clear(mode=cb.Clipboard)
+                cb.setMimeData(data, mode=cb.Clipboard)
+            else:
+                cb.setImage(QImage.fromData(buffer.getvalue()))
+
     def _on_keypress(self, event):
         if plt.get_backend().lower() == "webagg":
             return
