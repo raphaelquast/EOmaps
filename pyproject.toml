@@ -90,6 +90,9 @@ Documentation = "https://eomaps.readthedocs.io/"
 Repository = "https://github.com/raphaelquast/eomaps"
 
 [tool.pytest.ini_options]
+mpl-use-full-test-name = "True"
+mpl-default-style = "default"
+mpl-results-path = "img_comparison_results"
 filterwarnings = [
     "ignore:Downloading*",
     "ignore:Passing a SingleBlockManager to Series is deprecated *:DeprecationWarning",
