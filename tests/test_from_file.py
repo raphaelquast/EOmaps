@@ -1,72 +1,60 @@
-import matplotlib as mpl
-
-mpl.rcParams["toolbar"] = "None"
-
-import unittest
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-
+import pytest
 from eomaps import Maps
 from pathlib import Path
 
+paths = {
+    "CSV": Path(__file__).parent / "_testdata" / "testfile.csv",
+    "GeoTIFF": Path(__file__).parent / "_testdata" / "testfile.tif",
+    "NetCDF": Path(__file__).parent / "_testdata" / "testfile.nc",
+}
 
-class TestFromFile(unittest.TestCase):
-    def setUp(self):
-        self.csvpath = Path(__file__).parent / "_testdata" / "testfile.csv"
-        self.tiffpath = Path(__file__).parent / "_testdata" / "testfile.tif"
-        self.netcdfpath = Path(__file__).parent / "_testdata" / "testfile.nc"
-        pass
+read_args = {
+    "CSV": dict(x="x", y="y", parameter="data", crs=4326),
+    "NetCDF": dict(data_crs=4326),
+}
 
-    def test_CSV(self):
-        data = Maps.read_file.CSV(
-            self.csvpath, x="x", y="y", parameter="data", crs=4326
-        )
-        m = Maps.from_file.CSV(
-            self.csvpath, x="x", y="y", parameter="data", data_crs=4326
-        )
+plot_args = {
+    "CSV": dict(x="x", y="y", parameter="data", data_crs=4326),
+    "NetCDF": dict(data_crs=4326),
+}
 
-        m2 = m.new_layer_from_file.CSV(
-            self.csvpath,
-            x="x",
-            y="y",
-            parameter="data",
-            data_crs=4326,
-            layer="second",
-            cmap="cividis",
-            extent=(-20, 20, -56, 78),
-        )
-        m.show_layer(m2.layer)
+style_args = {
+    "CSV": dict(cmap="cividis", shape="ellipses"),
+    "GeoTIFF": dict(shape="raster", extent=(7, 9, 41, 42)),
+    "NetCDF": dict(shape="voronoi_diagram"),
+}
 
-        plt.close("all")
 
-    def test_GeoTIFF(self):
-        data = Maps.read_file.GeoTIFF(self.tiffpath)
-        m = Maps.from_file.GeoTIFF(self.tiffpath)
+@pytest.mark.parametrize("method", ["CSV", "GeoTIFF", "NetCDF"])
+def test_read_file(method):
+    _ = getattr(Maps.read_file, method)(paths[method], **read_args.get(method, {}))
 
-        m2 = m.new_layer_from_file.GeoTIFF(
-            self.tiffpath,
-            layer="second",
-            cmap="cividis",
-            shape="shade_points",
-            extent=(7, 9, 41, 42),
-        )
-        m.show_layer(m2.layer)
-        plt.close("all")
 
-    def test_NetCDF(self):
-        data = Maps.read_file.NetCDF(self.netcdfpath, data_crs=4326)
-        m = Maps.from_file.NetCDF(
-            self.netcdfpath, data_crs=4326, shape="voronoi_diagram"
-        )
+@pytest.mark.parametrize("method", ["CSV", "GeoTIFF", "NetCDF"])
+@pytest.mark.mpl_image_compare()
+def test_from_file(method):
+    m = getattr(Maps.from_file, method)(
+        paths[method], **plot_args.get(method, {}), **style_args.get(method, {})
+    )
+    m.add_feature.preset.coastline()
+    m.add_gridlines(lw=2, auto_n=5)
+    return m
 
-        m2 = m.new_layer_from_file.NetCDF(
-            self.netcdfpath,
-            layer="second",
-            cmap="cividis",
-            shape="shade_raster",
-            data_crs=4326,
-            extent=((7, 9, 41, 42), 4326),
-        )
-        m.show_layer(m2.layer)
-        plt.close("all")
+
+@pytest.mark.parametrize("method", ["CSV", "GeoTIFF", "NetCDF"])
+@pytest.mark.mpl_image_compare()
+def test_new_layer_from_file(method):
+
+    m = Maps(Maps.CRS.Mollweide(), layer="all")
+    m.add_feature.preset.coastline()
+    m.add_gridlines(lw=2, auto_n=5)
+
+    m2 = getattr(m.new_layer_from_file, method)(
+        paths[method],
+        **plot_args.get(method, {}),
+        **style_args.get(method, {}),
+        layer="second",
+    )
+    m.show_layer(m2.layer)
+
+    return m

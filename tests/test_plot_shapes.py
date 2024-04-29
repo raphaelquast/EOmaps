@@ -41,12 +41,13 @@ def close_all():
 
 @pytest.mark.usefixtures("close_all")
 @pytest.mark.parametrize("data", testdata, ids=ids)
+@pytest.mark.mpl_image_compare()
 def test_hexbin(data):
     m = Maps(ax=221, figsize=(10, 6))
     m.set_data(**data)
     m.set_shape.hexbin(size=(10, 5))
     m.plot_map()
-    m.add_colorbar()
+    cb = m.add_colorbar()
 
     m2 = m.new_map(ax=222, inherit_data=True)
     m2.set_shape.hexbin(size=20, aggregator="median")
@@ -64,9 +65,12 @@ def test_hexbin(data):
     m4.plot_map(cmap="RdYlBu")
     m4.add_colorbar()
 
+    return m
+
 
 @pytest.mark.usefixtures("close_all")
 @pytest.mark.parametrize("data", testdata, ids=ids)
+@pytest.mark.mpl_image_compare()
 def test_contour(data):
     m = Maps(ax=221, figsize=(10, 6))
     m.subplots_adjust(left=0.01, right=0.99)
@@ -89,8 +93,8 @@ def test_contour(data):
     )
 
     m3 = m.new_map(ax=224, inherit_data=True)
-    m3.set_shape.ellipses()
-    m3.plot_map(alpha=0.25)
+    m3.set_shape.voronoi_diagram()
+    m3.plot_map(alpha=0.25, lw=0.25, ec="k")
     cb3 = m3.add_colorbar()
 
     m3_1 = m3.new_layer("contours", inherit_data=True)
@@ -125,30 +129,41 @@ def test_contour(data):
 
     m.show_layer("base", "contours")
 
+    return m
+
 
 @pytest.mark.usefixtures("close_all")
 @pytest.mark.parametrize("data", testdata, ids=ids)
+@pytest.mark.mpl_image_compare()
 def test_shade_points(data):
     m = Maps(ax=221, figsize=(10, 6))
+
     m.set_data(**data)
     m.set_shape.shade_points(aggregator="mean")
+    m.set_shade_dpi(100)
     m.plot_map()
     m.add_colorbar()
 
     m2 = m.new_map(ax=222, inherit_data=True)
-    m.set_shape.shade_points(aggregator="max")
+    m2.set_shape.shade_points(aggregator="max")
+    m2.set_shade_dpi(30)
     m2.plot_map(cmap="RdYlBu")
     m2.add_colorbar()
-    m2.set_shade_dpi(10)
 
     m3 = m.new_map(ax=223, inherit_data=True)
-    m.set_shape.shade_points(aggregator="max")
+    m3.set_shape.shade_points(aggregator="max")
+    m3.set_shade_dpi(20)
     m3.plot_map(cmap="RdYlBu")
     m3.add_colorbar()
-    m3.set_shade_dpi(50)
 
     m4 = m.new_map(ax=224, inherit_data=True)
-    m.set_shape.shade_points(aggregator="max")
+    m4.set_shape.shade_points(aggregator="max")
+    m4.set_shade_dpi(10)
     m4.set_classify.EqualInterval(k=5)
     m4.plot_map(cmap="RdYlBu")
     m4.add_colorbar()
+
+    for mi in [m, m2, m3, m4]:
+        mi.add_title(f"shade dpi = {mi._shade_dpi}")
+
+    return m
