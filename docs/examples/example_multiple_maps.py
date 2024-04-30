@@ -14,8 +14,8 @@ data = data.sample(4000)  # take 4000 random datapoints from the dataset
 
 # initialize a grid of Maps objects
 m = Maps(ax=131, crs=4326, figsize=(11, 5))
-m2 = Maps(f=m.f, ax=132, crs=Maps.CRS.Stereographic())
-m3 = Maps(f=m.f, ax=133, crs=3035)
+m2 = m.new_map(ax=132, crs=Maps.CRS.Stereographic())
+m3 = m.new_map(ax=133, crs=3035)
 
 # --------- set specs for the first map
 m.text(0.5, 1.1, "epsg=4326", transform=m.ax.transAxes)
