@@ -333,9 +333,9 @@ class BlitManager(LayerParser):
                 try:
                     f = self._on_layer_change[False].pop(0)
                     f(layer=layer)
-                except Exception:
+                except Exception as ex:
                     _log.error(
-                        "EOmaps: Issue while executing a layer-change action",
+                        f"EOmaps: Issue during layer-change action: {ex}",
                         exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                     )
 
@@ -354,9 +354,9 @@ class BlitManager(LayerParser):
                     try:
                         f = single_shot_funcs.pop(0)
                         f(layer=l)
-                    except Exception:
+                    except Exception as ex:
                         _log.error(
-                            "EOmaps: Issue while executing a layer-change action",
+                            f"EOmaps: Issue during layer-change action: {ex}",
                             exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                         )
 
