@@ -2204,7 +2204,7 @@ class Maps(MapsBase):
 
         # add the scalebar to the map at the desired position
         s._add_scalebar(pos=pos, azim=rotation, pickable=pickable)
-
+        self.BM.update()
         return s
 
     def add_line(
