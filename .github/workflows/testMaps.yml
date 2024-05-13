@@ -33,8 +33,14 @@ jobs:
       - name: Test Maps
         shell: bash -l {0}
         run: |
-          pip install -e .[all]
+          pip install -e .[test]
           python -m pytest -v --cov=eomaps --cov-report=xml
+      - name: Upload Image Comparison Artefacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: img_comparison_results
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

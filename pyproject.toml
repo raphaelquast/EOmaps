@@ -11,7 +11,7 @@ eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
 
 [project]
 name = "eomaps"
-version = "8.1.1"
+version = "8.2"
 description = "A library to create interactive maps of geographical datasets."
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -76,6 +76,12 @@ gui = [
     "qtpy"
     ]
 
+test = [
+    "eomaps[io, classify, wms, shade, gui, test]",
+    "pytest",
+    "pytest-mpl"
+]
+
 [project.scripts]
 eomaps = "eomaps.scripts.open:cli"
 
@@ -84,6 +90,9 @@ Documentation = "https://eomaps.readthedocs.io/"
 Repository = "https://github.com/raphaelquast/eomaps"
 
 [tool.pytest.ini_options]
+mpl-use-full-test-name = "True"
+mpl-default-style = "default"
+mpl-results-path = "img_comparison_results"
 filterwarnings = [
     "ignore:Downloading*",
     "ignore:Passing a SingleBlockManager to Series is deprecated *:DeprecationWarning",

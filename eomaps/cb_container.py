@@ -579,7 +579,7 @@ class _ClickContainer(_CallbackContainer):
             else:
                 _log.warning(
                     "EOmaps: No picked values found. Attach "
-                    "the 'get_vals' callback first!"
+                    "the 'get_values' callback first!"
                 )
 
         @property
@@ -2304,7 +2304,6 @@ class CallbackContainer:
         assignments["keymap.grid"] = ["g"]
         assignments["keymap.grid_minor"] = ["G"]
         assignments["keymap.home"] = ["h", "r"]
-        assignments["keymap.pan"] = ["p"]
         assignments["keymap.quit"] = ["q"]
         assignments["keymap.save"] = ["s"]
         assignments["keymap.xscale"] = ["k", "L"]

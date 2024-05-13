@@ -1,5 +1,4 @@
 # EOmaps example: Adding scalebars - what about distances?
-
 from eomaps import Maps
 
 m = Maps(figsize=(9, 5))
@@ -14,7 +13,9 @@ s2 = m.add_scalebar(
     n=10,
     scale_props=dict(width=5, colors=("k", ".25", ".5", ".75", ".95")),
     patch_props=dict(offsets=(1, 1.4, 1, 1), fc=(0.7, 0.8, 0.3, 1)),
-    label_props=dict(offset=0.5, scale=1.4, every=5, weight="bold", family="Calibri"),
+    label_props=dict(
+        offset=0.5, scale=1.4, every=5, weight="bold"  # , family="Calibri"
+    ),
 )
 
 s3 = m.add_scalebar(
@@ -25,7 +26,7 @@ s3 = m.add_scalebar(
     scale_props=dict(width=3, colors=(*["w", "darkred"] * 2, *["w"] * 5, "darkred")),
     patch_props=dict(fc=(0.25, 0.25, 0.25, 0.8), ec="k", lw=0.5, offsets=(1, 1, 1, 2)),
     label_props=dict(
-        every=(1, 4, 10), color="w", rotation=45, weight="bold", family="Impact"
+        every=(1, 4, 10), color="w", rotation=45, weight="bold"  # , family="Impact"
     ),
     line_props=dict(color="w"),
 )

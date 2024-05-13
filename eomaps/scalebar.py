@@ -8,6 +8,8 @@
 import logging
 from collections import OrderedDict
 from functools import lru_cache
+import importlib.metadata
+from packaging import version
 
 import numpy as np
 
@@ -23,6 +25,13 @@ from .helpers import pairwise
 _picked_scalebars = set()
 
 _log = logging.getLogger(__name__)
+
+# TODO remove this once pyproj >3.5 is enforced
+pyproj_version = version.parse(importlib.metadata.version("pyproj"))
+if pyproj_version >= version.Version("3.5"):
+    _pyproj_geod_fix_args = {"return_back_azimuth": True}
+else:
+    _pyproj_geod_fix_args = {}
 
 
 class ScaleBar:
@@ -979,6 +988,7 @@ class ScaleBar:
             del_s=self._current_scale,
             initial_idx=0,
             terminus_idx=0,
+            **_pyproj_geod_fix_args,
         )
 
         if isinstance(self._label_props["every"], int):
@@ -1003,6 +1013,7 @@ class ScaleBar:
                 npts=self._interm_pts,
                 initial_idx=0,
                 terminus_idx=0,
+                **_pyproj_geod_fix_args,
             )
             lons.append(p.lons)
             lats.append(p.lats)

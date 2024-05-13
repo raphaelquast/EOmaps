@@ -99,17 +99,31 @@ The `environment.yml` file already contains the packages required to run the tes
 
 - `pytest <https://docs.pytest.org>`__ to run the tests
 - `pytest-cov <https://github.com/pytest-dev/pytest-cov>`__ and `coveralls <https://github.com/TheKevJames/coveralls-python>`__ to track lines covered by the tests
-
+- `pytest-mpl <https://pytest-mpl.readthedocs.io/en/stable/>`__ to perform image comparisons
 
 To run the primary test suite and generate coverage report, navigate to the parent `eomaps` directory and run:
 
 .. code-block:: console
 
-    python -m pytest -v --cov eomaps
+    python -m pytest -v --cov eomaps --mpl
+
+Some of the tests compare exported images with a set of baseline-images to ensure stable image exports and to catch
+potential issues that are not detected by the code based tests.
+
+If changes require an update of the baseline images, you have to invoke
+`pytest-mpl <https://pytest-mpl.readthedocs.io/en/stable/>`__ with the `mpl-generate-path` option:
+
+.. code-block:: console
+
+    python -m pytest -v --cov eomaps --mpl --mpl-generate-path=tests/baseline
+
+This will update all images in the `tests/baseline` folder.
 
 .. note::
 
     During the tests, a lot of figures will be created and destroyed!
+
+    Before updating new baseline images, make sure to manually check that they look exactly as expected!
 
 
 .. tip::
@@ -118,7 +132,7 @@ To run the primary test suite and generate coverage report, navigate to the pare
 
    .. code-block:: console
 
-      python -m pytest -k <KEYWORD>
+      python -m pytest -k <QUERY KEYWORD>
 
    (see `pytest command-line-flags <https://docs.pytest.org/en/7.3.x/reference/reference.html#command-line-flags>`_ for more details)
 
@@ -129,7 +143,7 @@ To run the primary test suite and generate coverage report, navigate to the pare
 
     .. code-block:: console
 
-        python -m pytest -n <NUMCORE> --cov eomaps
+        python -m pytest -n <NUMBER OF CORES>
 
 Style Checking
 ~~~~~~~~~~~~~~

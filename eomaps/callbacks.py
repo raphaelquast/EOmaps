@@ -176,9 +176,9 @@ class _CallbacksBase:
                 printstr = (
                     (f"# Picked {n_ids} points\n" if multipick else "")
                     + f"{xlabel} = {x}\n"
-                    + (f"{xlabel}_plot = {x0}\n" if not equal_crs else "")
                     + f"{ylabel} = {y}\n"
-                    + (f"{ylabel}_plot = {y0}\n" if not equal_crs else "")
+                    + (f"x_plot = {x0}\n" if not equal_crs else "")
+                    + (f"y_plot = {y0}\n" if not equal_crs else "")
                     + (f"ID = {ID}\n" if ID is not None else "")
                     + (f"{parameter} = {val}" if val is not None else "")
                 )
@@ -631,7 +631,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
                 "rectangles", radius=radius, radius_crs=radius_crs, mesh=False, n=n
             )
         elif shape == "scatter_points":
-            marker = getattr(self.m.shape, "_marker", "o")
+            marker = getattr(self.m.shape, "_marker", kwargs.pop("marker", "o"))
             shp = self.m.set_shape._get("scatter_points", _size=radius, _marker=marker)
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")

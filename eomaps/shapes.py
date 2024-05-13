@@ -461,7 +461,6 @@ class Shapes(object):
 
     @staticmethod
     def _estimate_radius(m, radius_crs, method=np.nanmedian):
-
         assert radius_crs in [
             "in",
             "out",
@@ -481,7 +480,12 @@ class Shapes(object):
             userange = int(np.sqrt(m.set_shape._radius_estimation_range))
 
             radiusx = method(np.diff(x[:userange, :userange], axis=1)) / 2
+            if radiusx == 0:
+                radiusx = method(np.diff(x[:userange, :userange].T, axis=1)) / 2
+
             radiusy = method(np.diff(y[:userange, :userange], axis=0)) / 2
+            if radiusy == 0:
+                radiusy = method(np.diff(y[:userange, :userange].T, axis=0)) / 2
 
             radius = (radiusx, radiusy)
 
@@ -575,7 +579,7 @@ class Shapes(object):
                 # explicit treatment for recarrays (to avoid performance issues)
                 # with matplotlib.colors.to_rgba_array()
                 # (recarrays are used to convert 3/4 arrays into an rgb(a) array
-                # in m._handle_explicit_colors() )
+                # in m._data_manager._handle_explicit_colors() )
                 if isinstance(color, np.recarray):
                     color_vals[c_key] = color[mask.reshape(color.shape)].view(
                         (float, len(color.dtype.names))

@@ -115,7 +115,8 @@ class LayoutEditor:
     @modifier_pressed.setter
     def modifier_pressed(self, val):
         self._modifier_pressed = val
-        self.m.cb.execute_callbacks(not val)
+        if hasattr(self.m, "cb"):
+            self.m.cb.execute_callbacks(not val)
 
         if self._modifier_pressed:
             self.m.BM._disable_draw = True
@@ -193,8 +194,22 @@ class LayoutEditor:
 
         if self._snap_id > 0:
             sx, sy = self._snap
-            x0 = self.roundto(x0, sx)
-            y0 = self.roundto(y0, sy)
+            x0s = self.roundto(x0, sx)
+            y0s = self.roundto(y0, sy)
+
+            # check if snap on top/right edges is closer than on bottom edges
+            x1s = self.roundto(x0 + w, sx)
+            y1s = self.roundto(y0 + h, sy)
+
+            if abs(x0s - x0) >= abs(x1s - x0 - w):
+                x0 = x1s - w
+            else:
+                x0 = x0s
+
+            if abs(y0s - y0) >= abs(y1s - y0 - h):
+                y0 = y1s - h
+            else:
+                y0 = y0s
 
         bbox = Bbox.from_bounds(x0, y0, w, h).transformed(self.f.transFigure.inverted())
 
@@ -413,12 +428,25 @@ class LayoutEditor:
         if event.button != 1:
             return
 
+        # The first picked axes is used to determine the repositioning relative to
+        # the active snap-grid. All additional axes are repositioned accordingly
+        dx, dy = None, None
         for ax in self._ax_picked:
             if ax is None:
                 return
 
-            bbox = self._get_move_bbox(ax, event.x, event.y)
-            ax.set_position(bbox)
+            if dx is None:
+                bbox = self._get_move_bbox(ax, event.x, event.y)
+                # Get the distance that the axes was shifted
+                dx, dy = bbox.x0 - ax.get_position().x0, bbox.y0 - ax.get_position().y0
+                # Reposition the axes
+                ax.set_position(bbox)
+            else:
+                # Always adjust positions of axes with respect to the first
+                # re-positioned axes (to avoid changing the relative alignment
+                # of multiple picked axes due to grid-snapping)
+                newbbox = ax.get_position().translated(dx, dy)
+                ax.set_position(newbbox)
 
         self._add_to_history()
         self._color_axes()
@@ -583,9 +611,13 @@ class LayoutEditor:
         else:
             for layer in (self.m.BM.bg_layer, "__SPINES__", "all"):
                 # logos are put on the spines-layer to appear on top of spines!
-                if ax in self.m.BM.get_bg_artists(layer):
+                if ax in self.m.BM.get_bg_artists(
+                    self.m.BM._parse_multi_layer_str(layer)[0]
+                ):
                     return True
-                elif ax in self.m.BM.get_artists(self.m.BM.bg_layer):
+                elif ax in self.m.BM.get_artists(
+                    self.m.BM._get_active_layers_alphas[0]
+                ):
                     return True
 
         return False
@@ -773,7 +805,8 @@ class LayoutEditor:
         # reset the histogram-size of all colorbars to make sure previously hidden
         # axes (e.g. size=0) become visible if the size is now > 0.
         for m in self.ms:
-            for cb in m._colorbars:
+            # TODO
+            for cb in getattr(m, "_colorbars", []):
                 cb._set_hist_size(update_all=True)
 
         # remove snap-grid (if it's still visible)
