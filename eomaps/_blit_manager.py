@@ -574,7 +574,11 @@ class BlitManager(LayerParser):
             # artists that are only visible if both layers are visible! (e.g. "l1|l2")
             artists.extend(self._bg_artists.get(l, []))
 
-            if l == self._unmanaged_artists_layer:
+            # make sure to also trigger drawing unmanaged artists on inset-maps!
+            if l in (
+                self._unmanaged_artists_layer,
+                f"__inset_{self._unmanaged_artists_layer}",
+            ):
                 artists.extend(self._get_unmanaged_artists())
 
         # make the list unique but maintain order (dicts keep order for python>3.7)
