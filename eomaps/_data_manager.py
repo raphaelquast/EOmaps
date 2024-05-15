@@ -940,9 +940,9 @@ class DataManager:
 
             self.m.cb.pick._set_artist(coll)
 
-        except Exception:
+        except Exception as ex:
             _log.exception(
-                f"EOmaps: Unable to plot the data for the layer '{layer}'!",
+                f"EOmaps: Unable to plot the data for the layer '{layer}'!\n{ex}",
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
