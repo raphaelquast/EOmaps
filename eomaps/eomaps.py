@@ -2765,8 +2765,9 @@ class Maps(MapsBase):
         else:
             if "norm" in kwargs:
                 norm = kwargs.pop("norm")
-                norm.vmin = self._vmin
-                norm.vmax = self._vmax
+                if not isinstance(norm, str):  # to allow datashader "eq_hist" norm
+                    norm.vmin = self._vmin
+                    norm.vmax = self._vmax
             else:
                 norm = plt.Normalize(vmin=self._vmin, vmax=self._vmax)
 
