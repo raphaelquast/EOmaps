@@ -3501,11 +3501,10 @@ class Maps(MapsBase):
                 bins = [*bins, vmax]
 
             # TODO Always use resample once mpl>3.6 is pinned
-            if hasattr(cmap, "resampled"):
+            if hasattr(cmap, "resampled") and len(bins) > cmap.N:
                 # Resample colormap to contain enough color-values
                 # as needed by the boundary-norm.
-                if len(bins) > cmap.N:
-                    cbcmap = cmap.resampled(len(bins))
+                cbcmap = cmap.resampled(len(bins))
             else:
                 cbcmap = cmap
 
