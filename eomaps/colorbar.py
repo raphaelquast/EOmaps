@@ -631,6 +631,8 @@ class ColorBar(ColorBarBase):
 
     """
 
+    max_n_classify_bins_to_label = 30
+
     def __init__(self, *args, inherit_position=True, layer=None, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1197,9 +1199,11 @@ class ColorBar(ColorBarBase):
             return
 
         if self._m._classified:
-            self.cb.set_ticks(
-                np.unique(np.clip(self._m.classify_specs._bins, self._vmin, self._vmax))
+            unique_bins = np.unique(
+                np.clip(self._m.classify_specs._bins, self._vmin, self._vmax)
             )
+            if len(unique_bins) <= self.max_n_classify_bins_to_label:
+                self.cb.set_ticks(unique_bins)
 
         if self.orientation == "horizontal":
             if self._m._classified:
