@@ -363,6 +363,18 @@ class Maps(MapsBase):
         return self._coll
 
     @property
+    def _shape_assigned(self):
+        """Return True if the shape is explicitly assigned and False otherwise"""
+        # the shape is considered assigned if an explicit shape is set
+        # or if the data has been plotted with the default shape
+
+        q = self._shape is None or (
+            getattr(self._shape, "_is_default", False) and not self._data_plotted
+        )
+
+        return not q
+
+    @property
     def shape(self):
         """
         The shape that is used to represent the dataset if `m.plot_map()` is called.
@@ -372,13 +384,8 @@ class Maps(MapsBase):
         for 2D datasets and "shade_points" is used for unstructured datasets.
 
         """
-        # make sure the default shape is re-checked every time until
-        # data is effectively plotted or an explicit shape is set.
-        check_default = self._shape is None or (
-            getattr(self._shape, "_is_default", False) and not self._data_plotted
-        )
 
-        if check_default:
+        if not self._shape_assigned:
             self._set_default_shape()
             self._shape._is_default = True
 
@@ -538,7 +545,7 @@ class Maps(MapsBase):
             m2.inherit_data(self)
         if inherit_classification:
             m2.inherit_classification(self)
-        if inherit_shape:
+        if inherit_shape and self._shape_assigned:
             getattr(m2.set_shape, self.shape.name)(**self.shape._initargs)
 
         if np.allclose(self.ax.bbox.bounds, m2.ax.bbox.bounds):
@@ -669,7 +676,7 @@ class Maps(MapsBase):
             m.inherit_data(self)
         if inherit_classification:
             m.inherit_classification(self)
-        if inherit_shape:
+        if inherit_shape and self._shape_assigned:
             getattr(m.set_shape, self.shape.name)(**self.shape._initargs)
 
         # make sure the new layer does not attempt to reset the extent if
