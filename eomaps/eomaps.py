@@ -372,7 +372,9 @@ class Maps(MapsBase):
         for 2D datasets and "shade_points" is used for unstructured datasets.
 
         """
-        if self._shape is None:
+        # make sure the default shape is re-checked every time until
+        # data is effectively plotted or an explicit shape is set.
+        if self._shape is None or not self._data_plotted:
             self._set_default_shape()
 
         return self._shape
