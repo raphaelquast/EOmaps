@@ -374,8 +374,13 @@ class Maps(MapsBase):
         """
         # make sure the default shape is re-checked every time until
         # data is effectively plotted or an explicit shape is set.
-        if self._shape is None or not self._data_plotted:
+        check_default = self._shape is None or (
+            getattr(self._shape, "_is_default", False) and not self._data_plotted
+        )
+
+        if check_default:
             self._set_default_shape()
+            self._shape._is_default = True
 
         return self._shape
 
