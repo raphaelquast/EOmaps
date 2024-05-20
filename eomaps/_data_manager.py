@@ -681,7 +681,7 @@ class DataManager:
 
         # don't re-draw if the layer of the dataset is not requested
         # (note multi-layers trigger re-draws of individual layers as well)
-        if layer not in ["all", self.layer]:
+        if not self.m.BM._layer_is_subset(layer, self.layer):
             return False
 
         # don't re-draw if the collection has been hidden in the companion-widget
@@ -891,7 +891,6 @@ class DataManager:
 
             s = self._get_datasize(**props)
             self._print_datasize_warnings(s)
-
             # stop here in case we are dealing with a pick-only dataset
             if self._only_pick:
                 return
@@ -940,9 +939,9 @@ class DataManager:
 
             self.m.cb.pick._set_artist(coll)
 
-        except Exception:
+        except Exception as ex:
             _log.exception(
-                f"EOmaps: Unable to plot the data for the layer '{layer}'!",
+                f"EOmaps: Unable to plot the data for the layer '{layer}'!\n{ex}",
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 

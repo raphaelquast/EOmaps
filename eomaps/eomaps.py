@@ -363,6 +363,18 @@ class Maps(MapsBase):
         return self._coll
 
     @property
+    def _shape_assigned(self):
+        """Return True if the shape is explicitly assigned and False otherwise"""
+        # the shape is considered assigned if an explicit shape is set
+        # or if the data has been plotted with the default shape
+
+        q = self._shape is None or (
+            getattr(self._shape, "_is_default", False) and not self._data_plotted
+        )
+
+        return not q
+
+    @property
     def shape(self):
         """
         The shape that is used to represent the dataset if `m.plot_map()` is called.
@@ -372,8 +384,10 @@ class Maps(MapsBase):
         for 2D datasets and "shade_points" is used for unstructured datasets.
 
         """
-        if self._shape is None:
+
+        if not self._shape_assigned:
             self._set_default_shape()
+            self._shape._is_default = True
 
         return self._shape
 
@@ -531,7 +545,7 @@ class Maps(MapsBase):
             m2.inherit_data(self)
         if inherit_classification:
             m2.inherit_classification(self)
-        if inherit_shape:
+        if inherit_shape and self._shape_assigned:
             getattr(m2.set_shape, self.shape.name)(**self.shape._initargs)
 
         if np.allclose(self.ax.bbox.bounds, m2.ax.bbox.bounds):
@@ -662,7 +676,7 @@ class Maps(MapsBase):
             m.inherit_data(self)
         if inherit_classification:
             m.inherit_classification(self)
-        if inherit_shape:
+        if inherit_shape and self._shape_assigned:
             getattr(m.set_shape, self.shape.name)(**self.shape._initargs)
 
         # make sure the new layer does not attempt to reset the extent if
@@ -2765,8 +2779,9 @@ class Maps(MapsBase):
         else:
             if "norm" in kwargs:
                 norm = kwargs.pop("norm")
-                norm.vmin = self._vmin
-                norm.vmax = self._vmax
+                if not isinstance(norm, str):  # to allow datashader "eq_hist" norm
+                    norm.vmin = self._vmin
+                    norm.vmax = self._vmax
             else:
                 norm = plt.Normalize(vmin=self._vmin, vmax=self._vmax)
 
@@ -3499,8 +3514,15 @@ class Maps(MapsBase):
             if vmax > max(bins):
                 bins = [*bins, vmax]
 
-            cbcmap = cmap
-            norm = mpl.colors.BoundaryNorm(bins, cmap.N)
+            # TODO Always use resample once mpl>3.6 is pinned
+            if hasattr(cmap, "resampled") and len(bins) > cmap.N:
+                # Resample colormap to contain enough color-values
+                # as needed by the boundary-norm.
+                cbcmap = cmap.resampled(len(bins))
+            else:
+                cbcmap = cmap
+
+            norm = mpl.colors.BoundaryNorm(bins, cbcmap.N)
 
             self._emit_signal("cmapsChanged")
 

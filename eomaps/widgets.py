@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from . import _log
 from ._blit_manager import LayerParser
@@ -10,16 +9,6 @@ try:
     import ipywidgets
 except ImportError:
     _log.warning("EOmaps-widgets are missing the required dependency 'ipywidgets'!")
-
-
-def _check_backend():
-    backend = plt.get_backend()
-    if "ipympl" not in backend.lower():
-        _log.warning(
-            "EOmaps-widgets only work with the 'ipympl (widget)' backend! "
-            "Make sure you have 'ipympl' installed and use the magic-command "
-            "'%matplotlib widget' to switch to the interactive jupyter backend!"
-        )
 
 
 @contextmanager
@@ -100,8 +89,6 @@ class _LayerSelectionWidget:
     _widget_cls = None
 
     def __init__(self, m, layers=None, **kwargs):
-        _check_backend()
-
         self._m = m
         self._set_layers_options(layers)
 
@@ -336,8 +323,6 @@ class LayerButton(ipywidgets.Button):
 
     def __init__(self, m, layer, **kwargs):
         self._m = m
-        _check_backend()
-
         self._layer = self._parse_layer(layer)
 
         kwargs.setdefault("description", self._layer)
@@ -386,8 +371,6 @@ class LayerOverlaySlider(ipywidgets.FloatSlider):
 
     def __init__(self, m, layer, **kwargs):
         self._m = m
-        _check_backend()
-
         self._layer = layer
 
         kwargs.setdefault("value", 0)
@@ -449,8 +432,6 @@ class _CallbackWidget:
 
     def __init__(self, m, widget_kwargs=None, **kwargs):
         self._m = m
-        _check_backend()
-
         self._kwargs = kwargs
 
         if widget_kwargs is None:
