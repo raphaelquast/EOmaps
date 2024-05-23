@@ -1007,7 +1007,7 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
             import numpy as np
 
             x, y = np.meshgrid(np.linspace(-30, 30, 50),
-                               np.linspace(30, 30, 50))
+                               np.linspace(-30, 30, 50))
 
             # values must be between 0 and 1
             r = np.random.randint(0, 100, x.shape) / 100
