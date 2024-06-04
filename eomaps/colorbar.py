@@ -766,9 +766,8 @@ class ColorBar(ColorBarBase):
                 else:
                     BM.add_bg_artist(a, self._layer)
 
-        # we need to re-draw since the background axis size has changed!
-        BM._refetch_layer(self._layer)
-        BM._refetch_layer("__SPINES__")
+        # we need to re-draw all layers since the axis size has changed!
+        self._m.redraw()
 
     def _set_hist_size(self, *args, **kwargs):
         super()._set_hist_size(*args, **kwargs)
