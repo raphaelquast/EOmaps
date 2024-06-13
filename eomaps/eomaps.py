@@ -9,7 +9,7 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from functools import lru_cache, wraps
 from itertools import repeat, chain
 from pathlib import Path
@@ -356,6 +356,18 @@ class Maps(MapsBase):
             self.util = Utilities(self)
         else:
             self.util = self.parent.util
+
+    @contextmanager
+    def delay_draw(self):
+        try:
+            self.BM._disable_draw = True
+            self.BM._disable_update = True
+
+            yield
+        finally:
+            self.BM._disable_draw = False
+            self.BM._disable_update = False
+            self.redraw()
 
     @property
     def coll(self):
