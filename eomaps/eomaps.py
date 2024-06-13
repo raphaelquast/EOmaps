@@ -2956,7 +2956,6 @@ class Maps(MapsBase):
 
             dataset_lazy = True
         else:
-
             # get rid of unnecessary dimensions in the numpy arrays
             zdata = zdata.squeeze()
             x0 = self._data_manager.x0.squeeze()
@@ -3117,10 +3116,6 @@ class Maps(MapsBase):
             ax=self.ax,
             plot_width=plot_width,
             plot_height=plot_height,
-            # x_range=(x0, x1),
-            # y_range=(y0, y1),
-            # x_range=(df.x.min(), df.x.max()),
-            # y_range=(df.y.min(), df.y.max()),
             x_range=x_range,
             y_range=y_range,
             vmin=self._vmin,
