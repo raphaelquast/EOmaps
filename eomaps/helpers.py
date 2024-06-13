@@ -470,9 +470,18 @@ class SearchTree:
         i = None
         # take care of 1D coordinates and 2D data
         if self._m._data_manager.x0_1D is not None:
+
+            dx = np.abs(self._m._data_manager.x0_1D - x[0])
+            dy = np.abs(self._m._data_manager.y0_1D - x[1])
+
             if k > 1 and pick_relative_to_closest is True:
-                ix = np.argmin(np.abs(self._m._data_manager.x0_1D - x[0]))
-                iy = np.argmin(np.abs(self._m._data_manager.y0_1D - x[1]))
+                # mask datapoints outside the "search_radius"
+                dx, dy = dx[dx < d], dy[dy < d]
+                if len(dx) == 0 or len(dy) == 0:
+                    return None
+
+                ix = np.argmin(dx)
+                iy = np.argmin(dy)
                 # query again (starting from the closest point)
                 return self.query(
                     (self._m._data_manager.x0_1D[ix], self._m._data_manager.y0_1D[iy]),
@@ -481,14 +490,14 @@ class SearchTree:
                     pick_relative_to_closest=False,
                 )
             else:
-
                 # perform a brute-force search for 1D coords
-                ix = np.argpartition(
-                    np.abs(self._m._data_manager.x0_1D - x[0]), range(k)
-                )[:k]
-                iy = np.argpartition(
-                    np.abs(self._m._data_manager.y0_1D - x[1]), range(k)
-                )[:k]
+                ix = np.argpartition(dx, range(k))[:k]
+                iy = np.argpartition(dy, range(k))[:k]
+
+                # mask datapoints outside the "search_radius"
+                ix, iy = ix[dx[ix] < d], iy[dy[iy] < d]
+                if len(ix) == 0 or len(iy) == 0:
+                    return None
 
                 if k > 1:
                     # select a circle within the kxk rectangle
