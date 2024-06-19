@@ -2940,18 +2940,33 @@ class Maps(MapsBase):
         dataset_lazy = False
         if (
             isinstance(self.data, xar.Dataset)
-            and self.shape.name == "shade_raster"
             and self.data_specs.parameter is not None
-            and len(zdata.shape) == 2
-            and zdata.chunks is not None
+            and self.data.chunks
+            and self.get_crs("in") == self.get_crs("out")
         ):
             # pass chunked 2D datasets directly to allow lazy-loading
             _log.info("EOmaps: Chunked xarray dataset is handled lazily with dask!")
 
             df = self.data
-            self.shape.glyph = ds.glyphs.QuadMeshRectilinear(
-                "x", "y", self.data_specs.parameter
-            )
+
+            if self.shape.name == "shade_raster":
+                if (
+                    len(zdata.shape) == 2
+                    and len(self._data_manager.x0.shape) == 1
+                    and len(self._data_manager.y0.shape) == 1
+                ):
+
+                    self.shape.glyph = ds.glyphs.QuadMeshRectilinear(
+                        self.data_specs.x, self.data_specs.y, self.data_specs.parameter
+                    )
+                else:
+                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear(
+                        self.data_specs.x, self.data_specs.y, self.data_specs.parameter
+                    )
+
+            elif self.shape.name == "shade_points":
+                df = self.data.to_dask_dataframe()
+
             self.shape.aggregator.column = self.data_specs.parameter
 
             dataset_lazy = True
@@ -2979,6 +2994,10 @@ class Maps(MapsBase):
                 )
 
             else:
+                # required to avoid ambiguities
+                if isinstance(zdata, xar.DataArray):
+                    zdata = zdata.data
+
                 if len(zdata.shape) == 2:
                     if (zdata.shape == x0.shape) and (zdata.shape == y0.shape):
                         # 2D coordinates and 2D raster
