@@ -2976,6 +2976,10 @@ class Maps(MapsBase):
             x0 = self._data_manager.x0.squeeze()
             y0 = self._data_manager.y0.squeeze()
 
+            # required to avoid ambiguities
+            if isinstance(zdata, xar.DataArray):
+                zdata = zdata.data
+
             # the shape is always set after _prepare data!
             if self.shape.name == "shade_points" and self._data_manager.x0_1D is None:
                 # fill masked-values with None to avoid issues with numba not being
@@ -2994,10 +2998,6 @@ class Maps(MapsBase):
                 )
 
             else:
-                # required to avoid ambiguities
-                if isinstance(zdata, xar.DataArray):
-                    zdata = zdata.data
-
                 if len(zdata.shape) == 2:
                     if (zdata.shape == x0.shape) and (zdata.shape == y0.shape):
                         # 2D coordinates and 2D raster
