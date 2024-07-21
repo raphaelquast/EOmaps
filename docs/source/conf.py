@@ -1,5 +1,7 @@
 # Configuration file for the Sphinx documentation builder.
-import sys, os
+import os
+import sys
+
 from docutils.nodes import reference
 
 from eomaps import Maps
@@ -108,11 +110,30 @@ html_css_files = ["custom_css.css"]
 
 html_theme = "pydata_sphinx_theme"
 
-
 autosummary_generate = ["api/autodoc_additional_props.rst"]  # "full_reference.rst",
 
 autodoc_default_options = {
     "member-order": "alphabetical",
+}
+html_theme_options = {
+    "collapse_navigation": False,
+    "show_nav_level": 2,
+    "show_toc_level": 2,
+    "header_links_before_dropdown": 10,
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/raphaelquast/EOmaps",
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome",
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/eomaps/",
+            "icon": "fa-brands fa-python",
+            "type": "fontawesome",
+        },
+    ],
 }
 
 
