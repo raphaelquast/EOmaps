@@ -32,3 +32,6 @@ _exclude*
 docs/jupyter_execute/*
 docs/.jupyter_cache/*
 docs/.virtual_documents/*
+
+# mac
+.DS_Store
