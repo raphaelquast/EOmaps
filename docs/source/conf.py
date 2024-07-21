@@ -115,6 +115,8 @@ autosummary_generate = ["api/autodoc_additional_props.rst"]  # "full_reference.r
 autodoc_default_options = {
     "member-order": "alphabetical",
 }
+
+html_logo = "../../logos/EO_Maps_Logo_V6.png"
 html_theme_options = {
     "collapse_navigation": False,
     "show_nav_level": 2,
