@@ -108,6 +108,28 @@ html_css_files = ["custom_css.css"]
 
 html_theme = "pydata_sphinx_theme"
 
+html_logo = "../../logos/EO_Maps_Logo_V6.png"
+html_theme_options = {
+    "collapse_navigation": False,
+    "show_nav_level": 2,
+    "show_toc_level": 2,
+    "header_links_before_dropdown": 10,
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/raphaelquast/EOmaps",
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome",
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/eomaps/",
+            "icon": "fa-brands fa-python",
+            "type": "fontawesome",
+        },
+    ],
+}
+
 
 autosummary_generate = ["api/autodoc_additional_props.rst"]  # "full_reference.rst",
 

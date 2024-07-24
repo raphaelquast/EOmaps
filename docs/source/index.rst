@@ -233,9 +233,9 @@ Make sure to check out the :doc:`Examples <examples/EOmaps_examples>` for an ove
     :maxdepth: 1
     :caption: General
 
-    Installation <installation>
-    User guide <user_guide/index>
-    Examples <examples/EOmaps_examples>
-    Reference <api/reference>
-    Contribute <contribute/contribute>
+    installation
+    user_guide/index
+    examples/EOmaps_examples
+    api/reference
+    contribute/contribute
     FAQ
