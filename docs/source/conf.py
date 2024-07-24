@@ -108,14 +108,8 @@ templates_path = ["_templates"]
 html_static_path = ["_static"]
 html_css_files = ["custom_css.css"]
 
+# PyData theme options
 html_theme = "pydata_sphinx_theme"
-
-autosummary_generate = ["api/autodoc_additional_props.rst"]  # "full_reference.rst",
-
-autodoc_default_options = {
-    "member-order": "alphabetical",
-}
-
 html_logo = "../../logos/EO_Maps_Logo_V6.png"
 html_theme_options = {
     "collapse_navigation": False,
@@ -136,6 +130,12 @@ html_theme_options = {
             "type": "fontawesome",
         },
     ],
+}
+
+autosummary_generate = ["api/autodoc_additional_props.rst"]  # "full_reference.rst",
+
+autodoc_default_options = {
+    "member-order": "alphabetical",
 }
 
 

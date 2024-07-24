@@ -2,7 +2,7 @@
 How to Use EOmaps
 =================
 
-.. toctree:: 
+.. toctree::
    :maxdepth: 1
    :caption: How to Use EOmaps
 

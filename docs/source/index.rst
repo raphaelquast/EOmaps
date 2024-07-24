@@ -228,7 +228,6 @@ Make sure to check out the :doc:`Examples <examples/EOmaps_examples>` for an ove
 .. include:: examples/example_galery.rst
 
 
-
 .. toctree::
     :hidden:
     :maxdepth: 1
