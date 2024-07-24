@@ -1,9 +1,0 @@
-﻿DLR
-===
-
-.. currentmodule:: eomaps.eomaps
-
-.. autoproperty:: eomaps.eomaps.Maps.add_wms.DLR
-
-
-
