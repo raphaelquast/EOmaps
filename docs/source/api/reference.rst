@@ -1,6 +1,6 @@
-======
-eomaps
-======
+=============
+API Reference
+=============
 
 .. currentmodule:: eomaps.eomaps
 

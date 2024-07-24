@@ -45,7 +45,7 @@ for a map.
     .. grid-item::
         :columns: 8 8 8 4
 
-        .. image:: _static/minigifs/basics_first_map.png
+        .. image:: ../../_static/minigifs/basics_first_map.png
 
 
 - ``crs`` represents the projection used for plotting
@@ -90,7 +90,7 @@ A :py:class:`Maps` object represents one (or more) of the following things **on 
 
 You can create as many layers as you need! The following image explains how it works in general:
 
-.. image:: _static/intro.png
+.. image:: ../../_static/intro.png
    :width: 70%
 
 .. dropdown:: Creating new layers
@@ -219,7 +219,7 @@ The visible layer can be a **single layer-name**, or a **combination of multiple
       - Click on a single layer to make it the visible layer.
       - Hold down ``control`` or ``shift`` to overlay multiple layers.
 
-    .. image:: _static/minigifs/select_layers_dropdown.gif
+    .. image:: ../../_static/minigifs/select_layers_dropdown.gif
 
     |
 
@@ -229,7 +229,7 @@ The visible layer can be a **single layer-name**, or a **combination of multiple
       - Hold down ``shift`` while clicking on a tab to overlay multiple layers.
       - Re-arrange the tabs to change the stacking-order of the layers.
 
-    .. image:: _static/minigifs/rearrange_layers.gif
+    .. image:: ../../_static/minigifs/rearrange_layers.gif
 
 .. dropdown:: Programmatically switch/overlay layers
     :icon: info
@@ -456,7 +456,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     .. grid-item-card::
         :columns: 6 6 6 4
-        :img-background: _static/grids/grid1.png
+        :img-background: ../../_static/grids/grid1.png
 
 
 .. grid:: 1 1 1 2
@@ -480,7 +480,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     .. grid-item-card::
         :columns: 6 6 6 4
-        :img-background: _static/grids/grid2.png
+        :img-background: ../../_static/grids/grid2.png
 
 
 .. grid:: 1 1 1 2
@@ -504,7 +504,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     .. grid-item-card::
         :columns: 6 6 6 4
-        :img-background: _static/grids/grid3.png
+        :img-background: ../../_static/grids/grid3.png
 
 
 
@@ -531,7 +531,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     .. grid-item-card::
         :columns: 6 6 6 4
-        :img-background: _static/grids/grid4.png
+        :img-background: ../../_static/grids/grid4.png
 
 
 .. grid:: 1 1 1 2
@@ -553,7 +553,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     .. grid-item-card::
         :columns: 6 6 6 4
-        :img-background: _static/grids/grid5.png
+        :img-background: ../../_static/grids/grid5.png
 
 
 
@@ -577,7 +577,7 @@ To position the map in a (virtual) grid, one of the following options are possib
 
     .. grid-item-card::
         :columns: 6 6 6 4
-        :img-background: _static/grids/grid6.png
+        :img-background: ../../_static/grids/grid6.png
 
 
 Absolute positioning
@@ -611,7 +611,7 @@ To set the absolute position of the map, provide a list of 4 floats representing
 
     .. grid-item-card::
         :columns: 6 6 6 4
-        :img-background: _static/grids/grid7.png
+        :img-background: ../../_static/grids/grid7.png
 
 
 Using already existing figures / axes
@@ -698,7 +698,7 @@ Here's an example to show how it works:
 
     .. grid-item::
 
-        .. image:: _static/minigifs/dynamic_axes_updates.gif
+        .. image:: ../../_static/minigifs/dynamic_axes_updates.gif
 
 
 MapsGrid objects

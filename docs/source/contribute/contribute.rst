@@ -70,7 +70,7 @@ You can set up ``python`` with the following steps:
 
 Content of ``environment.yml``:
 
-.. literalinclude:: ../environment.yml
+.. literalinclude:: ../../../environment.yml
 
 
 

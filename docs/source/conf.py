@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 
-from gen_autodoc_file import make_feature_toctree_file
+from docs.source.gen_autodoc_file import make_feature_toctree_file
 
 make_feature_toctree_file()
 
@@ -87,7 +87,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
-    "sphinx_rtd_theme",
+    "pydata_sphinx_theme",
     "myst_nb",
     "sphinx_design",
 ]
@@ -106,7 +106,7 @@ templates_path = ["_templates"]
 html_static_path = ["_static"]
 html_css_files = ["custom_css.css"]
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"
 
 
 autosummary_generate = ["api/autodoc_additional_props.rst"]  # "full_reference.rst",

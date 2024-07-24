@@ -24,11 +24,11 @@ There are 3 basic steps required to visualize your data:
 
 |toggleStart|
 
-.. literalinclude:: examples/example_basics.py
+.. literalinclude:: example_basics.py
 
 |toggleEnd|
 
-.. image:: _static/example_images/example_basics.gif
+.. image:: ../_static/example_images/example_basics.gif
   :width: 75%
 
 
@@ -47,11 +47,11 @@ Customize the appearance of the plot
 
 |toggleStart|
 
-.. literalinclude:: examples/example_customization.py
+.. literalinclude:: example_customization.py
 
 |toggleEnd|
 
-.. image:: _static/example_images/example_customization.png
+.. image:: ../_static/example_images/example_customization.png
   :width: 75%
 
 
@@ -71,11 +71,11 @@ Data-classification and multiple Maps in a figure
 
 |toggleStart|
 
-.. literalinclude:: examples/example_multiple_maps.py
+.. literalinclude:: example_multiple_maps.py
 
 |toggleEnd|
 
-.. image:: _static/example_images/example_multiple_maps.gif
+.. image:: ../_static/example_images/example_multiple_maps.gif
   :width: 75%
 
 
@@ -100,11 +100,11 @@ Callbacks - turn your maps into interactive widgets
 
 |toggleStart|
 
-.. literalinclude:: examples/example_callbacks.py
+.. literalinclude:: example_callbacks.py
 
 |toggleEnd|
 
-.. image:: _static/example_images/example_callbacks.gif
+.. image:: ../_static/example_images/example_callbacks.gif
   :width: 75%
 
 
@@ -121,11 +121,11 @@ Overlays, markers and annotations
 
 |toggleStart|
 
-.. literalinclude:: examples/example_overlays.py
+.. literalinclude:: example_overlays.py
 
 |toggleEnd|
 
-.. image:: _static/example_images/example_overlays.gif
+.. image:: ../_static/example_images/example_overlays.gif
   :width: 75%
 
 The data displayed in the above gif is taken from:
@@ -142,11 +142,11 @@ WebMap services and layer-switching
 
 |toggleStart|
 
-.. literalinclude:: examples/example_webmaps.py
+.. literalinclude:: example_webmaps.py
 
 |toggleEnd|
 
-.. image:: _static/example_images/example_webmaps.gif
+.. image:: ../_static/example_images/example_webmaps.gif
   :width: 75%
 
 The data displayed in the above gif is taken from:
@@ -179,11 +179,11 @@ EOmaps can be used to assign callbacks to vektor-data (e.g. ``geopandas.GeoDataF
 
 |toggleStart|
 
-.. literalinclude:: examples/example_vector_data.py
+.. literalinclude:: example_vector_data.py
 
 |toggleEnd|
 
-.. image:: _static/example_images/example_vector_data.gif
+.. image:: ../_static/example_images/example_vector_data.gif
   :width: 75%
 
 
@@ -220,11 +220,11 @@ EOmaps has a nice customizable scalebar feature!
 
 |toggleStart|
 
-.. literalinclude:: examples/example_scalebars.py
+.. literalinclude:: example_scalebars.py
 
 |toggleEnd|
 
-.. image:: _static/example_images/example_scalebars.gif
+.. image:: ../_static/example_images/example_scalebars.gif
   :width: 75%
 
 The data displayed in the above gif is taken from:
@@ -246,12 +246,12 @@ This example shows how to use EOmaps to analyze a database that is associated wi
 
 |toggleStart|
 
-.. literalinclude:: examples/example_timeseries.py
+.. literalinclude:: example_timeseries.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_images/example_timeseries.gif
+.. image:: ../_static/example_images/example_timeseries.gif
   :width: 75%
 
 
@@ -269,12 +269,12 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
 
 |toggleStart|
 
-.. literalinclude:: examples/example_row_col_selector.py
+.. literalinclude:: example_row_col_selector.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_images/example_row_col_selector.gif
+.. image:: ../_static/example_images/example_row_col_selector.gif
   :width: 75%
 
 
@@ -295,12 +295,12 @@ Quickly create nice inset-maps to show details for specific regions.
 
 |toggleStart|
 
-.. literalinclude:: examples/example_inset_maps.py
+.. literalinclude:: example_inset_maps.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_images/example_inset_maps.png
+.. image:: ../_static/example_images/example_inset_maps.png
   :width: 75%
 
 
@@ -322,12 +322,12 @@ Connect the anchor-points via:
 
 |toggleStart|
 
-.. literalinclude:: examples/example_lines.py
+.. literalinclude:: example_lines.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_images/example_lines.png
+.. image:: ../_static/example_images/example_lines.png
   :width: 75%
 
 
@@ -342,12 +342,12 @@ Draw custom grids and add grid labels.
 
 |toggleStart|
 
-.. literalinclude:: examples/example_gridlines.py
+.. literalinclude:: example_gridlines.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_images/example_gridlines.png
+.. image:: ../_static/example_images/example_gridlines.png
   :width: 75%
 
 .. _example_contour:
@@ -362,10 +362,10 @@ or to indicate contour-levels on top of other plots.
 
 |toggleStart|
 
-.. literalinclude:: examples/example_contour.py
+.. literalinclude:: example_contour.py
 
 |toggleEnd|
 
 
-.. image:: _static/example_images/example_contour.png
+.. image:: ../_static/example_images/example_contour.png
   :width: 75%
