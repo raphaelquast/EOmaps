@@ -48,5 +48,5 @@ dependencies:
   - sphinx
   - sphinx-copybutton
   - sphinx-design
-  - sphinx_rtd_theme
+  - pydata-sphinx-theme
   - myst-nb
