@@ -25,7 +25,7 @@ def gen_test(name, code):
 class _TestSequenceMeta(type):
     def __new__(mcs, name, bases, tests):
         # the path to the folder containing the example scripts
-        parent_path = Path(__file__).parent.parent / "docs" / "examples"
+        parent_path = Path(__file__).parent.parent / "docs" / "source" / "examples"
 
         examples = filter(
             lambda x: x.stem.startswith("example_") and x.suffix == ".py",
