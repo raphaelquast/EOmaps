@@ -310,7 +310,7 @@ Available shapes (see bleow for details on each plot-shape!):
 
 
 
- .. include:: ../../_shape_table.rst
+.. include:: ../../_shape_table.rst
 
 
 

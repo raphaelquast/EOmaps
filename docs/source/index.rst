@@ -1,16 +1,8 @@
 .. include:: examples/substitutions.rst
 
-.. image:: _static/logo.png
-  :width: 40%
-  :align: center
-  :target: https://github.com/raphaelquast/EOmaps
-
-.. raw:: html
-
-    <br>
-    <font size=5>Welcome to the documentation for <b>EOmaps</b>!</font>
-    <p>
-
+============================================
+Welcome to the documentation for **EOmaps**!
+============================================
 
 Here you can find detailed explanations on all the features and functionalities of EOmaps.
 
@@ -50,7 +42,7 @@ Want to visualize some data? Have a look at the :doc:`user_guide/how_to_use/api_
 
 EOmaps provides a variety of plot-shapes so you can select a shape that suits the structure, size and spatial representativeness of your data:
 
- .. include:: _shape_table.rst
+.. include:: _shape_table.rst
 
 Map Features
 ------------
@@ -172,7 +164,7 @@ With a few lines of code, you can turn your maps into interactive data-analysis 
 
 
 Miscellaneous
-~~~~~~~~~~~~~
+-------------
 
 .. grid:: 1 1 1 2
     :gutter: 1
@@ -207,7 +199,7 @@ Miscellaneous
 
 
 API Reference
-~~~~~~~~~~~~~
+-------------
 
 .. grid:: 1 1 1 2
     :gutter: 1
