@@ -43,7 +43,7 @@ A compass can be added to the map via :py:meth:`Maps.add_compass`:
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/compass.gif
+        .. image:: /_static/minigifs/compass.gif
             :width: 50%
 
 

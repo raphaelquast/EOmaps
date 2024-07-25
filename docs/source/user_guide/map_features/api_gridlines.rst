@@ -71,7 +71,7 @@ If no explicit grid-spacing is provided (e.g. ``d=None``), the grid is dynamical
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/grid_01.png
+        .. image:: /_static/minigifs/grid_01.png
 
 
 .. currentmodule:: eomaps.grid
@@ -148,4 +148,4 @@ can be used (e.g. `color`, `fontsize`, `fontweight`, ...).
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/grid_labels_01.png
+        .. image:: /_static/minigifs/grid_labels_01.png

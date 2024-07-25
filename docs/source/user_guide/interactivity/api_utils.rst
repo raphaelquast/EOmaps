@@ -59,5 +59,5 @@ By default, the widgets will show all available layers (except the "all" layer) 
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/layer_selector.gif
+        .. image:: /_static/minigifs/layer_selector.gif
             :width: 50%

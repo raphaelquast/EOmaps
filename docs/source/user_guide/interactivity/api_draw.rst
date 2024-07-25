@@ -29,7 +29,7 @@ Starting with EOmaps v5.0 it is possible to draw simple shapes on the map using 
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/draw_shapes.gif
+        .. image:: /_static/minigifs/draw_shapes.gif
 
 
 .. note::

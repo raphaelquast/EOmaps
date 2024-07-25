@@ -82,6 +82,7 @@ author = "Raphael Quast"
 # -- General configuration
 
 extensions = [
+    "nbsphinx",
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
@@ -90,7 +91,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_copybutton",
     "pydata_sphinx_theme",
-    "myst_nb",
     "sphinx_design",
 ]
 
@@ -161,13 +161,28 @@ napoleon_preprocess_types = False
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
-myst_update_mathjax = False  # to use single $x^2$ for equations
-myst_render_markdown_format = "myst"  # to parse markdown output with MyST parser
-myst_enable_extensions = ["dollarmath", "colon_fence"]
-myst_title_to_header = True
+# Support for notebook formats other than .ipynb
+nbsphinx_custom_formats = {
+    ".pct.py": ["jupytext.reads", {"fmt": "py:percent"}],
+}
+
+# source_suffix = {
+#     ".rst": "restructuredtext",
+#     ".myst": "myst-nb",
+# }
+
+
+# myst_update_mathjax = False  # to use single $x^2$ for equations
+# myst_render_markdown_format = "myst"  # to parse markdown output with MyST parser
+# myst_enable_extensions = ["dollarmath", "colon_fence"]
+# myst_title_to_header = True
 
 nb_execution_mode = "off"
 nb_execution_timeout = 120
+
+nbsphinx_execute = "never"
+nbsphinx_timeout = 120
+
 
 # handle compiler warnings for duplicate labels due to documents
 # included via the  ..include:: directive
@@ -180,9 +195,3 @@ exclude_patterns = [
     # (check "make_feature_toctree_file()" for more details.
     "api/eomaps.*",
 ]
-
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".ipynb": "myst-nb",
-    ".myst": "myst-nb",
-}

@@ -370,7 +370,7 @@ Ellipses
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-.. image:: ../../_static/shape_imgs/ellipses.png
+.. image:: /_static/shape_imgs/ellipses.png
     :width: 50%
 
 .. code-block:: python
@@ -398,7 +398,7 @@ Rectangles
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-.. image:: ../../_static/shape_imgs/rectangles.png
+.. image:: /_static/shape_imgs/rectangles.png
     :width: 50%
 
 .. code-block:: python
@@ -427,7 +427,7 @@ Geodesic Circles
    * - up to ~500k
      - 1D, 2D or mixed
 
-.. image:: ../../_static/shape_imgs/geod_circles.png
+.. image:: /_static/shape_imgs/geod_circles.png
     :width: 50%
 
 .. code-block:: python
@@ -454,7 +454,7 @@ Voronoi Diagram
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-.. image:: ../../_static/shape_imgs/voronoi_diagram.png
+.. image:: /_static/shape_imgs/voronoi_diagram.png
     :width: 50%
 
 .. code-block:: python
@@ -482,10 +482,10 @@ Delaunay Triangulation
    * - up to ~500k datapoints
      - 1D, 2D or mixed
 
-.. image:: ../../_static/shape_imgs/delaunay_triangulation.png
+.. image:: /_static/shape_imgs/delaunay_triangulation.png
     :width: 50%
 
-.. image:: ../../_static/shape_imgs/delaunay_triangulation_flat.png
+.. image:: /_static/shape_imgs/delaunay_triangulation_flat.png
     :width: 50%
 
 .. code-block:: python
@@ -514,10 +514,10 @@ Contour plots
    * - up to a few million datapoints
      - 1D, 2D or mixed
 
-.. image:: ../../_static/shape_imgs/contour_filled.png
+.. image:: /_static/shape_imgs/contour_filled.png
     :width: 50%
 
-.. image:: ../../_static/shape_imgs/contour.png
+.. image:: /_static/shape_imgs/contour.png
     :width: 50%
 
 .. code-block:: python
@@ -542,7 +542,7 @@ Hexbin plots
    * - up to a few million datapoints
      - 1D, 2D or mixed
 
-.. image:: ../../_static/shape_imgs/hexbin.png
+.. image:: /_static/shape_imgs/hexbin.png
     :width: 50%
 
 
@@ -573,7 +573,7 @@ Scatter Points
    * - ~500k datapoints
      - 1D, 2D or mixed
 
-.. image:: ../../_static/shape_imgs/scatter_points.png
+.. image:: /_static/shape_imgs/scatter_points.png
     :width: 50%
 
 .. code-block:: python
@@ -600,7 +600,7 @@ Raster
    * - billions of datapoints (large datasets are pre-aggregated)
      - 2D or 1D coordinates + 2D data
 
-.. image:: ../../_static/shape_imgs/raster.png
+.. image:: /_static/shape_imgs/raster.png
     :width: 50%
 
 .. code-block:: python
@@ -631,7 +631,7 @@ Shade Raster
      - 2D or 1D coordinates + 2D data
      - `datashader <https://datashader.org/>`_
 
-.. image:: ../../_static/shape_imgs/shade_raster.png
+.. image:: /_static/shape_imgs/shade_raster.png
     :width: 50%
 
 .. code-block:: python
@@ -663,7 +663,7 @@ Shade Points
      - 1D, 2D or mixed
      - `datashader <https://datashader.org/>`_
 
-.. image:: ../../_static/shape_imgs/shade_points.png
+.. image:: /_static/shape_imgs/shade_points.png
     :width: 50%
 
 .. code-block:: python
@@ -720,7 +720,7 @@ To assign a classification scheme to a :py:class:`Maps` object, use ``m.set_clas
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/classify_data_01.png
+        .. image:: /_static/minigifs/classify_data_01.png
             :width: 75%
 
 
@@ -791,7 +791,7 @@ To always keep the extent as-is, use ``m.plot_map(set_extent=False)``.
 
     .. grid-item::
 
-        .. image:: ../../_static/data_visualization/plot_data.png
+        .. image:: /_static/data_visualization/plot_data.png
             :width: 75%
 
 
@@ -856,7 +856,7 @@ In general, the colors assigned to the shapes are specified by
 
     .. grid-item::
 
-        .. image:: ../../_static/data_visualization/customize_plot.png
+        .. image:: /_static/data_visualization/customize_plot.png
             :width: 75%
 
 
@@ -923,7 +923,7 @@ To apply a uniform color to all datapoints, you can use `matpltolib's named colo
 
     .. grid-item::
 
-        .. image:: ../../_static/data_visualization/uniform_colors.png
+        .. image:: /_static/data_visualization/uniform_colors.png
             :width: 75%
 
 
@@ -972,7 +972,7 @@ To explicitly color each datapoint with a pre-defined color, simply provide a li
 
     .. grid-item::
 
-        .. image:: ../../_static/data_visualization/explicit_colors.png
+        .. image:: /_static/data_visualization/explicit_colors.png
             :width: 75%
 
 
@@ -1022,7 +1022,7 @@ You can fix individual color channels by passing a list with 1 element, e.g.:
 
     .. grid-item::
 
-        .. image:: ../../_static/data_visualization/rgba_composite.png
+        .. image:: /_static/data_visualization/rgba_composite.png
             :width: 75%
 
 
@@ -1090,7 +1090,7 @@ Once a dataset has been plotted, a colorbar with a colored histogram on top can 
 
     .. grid-item::
 
-        .. image:: ../../_static/data_visualization/colorbar.gif
+        .. image:: /_static/data_visualization/colorbar.gif
 
 
 .. autosummary::
@@ -1149,7 +1149,7 @@ To label the colorbar with custom names for a given set of bins, use :py:meth:`C
 
     .. grid-item::
 
-        .. image:: ../../_static/data_visualization/colorbar_ticks.png
+        .. image:: /_static/data_visualization/colorbar_ticks.png
 
 
 
@@ -1192,4 +1192,4 @@ pixels within the current field of view by setting ``dynamic_shade_indicator=Tru
 
     .. grid-item::
 
-        .. image:: ../../_static/data_visualization/dynamic_colorbar.gif
+        .. image:: /_static/data_visualization/dynamic_colorbar.gif

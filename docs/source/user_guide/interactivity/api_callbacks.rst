@@ -101,7 +101,7 @@ The ``< EVENT CATEGORY >`` hereby specifies the event that will trigger the call
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/simple_callbacks.gif
+        .. image:: /_static/minigifs/simple_callbacks.gif
 
 
 In addition, each callback-container supports the following useful methods:
@@ -140,7 +140,7 @@ Some of the most commonly used pre-defined callbacks are integrated in the :ref:
 - basic click/pick callbacks to get information on the clicked point
 
 
-.. image:: ../../_static/widget_callbacks.png
+.. image:: /_static/widget_callbacks.png
     :width: 60%
 
 
@@ -403,7 +403,7 @@ To customize the picking-behavior, use ``m.cb.pick.set_props()``. The following 
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/pick_multi.gif
+        .. image:: /_static/minigifs/pick_multi.gif
 
 
 Picking a dataset without plotting it first

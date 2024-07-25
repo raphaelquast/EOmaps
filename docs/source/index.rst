@@ -215,9 +215,18 @@ API Reference
 Examples
 --------
 
-Make sure to check out the :doc:`Examples <examples/EOmaps_examples>` for an overview of the capabilities (incl. source code)!
+Make sure to check out the :doc:`Examples <examples/index>` for an overview of the capabilities (incl. source code)!
 
-.. include:: examples/example_galery.rst
+.. grid:: 1 1 1 2
+    :gutter: 1
+
+    .. grid-item-card:: EOmaps Examples
+        :link: examples/index
+        :link-type: doc
+        :shadow: none
+
+        Detailed examples of EOmaps.
+
 
 
 .. toctree::
@@ -227,7 +236,7 @@ Make sure to check out the :doc:`Examples <examples/EOmaps_examples>` for an ove
 
     installation
     user_guide/index
-    examples/EOmaps_examples
+    examples/index
     api/reference
     contribute/contribute
     FAQ

@@ -46,7 +46,7 @@ To dynamically add annotations if you click on the map, checkout the associated 
     Starting with EOmaps v7.0 it is also possible to interactively edit existing annotations by activating
     the **Edit Annotations** button.
 
-    .. image:: ../../_static/widget_annotations.png
+    .. image:: /_static/widget_annotations.png
       :width: 50%
 
 
@@ -109,7 +109,7 @@ To dynamically add annotations if you click on the map, checkout the associated 
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/annotations.png
+        .. image:: /_static/minigifs/annotations.png
 
 
 Markers
@@ -193,7 +193,7 @@ To dynamically add markers if you click on the map, checkout the associated :ref
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/markers.png
+        .. image:: /_static/minigifs/markers.png
 
 
 
@@ -270,7 +270,7 @@ Lines can be added to a map with :py:meth:`Maps.add_line`.
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/lines.png
+        .. image:: /_static/minigifs/lines.png
 
 
 
@@ -318,7 +318,7 @@ To indicate rectangular areas in any given crs, simply use :py:meth:`Maps.indica
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/indicate_extent.png
+        .. image:: /_static/minigifs/indicate_extent.png
 
 
 Logos
@@ -352,7 +352,7 @@ Logos can be re-positioned and re-sized with the :ref:`layout_editor`!
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/logos.png
+        .. image:: /_static/minigifs/logos.png
 
 
 

@@ -24,7 +24,7 @@ EOmaps comes with an awesome companion widget that provides many useful features
     - This will activate **help tooltips** that explain the individual controls.
 
 
-.. image:: ../../_static/minigifs/companion_widget.gif
+.. image:: /_static/minigifs/companion_widget.gif
     :align: center
 
 .. raw:: html
@@ -68,5 +68,5 @@ next to the corresponding entry in the **Edit** tab that will open a popup windo
 - Links to **sources**, **references** and **licensing details** (without warranty for correctness!)
 - The **source code** to reproduce the current appearance of the feature
 
-.. image:: ../../_static/minigifs/companion_widget_feature_info.gif
+.. image:: /_static/minigifs/companion_widget_feature_info.gif
   :width: 50%

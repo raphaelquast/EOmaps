@@ -39,7 +39,7 @@ You can use it to simply drag the axes the mouse to the desired locations and ch
 
     .. grid-item::
 
-            .. image:: ../../_static/minigifs/layout_editor.gif
+            .. image:: /_static/minigifs/layout_editor.gif
 
 
 

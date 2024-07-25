@@ -80,5 +80,5 @@ For example, to highlight the clicked country, you could use:
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/add_gdf_pick.gif
+        .. image:: /_static/minigifs/add_gdf_pick.gif
             :width: 75%

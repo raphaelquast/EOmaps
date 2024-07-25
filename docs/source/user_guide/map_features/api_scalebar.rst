@@ -39,7 +39,7 @@ In addition, many style properties of the scalebar can be adjusted to get the lo
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/scalebar.gif
+        .. image:: /_static/minigifs/scalebar.gif
             :width: 50%
 
 

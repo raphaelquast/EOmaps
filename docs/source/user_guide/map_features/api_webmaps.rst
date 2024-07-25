@@ -67,7 +67,7 @@ and ``< LAYER >`` indicates the actual layer-name.
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/add_wms.png
+        .. image:: /_static/minigifs/add_wms.png
 
 
 Pre-defined WebMap services
@@ -217,4 +217,4 @@ To show an example, here's how to fetch multiple timestamps for the UV-index of 
 
     .. grid-item::
 
-        .. image:: ../../_static/minigifs/advanced_wms.gif
+        .. image:: /_static/minigifs/advanced_wms.gif
