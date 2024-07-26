@@ -3,11 +3,11 @@ import warnings
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-from matplotlib.backend_bases import MouseEvent, KeyEvent
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+from matplotlib.backend_bases import KeyEvent, MouseEvent
+from matplotlib.gridspec import GridSpec
+from pytest import mark
 
 from eomaps import Maps, MapsGrid
 
@@ -938,6 +938,7 @@ class TestBasicPlotting(unittest.TestCase):
         s3.remove()
         s4.remove()
 
+    @mark.skip("nominatim.openstreetmap.org is not available now")
     def test_set_extent_to_location(self):
         import requests
 
