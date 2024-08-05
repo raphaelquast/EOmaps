@@ -31,5 +31,9 @@ goto end
 :help
 %SPHINXBUILD% -M help %SOURCEDIR% %BUILDDIR% %SPHINXOPTS% %O%
 
+:clean
+del /s /q %BUILDDIR%\* %SOURCEDIR%\auto_examples\* %SOURCEDIR%\generated\*
+
+
 :end
 popd

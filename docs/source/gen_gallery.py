@@ -162,7 +162,7 @@ def main(examples_dir, gallery_dir):
 
         # add sub-gallery to the home gallery toc
         sub_path_rst = sub_header_file.relative_to(examples_dir)
-        toc_index_str += f"\n    {sub_path_rst.with_suffix('')}"
+        toc_index_str += f"\n    {sub_path_rst.with_suffix('').as_posix()}"
 
         # generate the sub-gallery
         toc_sub_str, grid_str = gen_sub_gallery(

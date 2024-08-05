@@ -13,11 +13,14 @@ dependencies:
   - myst-nb =1.0.0
   - sphinx-design =0.5.0
   - pydata-sphinx-theme
+  
 
   # install minimal dependencies to import eomaps
   - pip
   - pip:
     - ../.
     - ipywidgets  # for widgets docs
-    - nbsphinx
     - jupytext
+    - pandas
+    - geopandas 
+    - mapclassify 
