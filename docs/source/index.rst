@@ -1,4 +1,4 @@
-.. include:: examples/substitutions.rst
+.. include:: substitutions.rst
 
 ============================================
 Welcome to the documentation for **EOmaps**!
@@ -215,13 +215,13 @@ API Reference
 Examples
 --------
 
-Make sure to check out the :doc:`Examples <examples/index>` for an overview of the capabilities (incl. source code)!
+Make sure to check out the :doc:`Examples <auto_examples/GALLERY_HEADER>` for an overview of the capabilities (incl. source code)!
 
 .. grid:: 1 1 1 2
     :gutter: 1
 
     .. grid-item-card:: EOmaps Examples
-        :link: examples/index
+        :link: auto_examples/GALLERY_HEADER
         :link-type: doc
         :shadow: none
 
@@ -236,7 +236,7 @@ Make sure to check out the :doc:`Examples <examples/index>` for an overview of t
 
     installation
     user_guide/index
-    examples/index
+    auto_examples/GALLERY_HEADER
     api/reference
     contribute/contribute
     FAQ

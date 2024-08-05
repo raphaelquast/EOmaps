@@ -2,6 +2,7 @@
 import os
 import sys
 
+
 from docutils.nodes import reference
 
 from eomaps import Maps
@@ -10,9 +11,15 @@ sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 
+examples_dir = "../../examples"
+gallery_dir = "./auto_examples"
+
+
 from docs.source.gen_autodoc_file import make_feature_toctree_file
+import gen_gallery
 
 make_feature_toctree_file()
+gen_gallery.main(examples_dir, gallery_dir)
 
 
 def mpl_rc_role_subst(name, rawtext, text, lineno, inliner, options={}, content=[]):
@@ -82,7 +89,6 @@ author = "Raphael Quast"
 # -- General configuration
 
 extensions = [
-    "nbsphinx",
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
     "sphinx.ext.autodoc",
@@ -92,6 +98,7 @@ extensions = [
     "sphinx_copybutton",
     "pydata_sphinx_theme",
     "sphinx_design",
+    "myst_nb",
 ]
 
 
@@ -162,25 +169,20 @@ napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
 # Support for notebook formats other than .ipynb
-nbsphinx_custom_formats = {
-    ".pct.py": ["jupytext.reads", {"fmt": "py:percent"}],
+
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".myst": "myst-nb",
 }
 
-# source_suffix = {
-#     ".rst": "restructuredtext",
-#     ".myst": "myst-nb",
-# }
+
+myst_update_mathjax = False  # to use single $x^2$ for equations
+myst_render_markdown_format = "myst"  # to parse markdown output with MyST parser
+myst_enable_extensions = ["dollarmath", "colon_fence"]
+myst_title_to_header = True
 
 
-# myst_update_mathjax = False  # to use single $x^2$ for equations
-# myst_render_markdown_format = "myst"  # to parse markdown output with MyST parser
-# myst_enable_extensions = ["dollarmath", "colon_fence"]
-# myst_title_to_header = True
-
-nb_execution_mode = "off"
-nb_execution_timeout = 120
-
-nbsphinx_execute = "never"
+nbsphinx_execute = "auto"
 nbsphinx_timeout = 120
 
 

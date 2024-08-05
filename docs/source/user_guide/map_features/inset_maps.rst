@@ -38,7 +38,7 @@ The shape of the inset boundary can be one of the following options:
 .. tip::
    To quickly re-position (and re-size) inset-maps, make sure to have a look at the :ref:`layout_editor`!
 
-   A more advanced example on how to use inset-maps is available here: :doc:`../../examples/gallery/Maps/example_inset_maps`
+   A more advanced example on how to use inset-maps is available here: :doc:`../../auto_examples/Maps/example_inset_maps`
 
 .. code-block:: python
 

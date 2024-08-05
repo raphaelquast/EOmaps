@@ -8,6 +8,7 @@ docs/_build
 docs/debug.log
 docs/.vscode
 docs/source/generated
+docs/source/auto_examples
 docs/source/api/autodoc_additional_props.rst
 
 docs/source/_tables
