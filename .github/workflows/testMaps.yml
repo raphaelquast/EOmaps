@@ -18,7 +18,7 @@ jobs:
     name: test_Maps ${{ matrix.os }}  ${{ matrix.python-version }}
     steps:
       # checkout repository
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # install miniconda environment
 
       - uses: mamba-org/setup-micromamba@v1
@@ -42,7 +42,7 @@ jobs:
           name: code-coverage-report
           path: img_comparison_results
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           env_vars: ${{ matrix.os }}, ${{ matrix.python-version }}
           name: maps_coverage
