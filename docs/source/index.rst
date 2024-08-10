@@ -215,13 +215,13 @@ API Reference
 Examples
 --------
 
-Make sure to check out the :doc:`Examples <auto_examples/GALLERY_HEADER>` for an overview of the capabilities (incl. source code)!
+Make sure to check out the :doc:`Examples <auto_examples/index>` for an overview of the capabilities (incl. source code)!
 
 .. grid:: 1 1 1 2
     :gutter: 1
 
     .. grid-item-card:: EOmaps Examples
-        :link: auto_examples/GALLERY_HEADER
+        :link: auto_examples/index
         :link-type: doc
         :shadow: none
 
@@ -236,7 +236,7 @@ Make sure to check out the :doc:`Examples <auto_examples/GALLERY_HEADER>` for an
 
     installation
     user_guide/index
-    auto_examples/GALLERY_HEADER
+    auto_examples/index
     api/reference
     contribute/contribute
     FAQ

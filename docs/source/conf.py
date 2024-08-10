@@ -2,7 +2,6 @@
 import os
 import sys
 
-
 from docutils.nodes import reference
 
 from eomaps import Maps
@@ -16,10 +15,21 @@ gallery_dir = "./auto_examples"
 
 
 from docs.source.gen_autodoc_file import make_feature_toctree_file
-import gen_gallery
 
 make_feature_toctree_file()
-gen_gallery.main(examples_dir, gallery_dir)
+
+####### Generate gallery #######
+from pathlib import Path
+
+from myst_sphinx_gallery import GalleryConfig, generate_gallery
+
+myst_sphinx_gallery_config = GalleryConfig(
+    examples_dirs="../../examples",
+    gallery_dirs="auto_examples",
+    root_dir=Path(__file__).parent,
+    notebook_thumbnail_strategy="code",
+)
+generate_gallery(myst_sphinx_gallery_config)
 
 
 def mpl_rc_role_subst(name, rawtext, text, lineno, inliner, options={}, content=[]):
@@ -172,19 +182,17 @@ napoleon_attr_annotations = True
 
 source_suffix = {
     ".rst": "restructuredtext",
+    ".md": "myst-nb",
     ".myst": "myst-nb",
 }
-
 
 myst_update_mathjax = False  # to use single $x^2$ for equations
 myst_render_markdown_format = "myst"  # to parse markdown output with MyST parser
 myst_enable_extensions = ["dollarmath", "colon_fence"]
 myst_title_to_header = True
 
-
-nbsphinx_execute = "auto"
-nbsphinx_timeout = 120
-
+nb_execution_mode = "off"
+nb_execution_timeout = 120
 
 # handle compiler warnings for duplicate labels due to documents
 # included via the  ..include:: directive
