@@ -51,3 +51,4 @@ dependencies:
   - pydata-sphinx-theme
   - nbsphinx
   - myst-nb
+  - myst-sphinx-gallery = 0.2.2

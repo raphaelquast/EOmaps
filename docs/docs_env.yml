@@ -13,6 +13,7 @@ dependencies:
   - myst-nb =1.0.0
   - sphinx-design =0.5.0
   - pydata-sphinx-theme
+  - myst-sphinx-gallery = 0.2.2
 
 
   # install minimal dependencies to import eomaps
@@ -24,4 +25,3 @@ dependencies:
     - pandas
     - geopandas
     - mapclassify
-    - myst_sphinx_gallery
