@@ -14,22 +14,33 @@ examples_dir = "../../examples"
 gallery_dir = "./auto_examples"
 
 
-from docs.source.gen_autodoc_file import make_feature_toctree_file
+from docs.source.gen_autodoc_file import make_feature_toctree_file  # noqa: E402
 
 make_feature_toctree_file()
 
 ####### Generate gallery #######
-from pathlib import Path
+from pathlib import Path  # noqa: E402
 
-from myst_sphinx_gallery import GalleryConfig, generate_gallery
+from myst_sphinx_gallery import (  # noqa: E402
+    GalleryConfig,
+    GridItemCard,
+    ThumbnailConfig,
+)
+
+myst_gallery_grid_item = GridItemCard()
+myst_gallery_grid_item.add_option("class-item", "myst-gallery-grid-item")
+
 
 myst_sphinx_gallery_config = GalleryConfig(
     examples_dirs="../../examples",
     gallery_dirs="auto_examples",
     root_dir=Path(__file__).parent,
     notebook_thumbnail_strategy="code",
+    thumbnail_config=ThumbnailConfig(
+        max_animation_frames=80,
+    ),
+    grid_item_card=myst_gallery_grid_item,
 )
-generate_gallery(myst_sphinx_gallery_config)
 
 
 def mpl_rc_role_subst(name, rawtext, text, lineno, inliner, options={}, content=[]):
@@ -109,6 +120,7 @@ extensions = [
     "pydata_sphinx_theme",
     "sphinx_design",
     "myst_nb",
+    "myst_sphinx_gallery",
 ]
 
 
@@ -123,7 +135,7 @@ epub_show_urls = "footnote"
 
 templates_path = ["_templates"]
 html_static_path = ["_static"]
-html_css_files = ["custom_css.css"]
+html_css_files = ["css/custom.css", "css/gallery.css"]
 
 # PyData theme options
 html_theme = "pydata_sphinx_theme"
