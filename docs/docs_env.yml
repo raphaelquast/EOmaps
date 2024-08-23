@@ -21,7 +21,3 @@ dependencies:
   - pip:
     - ../.
     - ipywidgets  # for widgets docs
-    - jupytext
-    - pandas
-    - geopandas
-    - mapclassify
