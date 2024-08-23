@@ -1,13 +1,13 @@
-====================================
-Vector data - interactive geometries
-====================================
+==================================
+Vector-data interactive geometries
+==================================
 
-EOmaps can be used to assign callbacks to vektor-data (e.g. ``geopandas.GeoDataFrames``).
+EOmaps can be used to assign callbacks to vector data (e.g. ``geopandas.GeoDataFrames``).
 
 - to make a GeoDataFrame pickable, first use ``m.add_gdf(picker_name="MyPicker")``
 
-    - now you can assign callbacks via ``m.cb.pick__MyPicker.attach...`` just as you
-      would do with the ordinary ``m.cb.click`` or ``m.cb.pick`` callbacks
+- now you can assign callbacks via ``m.cb.pick__MyPicker.attach...`` just as you
+  would do with the ordinary ``m.cb.click`` or ``m.cb.pick`` callbacks
 
 .. Note::
     For large datasets that are visualized as simple rectangles, ellipses etc.

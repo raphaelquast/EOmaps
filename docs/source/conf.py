@@ -38,6 +38,7 @@ myst_sphinx_gallery_config = GalleryConfig(
     notebook_thumbnail_strategy="code",
     thumbnail_config=ThumbnailConfig(
         max_animation_frames=80,
+        operation_kwargs={"color": "white"},
     ),
     grid_item_card=myst_gallery_grid_item,
 )

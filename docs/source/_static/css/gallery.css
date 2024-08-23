@@ -11,8 +11,8 @@
     display: block;
 }
 
-.myst-gallery-grid-item .sd-card-title .reference {
-    color: black;
-    font-size: var(--pst-font-size-h8);
+.myst-gallery-grid-item  .sd-card-title .reference {
+    color: var(--pst-color-on-surface);
+    font-size: var(--pst-font-size-h7);
     font-weight: lighter;
 }

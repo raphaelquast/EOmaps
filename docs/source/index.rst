@@ -234,9 +234,9 @@ Make sure to check out the :doc:`Examples <auto_examples/index>` for an overview
     :maxdepth: 1
     :caption: General
 
-    installation
+    Installation <installation>
     user_guide/index
-    auto_examples/index
+    Examples <auto_examples/index>
     api/reference
-    contribute/contribute
-    FAQ
+    Contribution Guide <contribute/contribute>
+    FAQ <FAQ>
