@@ -43,7 +43,7 @@ def _parse_codeblocks_as_test(p, tests, condition=is_test_code_block):
     )
 
     # get a list of all code-blocks in the file
-    code_blocks = list(doctree.traverse(condition=condition))
+    code_blocks = list(doctree.findall(condition=condition))
 
     # generate unique tests for each code snippet
     for i, node in enumerate(code_blocks):
