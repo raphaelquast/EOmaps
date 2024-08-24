@@ -51,8 +51,9 @@ Read data from a file
     read_file.NetCDF
     read_file.CSV
 
-Initialize a Maps-object from a file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create a new Map from a file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``Maps.from_file.<filetype>(...)`` can be used to directly initialize a :py:class:`Maps` object from a file.
 (This is particularly useful if you have a well-defined file-structure that you need to access regularly)

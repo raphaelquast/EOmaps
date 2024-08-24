@@ -1112,8 +1112,8 @@ The returned ``ColorBar``-object has the following useful methods defined:
     ColorBar.tick_params
     ColorBar.set_visible
 
-Set colorbar tick labels based on bins
-**************************************
+Label colorbar bins
+*******************
 
 .. currentmodule:: eomaps.colorbar
 
@@ -1159,8 +1159,9 @@ To label the colorbar with custom names for a given set of bins, use :py:meth:`C
     ColorBar.set_bin_labels
 
 
-Using the colorbar as a "dynamic shade indicator"
-*************************************************
+
+Dynamically updated Colorbars
+*****************************
 
 
 .. note::

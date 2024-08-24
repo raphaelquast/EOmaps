@@ -201,8 +201,8 @@ You can create as many layers as you need! The following image explains how it w
 
 .. _combine_layers:
 
-🗗 Combine & compare multiple layers
-************************************
+🗗 Combine & Compare
+********************
 
 All maps of a figure always show **the same visible layer**.
 
@@ -323,8 +323,8 @@ The visible layer can be a **single layer-name**, or a **combination of multiple
     Maps.fetch_layers
 
 
-Image export (jpeg, png, svg, etc.)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Image export (jpeg, png, svg ...)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Once the map is ready, an image of the map can be saved at any time by using :py:meth:`Maps.savefig`
 
@@ -389,8 +389,9 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
 
 .. _multiple_maps:
 
-Multiple Maps (and/or plots) in one figure
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Multiple Maps/Plots in one Figure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is possible to combine multiple ``EOmaps`` maps and/or ordinary ``matpltolib`` plots in one figure.
 
@@ -614,8 +615,8 @@ To set the absolute position of the map, provide a list of 4 floats representing
         :img-background: /_static/grids/grid7.png
 
 
-Using already existing figures / axes
-*************************************
+Using existing figures / axes
+*****************************
 
 It is also possible to insert an EOmaps map into an existing figure or reuse an existing axes.
 
@@ -637,8 +638,8 @@ It is also possible to insert an EOmaps map into an existing figure or reuse an 
     m = Maps(f=f, ax=ax)
 
 
-Dynamic updates of plots in the same figure
-*******************************************
+Dynamic updates of figures
+**************************
 
     As soon as a :py:class:`Maps`-object is attached to a figure, EOmaps will handle re-drawing of the figure!
     Therefore **dynamically updated** artists must be added to the "blit-manager" (``m.BM``) to ensure
@@ -837,8 +838,10 @@ The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessi
     MapsGrid.add_gdf
 
 
-Naming conventions and autocompletion
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Syntax and Autocompletion
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: eomaps.eomaps
 
 The goal of EOmaps is to provide a comprehensive, yet easy-to-use interface.
 
@@ -867,8 +870,9 @@ Once a few basics keywords have been remembered, finding the right functions and
 
 The following list provides an overview of the naming-conventions used within EOmaps:
 
-Add features to a map - "m.add\_"
-*********************************
+
+Add features - "m.add\_"
+************************
 All functions that add features to a map start with ``add_``, e.g.:
 
 - :py:class:`Maps.add_feature`, :py:class:`Maps.add_wms`, :py:meth:`Maps.add_annotation`, :py:meth:`Maps.add_marker`, :py:meth:`Maps.add_gdf`, ...
@@ -884,17 +888,17 @@ The used convention is the following:
    - ``m.add_wms.OpenStreetMap.add_layer.default()``
    - ``m.add_wms.OpenStreetMap.OSM_mundialis.add_layer.OSM_WMS()``
 
-Set data specifications - "m.set\_"
-***********************************
+Set data spces - "m.set\_"
+**************************
 All functions that set properties of the associated dataset start with ``set_``, e.g.:
 
 - :py:meth:`Maps.set_data`, :py:class:`Maps.set_classify`, :py:class:`Maps.set_shape`, ...
 
-Create new Maps-objects - "m.new\_"
-***********************************
+Create new Maps - "m.new\_"
+***************************
 Actions that result in a new :py:class:`Maps` objects start with ``new_``.
 
-- :py:meth:`Maps.new_layer`, :py:meth:`Maps.new_inset_map`, ...
+- :py:meth:`Maps.new_layer`, :py:meth:`Maps.new_map`, :py:meth:`Maps.new_inset_map`, ...
 
 Callbacks - "m.cb."
 *******************

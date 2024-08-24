@@ -8,8 +8,9 @@
     :local:
     :depth: 1
 
-How to add WebMap services to a map
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add WebMap services to a map
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps
 
@@ -122,8 +123,8 @@ Pre-defined WebMap services
 
         :code:`m.add_wms.<...>. ... .<LAYER NAME>.layers`
 
-Using custom WebMap services
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Custom WebMap services
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: eomaps.eomaps.Maps.add_wms
 
@@ -157,8 +158,8 @@ It is also possible to use custom WMS/WMTS/XYZ services.
     layer(...)
 
 
-Setting date, style and other WebMap properties
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Setting WebMap properties
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Some WebMap services allow passing additional arguments to set properties such as the **date** or the **style** of the map.
 To pass additional arguments to a WebMap service, simply provide them when when calling the layer, e.g.:
