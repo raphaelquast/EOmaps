@@ -141,6 +141,14 @@ html_css_files = ["css/custom.css", "css/gallery.css"]
 # PyData theme options
 html_theme = "pydata_sphinx_theme"
 html_logo = "../../logos/EO_Maps_Logo_V6.png"
+
+# hide left sidebar for orphan pages
+html_sidebars = {
+    "contribute/contribute": [],
+    "installation": [],
+    "FAQ": [],
+}
+
 html_theme_options = {
     "collapse_navigation": False,
     "show_nav_level": 2,
