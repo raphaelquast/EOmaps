@@ -1,5 +1,7 @@
 .. include:: ../substitutions.rst
 
+:html_theme.sidebar_secondary.remove: true
+
 .. _EOmaps_examples:
 
 🗺 EOmaps examples
