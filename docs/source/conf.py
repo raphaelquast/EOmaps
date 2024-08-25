@@ -147,6 +147,7 @@ html_sidebars = {
     "contribute/contribute": [],
     "installation": [],
     "FAQ": [],
+    "api/reference": [],
 }
 
 html_theme_options = {
