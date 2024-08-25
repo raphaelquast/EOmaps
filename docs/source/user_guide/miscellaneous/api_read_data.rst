@@ -26,6 +26,7 @@ EOmaps provides some basic capabilities to read and plot directly from commonly 
 Read data from a file
 ~~~~~~~~~~~~~~~~~~~~~
 
+
 ``m.read_file.<filetype>(...)`` can be used to read all relevant data (e.g. values, coordinates & crs) from a file.
 
 .. code-block:: python
@@ -42,14 +43,15 @@ Read data from a file
     ...
     m.plot_map()
 
-.. currentmodule:: eomaps.reader
+
+
 
 .. autosummary::
     :nosignatures:
 
-    read_file.GeoTIFF
-    read_file.NetCDF
-    read_file.CSV
+    Maps.read_file.GeoTIFF
+    Maps.read_file.NetCDF
+    Maps.read_file.CSV
 
 
 Create a new Map from a file
@@ -68,20 +70,19 @@ Create a new Map from a file
     m.add_colorbar()
     m.cb.pick.attach.annotate()
 
-.. currentmodule:: eomaps.reader
 
 .. autosummary::
     :nosignatures:
 
-    from_file.GeoTIFF
-    from_file.NetCDF
-    from_file.CSV
+    Maps.from_file.GeoTIFF
+    Maps.from_file.NetCDF
+    Maps.from_file.CSV
 
 
 Create a new layer from a file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Similar to :py:class:`Maps.from_file` , a new layer based on a file can be added to an existing :py:class:`Maps` object via ``Maps.new_layer_from_file.<filetype>(...)``.
+Similar to :py:class:`Maps.from_file` , a new layer based on a file can be added to an existing :py:class:`Maps` object via :py:class:Maps.new_layer_from_file`.
 
 .. code-block:: python
 
@@ -98,12 +99,11 @@ Similar to :py:class:`Maps.from_file` , a new layer based on a file can be added
         cmap="RdBu"
         )
 
-.. currentmodule:: eomaps.reader
 
 .. autosummary::
     :nosignatures:
 
 
-    new_layer_from_file.GeoTIFF
-    new_layer_from_file.NetCDF
-    new_layer_from_file.CSV
+    Maps.new_layer_from_file.GeoTIFF
+    Maps.new_layer_from_file.NetCDF
+    Maps.new_layer_from_file.CSV

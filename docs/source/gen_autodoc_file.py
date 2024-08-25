@@ -71,6 +71,7 @@ def make_feature_toctree_file():
         "set_shape",
         "draw",
         "from_file",
+        "new_layer_from_file",
         "read_file",
         "util",
         "add_wms",
