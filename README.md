@@ -111,41 +111,41 @@ You can find detailed instructions on how to setup EOmaps for development in the
 <table>
   <tr>
     <td colspan=2 valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/api_companion_widget.html"><img src="https://github.com/raphaelquast/EOmaps/assets/22773387/fe27e290-019e-4179-929d-d33bc590758e" alt="EOmaps GUI Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/api_companion_widget.html"><img src="https://github.com/raphaelquast/EOmaps/assets/22773387/fe27e290-019e-4179-929d-d33bc590758e" alt="EOmaps GUI Example"></a>
     </td>
       <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-timeseries"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_timeseries.gif?raw=true" alt="EOmaps Timeseries Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html#example-timeseries"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_images/example_timeseries.gif?raw=true" alt="EOmaps Timeseries Example"></a>
     </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-callbacks"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_callbacks.gif?raw=true" alt="EOmaps Callbacks Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html#example-callbacks"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_images/example_callbacks.gif?raw=true" alt="EOmaps Callbacks Example"></a>
     </td>
   </tr>
   <tr>
     <td valign="center" style="width:50%">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-webmaps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_webmaps.gif?raw=true" alt="EOmaps Webmaps Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html#example-webmaps"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_images/example_webmaps.gif?raw=true" alt="EOmaps Webmaps Example"></a>
       </td>
     <td valign="center">
-        <a href="[https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html](https://eomaps.readthedocs.io/en/dev/api_webmaps.html#setting-date-style-and-other-webmap-properties)"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/minigifs/advanced_wms.gif?raw=true" alt="EOmaps Webmaps Example 2"></a>
+        <a href="[https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html](https://eomaps.readthedocs.io/en/latest/api_webmaps.html#setting-date-style-and-other-webmap-properties)"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/minigifs/advanced_wms.gif?raw=true" alt="EOmaps Webmaps Example 2"></a>
       </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-scalebars"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_scalebars.gif?raw=true" alt="EOmaps Scalebars Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html#example-scalebars"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_images/example_scalebars.gif?raw=true" alt="EOmaps Scalebars Example"></a>
       </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-multiple-maps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_multiple_maps.gif?raw=true" alt="EOmaps Multiple Maps Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html#example-multiple-maps"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_images/example_multiple_maps.gif?raw=true" alt="EOmaps Multiple Maps Example"></a>
       </td>
   </tr>
   <tr>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/api_layout_editor.html"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/minigifs/layout_editor.gif?raw=true" alt="EOmaps LayoutEditor Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/api_layout_editor.html"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/minigifs/layout_editor.gif?raw=true" alt="EOmaps LayoutEditor Example"></a>
     </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-vector-data"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_vector_data.gif?raw=true" alt="EOmaps Vector Data Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html#example-vector-data"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_images/example_vector_data.gif?raw=true" alt="EOmaps Vector Data Example"></a>
     </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-lines"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_lines.png?raw=true" alt="EOmaps Lines Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html#example-lines"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_images/example_lines.png?raw=true" alt="EOmaps Lines Example"></a>
     </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-inset-maps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_inset_maps.png?raw=true" alt="EOmaps InsetMaps Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/latest/EOmaps_examples.html#example-inset-maps"><img src="https://github.com/raphaelquast/EOmaps/blob/master/docs/_static/example_images/example_inset_maps.png?raw=true" alt="EOmaps InsetMaps Example"></a>
     </td>
 
   </tr>
