@@ -203,6 +203,7 @@ class Maps(MapsBase):
     __version__ = __version__
 
     from_file = from_file
+    new_layer_from_file = new_layer_from_file
     read_file = read_file
 
     CRS = ccrs
@@ -320,7 +321,7 @@ class Maps(MapsBase):
         if WebMapContainer is not None:
             self.add_wms = self.add_wms(weakref.proxy(self))
 
-        self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
+        self.new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
         self.set_shape = self.set_shape(weakref.proxy(self))
         self._shape = None
@@ -464,12 +465,6 @@ class Maps(MapsBase):
     @wraps(AnnotationEditor.__call__)
     def edit_annotations(self, b=True, **kwargs):
         self._edit_annotations(b, **kwargs)
-
-    @property
-    @wraps(new_layer_from_file)
-    def new_layer_from_file(self):
-        """Create a new layer from a file."""
-        return self._new_layer_from_file
 
     def new_map(
         self,
