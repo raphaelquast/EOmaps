@@ -102,6 +102,18 @@ Map Features
 
         :doc:`map_features/api_webmaps`
 
+    .. grid-item-card::
+        :link: map_features/inset_maps
+        :link-type: doc
+
+        :doc:`map_features/inset_maps`
+
+    .. grid-item-card::
+        :link: map_features/naturalearth_features
+        :link-type: doc
+
+        :doc:`map_features/naturalearth_features`
+
 
 Interactivity
 -------------
@@ -139,6 +151,11 @@ Interactivity
 
         :doc:`interactivity/api_utils`
 
+    .. grid-item-card::
+        :link: interactivity/widgets
+        :link-type: doc
+
+        :doc:`interactivity/widgets`
 
 
 Miscellaneous
