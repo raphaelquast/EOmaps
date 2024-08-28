@@ -840,6 +840,29 @@ class ScaleBar:
 
         self._update(BM_update=True)
 
+    def set_rotation(self, ang=0):
+        """
+        Set the absolute rotation angle of the first segment of the scalebar.
+
+        Note
+        ----
+        This method sets the "absolute rotation angle" in display units,
+        not the "azimuth angle" which can be set with :py:meth:`ScaleBar.set_position`.
+
+        Parameters
+        ----------
+        ang : float
+            The rotation angle.
+
+        """
+        lon, lat, _ = self.get_position()
+        x0, y0 = self._m._transf_lonlat_to_plot.transform(lon, lat)
+        x1, y1 = self._m._transf_lonlat_to_plot.transform(
+            *self._geod.fwd(lon, lat, -ang, self.get_scale())[:2]
+        )
+        azim = np.rad2deg(-np.arctan2(x1 - x0, y1 - y0))
+        self.set_position((lon, lat), azim=azim)
+
     def _set_position(self, lon=None, lat=None, azim=None, update=False):
         if lon is None:
             lon = self._lon
