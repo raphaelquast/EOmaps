@@ -1262,12 +1262,18 @@ class Maps(MapsBase):
             _log.info(f"Centering Map to:\n    {r['display_name']}")
 
     def _set_gdf_path_boundary(self, gdf, set_extent=True):
-        geom = gdf.to_crs(self.crs_plot).unary_union.boundary
+        geom = gdf.to_crs(self.crs_plot).unary_union
+        if "Polygon" in geom.geom_type:
+            geom = geom.boundary
 
         if geom.geom_type == "MultiLineString":
             boundary_linestrings = geom.geoms
         elif geom.geom_type == "LineString":
             boundary_linestrings = [geom]
+        else:
+            raise TypeError(
+                f"Geometries of type {geom.type} cannot be used as map-boundary."
+            )
 
         vertices, codes = [], []
         for g in boundary_linestrings:
