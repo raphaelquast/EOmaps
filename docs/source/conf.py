@@ -151,7 +151,12 @@ html_sidebars = {
     "api/reference": [],
 }
 
-version_match = eomaps.__version__
+# version-switcher details
+version_json = "https://eomaps.readthedocs.io/en/dev/_static/version_switcher.json"
+version_match = os.environ.get("READTHEDOCS_VERSION")
+if not version_match:
+    version_match = "latest"
+
 
 html_theme_options = {
     "collapse_navigation": False,
@@ -174,7 +179,7 @@ html_theme_options = {
         },
     ],
     "switcher": {
-        "json_url": "https://github.com/raphaelquast/EOmaps/blob/version_switcher/docs/docs_env.yml",
+        "json_url": version_json,
         "version_match": version_match,
     },
 }
