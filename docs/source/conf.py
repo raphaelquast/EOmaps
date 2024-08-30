@@ -4,6 +4,7 @@ import sys
 
 from docutils.nodes import reference
 
+import eomaps
 from eomaps import Maps
 
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
@@ -150,11 +151,14 @@ html_sidebars = {
     "api/reference": [],
 }
 
+version_match = eomaps.__version__
+
 html_theme_options = {
     "collapse_navigation": False,
     "show_nav_level": 2,
     "show_toc_level": 2,
     "header_links_before_dropdown": 10,
+    "navbar_start": ["navbar-logo", "version-switcher"],
     "icon_links": [
         {
             "name": "GitHub",
@@ -169,6 +173,10 @@ html_theme_options = {
             "type": "fontawesome",
         },
     ],
+    "switcher": {
+        "json_url": "https://github.com/raphaelquast/EOmaps/blob/version_switcher/docs/docs_env.yml",
+        "version_match": version_match,
+    },
 }
 
 autosummary_generate = ["api/autodoc_additional_props.rst"]  # "full_reference.rst",
