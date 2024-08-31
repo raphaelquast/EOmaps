@@ -235,6 +235,7 @@ Miscellaneous
     :template: obj_with_attributes_no_toc.rst
     :nosignatures:
 
+    Maps.delay_draw
     Maps.fetch_companion_wms_layers
     Maps.refetch_wms_on_size_change
     Maps.cleanup
