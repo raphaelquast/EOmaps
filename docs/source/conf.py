@@ -139,6 +139,8 @@ templates_path = ["_templates"]
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css", "css/gallery.css"]
 
+html_js_files = ["custom-icon.js"]
+
 # PyData theme options
 html_theme = "pydata_sphinx_theme"
 html_logo = "../../logos/EO_Maps_Logo_V6.png"
@@ -174,7 +176,13 @@ html_theme_options = {
         {
             "name": "PyPI",
             "url": "https://pypi.org/project/eomaps/",
-            "icon": "fa-brands fa-python",
+            "icon": "fa-custom fa-pypi",
+            "type": "fontawesome",
+        },
+        {
+            "name": "conda-forge",
+            "url": "https://anaconda.org/conda-forge/eomaps",
+            "icon": "fa-custom fa-conda-forge",
             "type": "fontawesome",
         },
     ],
