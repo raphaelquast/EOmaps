@@ -360,6 +360,23 @@ class Maps(MapsBase):
 
     @contextmanager
     def delay_draw(self):
+        """
+        A contextmanager to delay drawing until the context exits.
+
+        This is particularly useful to avoid intermediate draw-events when plotting
+        a lot of features or datasets on the currently visible layer.
+
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> with m.delay_draw():
+        >>>     m.add_feature.preset.coastline()
+        >>>     m.add_feature.preset.ocean()
+        >>>     m.add_feature.preset.land()
+
+        """
         try:
             self.BM._disable_draw = True
             self.BM._disable_update = True
