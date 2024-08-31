@@ -94,7 +94,7 @@ conda install -c conda-forge eomaps
 > ...
 > ```
 
-For more detailes, have a look at the [Installation Instructions](https://eomaps.readthedocs.io/en/latest/installation.html) or the quickstart guide ["From 0 to EOmaps"](https://eomaps.readthedocs.io/en/dev/quickstart_quide.html#quickstart-guide)!
+For more detailes, have a look at the [Installation Instructions](https://eomaps.readthedocs.io/en/dev/installation.html) or the quickstart guide ["From 0 to EOmaps"](https://eomaps.readthedocs.io/en/dev/quickstart_quide.html#quickstart-guide)!
 
 
 ## 🌟 Contribute
