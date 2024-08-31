@@ -66,7 +66,7 @@ Leveraging the powers of matplotlib, you can also embed interactive maps in Jupy
 
 ## 🚀 Getting started
 
-Head over to the start-page of the <a href=https://eomaps.readthedocs.io/en/latest><b>📖 Documentation </b></a> to get an overview of all available features and functionalities!
+Head over to the start-page of the <a href=https://eomaps.readthedocs.io/><b>📖 Documentation </b></a> to get an overview of all available features and functionalities!
 
 > [!TIP]
 > For a quick hands-on introduction, checkout this article on dev.to:  
@@ -94,13 +94,13 @@ conda install -c conda-forge eomaps
 > ...
 > ```
 
-For more detailes, have a look at the [Installation Instructions](https://eomaps.readthedocs.io/en/latest/installation.html) or the quickstart guide ["From 0 to EOmaps"](https://eomaps.readthedocs.io/en/latest/FAQ.html#from-0-to-eomaps-a-quickstart-guide)!
+For more detailes, have a look at the [Installation Instructions](https://eomaps.readthedocs.io/en/latest/installation.html) or the quickstart guide ["From 0 to EOmaps"](https://eomaps.readthedocs.io/en/dev/quickstart_quide.html#quickstart-guide)!
 
 
 ## 🌟 Contribute
 
 Interested in contributing to EOmaps? **Awesome!**  
-You can find detailed instructions on how to setup EOmaps for development in the [Contribution Guide](https://eomaps.readthedocs.io/en/latest/contribute.html)!
+You can find detailed instructions on how to setup EOmaps for development in the [Contribution Guide](https://eomaps.readthedocs.io/en/dev/contribute/contribute.html)!
 
 > Found a bug or got an idea for an interesting feature?  
 > Open an [issue](https://github.com/raphaelquast/EOmaps/issues) or start a [discussion](https://github.com/raphaelquast/EOmaps/discussions), and I'll see what I can do!  
@@ -111,41 +111,41 @@ You can find detailed instructions on how to setup EOmaps for development in the
 <table>
   <tr>
     <td colspan=2 valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/api_companion_widget.html"><img src="https://github.com/raphaelquast/EOmaps/assets/22773387/fe27e290-019e-4179-929d-d33bc590758e" alt="EOmaps GUI Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/user_guide/interactivity/api_companion_widget.html"><img src="https://github.com/raphaelquast/EOmaps/assets/22773387/fe27e290-019e-4179-929d-d33bc590758e" alt="EOmaps GUI Example"></a>
     </td>
       <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-timeseries"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_timeseries.gif?raw=true" alt="EOmaps Timeseries Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/auto_examples/widgets/timeseries.html#example-timeseries"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/example_images/example_timeseries.gif?raw=true" alt="EOmaps Timeseries Example"></a>
     </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-callbacks"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_callbacks.gif?raw=true" alt="EOmaps Callbacks Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/auto_examples/callbacks/callbacks.html#example-callbacks"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/example_images/example_callbacks.gif?raw=true" alt="EOmaps Callbacks Example"></a>
     </td>
   </tr>
   <tr>
     <td valign="center" style="width:50%">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-webmaps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_webmaps.gif?raw=true" alt="EOmaps Webmaps Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/auto_examples/images/webmaps.html#example-webmaps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/example_images/example_webmaps.gif?raw=true" alt="EOmaps Webmaps Example"></a>
       </td>
     <td valign="center">
-        <a href="[https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html](https://eomaps.readthedocs.io/en/dev/api_webmaps.html#setting-date-style-and-other-webmap-properties)"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/minigifs/advanced_wms.gif?raw=true" alt="EOmaps Webmaps Example 2"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/user_guide/map_features/api_webmaps.html#setting-webmap-properties"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/minigifs/advanced_wms.gif?raw=true" alt="EOmaps Webmaps Example 2"></a>
       </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-scalebars"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_scalebars.gif?raw=true" alt="EOmaps Scalebars Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/auto_examples/geomap_components/scalebars.html#example-scalebars"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/example_images/example_scalebars.gif?raw=true" alt="EOmaps Scalebars Example"></a>
       </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-multiple-maps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_multiple_maps.gif?raw=true" alt="EOmaps Multiple Maps Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/auto_examples/Maps/multiple_maps.html#example-multiple-maps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/example_images/example_multiple_maps.gif?raw=true" alt="EOmaps Multiple Maps Example"></a>
       </td>
   </tr>
   <tr>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/api_layout_editor.html"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/minigifs/layout_editor.gif?raw=true" alt="EOmaps LayoutEditor Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/user_guide/interactivity/api_layout_editor.html"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/minigifs/layout_editor.gif?raw=true" alt="EOmaps LayoutEditor Example"></a>
     </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-vector-data"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_vector_data.gif?raw=true" alt="EOmaps Vector Data Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/auto_examples/geometry/vector_data.html#example-vector-data"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/example_images/example_vector_data.gif?raw=true" alt="EOmaps Vector Data Example"></a>
     </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-lines"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_lines.png?raw=true" alt="EOmaps Lines Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/auto_examples/geometry/lines.html#example-lines"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/example_images/example_lines.png?raw=true" alt="EOmaps Lines Example"></a>
     </td>
     <td valign="center">
-        <a href="https://eomaps.readthedocs.io/en/dev/EOmaps_examples.html#example-inset-maps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/_static/example_images/example_inset_maps.png?raw=true" alt="EOmaps InsetMaps Example"></a>
+        <a href="https://eomaps.readthedocs.io/en/dev/auto_examples/Maps/inset_maps.html#example-inset-maps"><img src="https://github.com/raphaelquast/EOmaps/blob/dev/docs/source/_static/example_images/example_inset_maps.png?raw=true" alt="EOmaps InsetMaps Example"></a>
     </td>
 
   </tr>
@@ -155,7 +155,7 @@ You can find detailed instructions on how to setup EOmaps for development in the
 
 ## ☕ Support
 
-The development of EOmaps is supported by:
+The development of EOmaps has been supported by:
 
 <a href="https://www.tuwien.at/en/mg/geo/rs"><img height=30 align=left src="https://github.com/raphaelquast/EOmaps/assets/22773387/1ad88e68-eb16-4549-8159-8b4a6db8ab28"> TU Wien Department of Geodesy and Geoinformation - Research Area Remote Sensing</a>
 
