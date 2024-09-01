@@ -39,7 +39,6 @@ dependencies = [
     "scipy",
     "matplotlib>=3.4",
     "cartopy>=0.20.0",
-    "descartes",
     "pyproj",
     "packaging",
     "click"
