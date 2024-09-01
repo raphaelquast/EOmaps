@@ -7,11 +7,12 @@ docs/build
 docs/_build
 docs/debug.log
 docs/.vscode
-docs/generated
-docs/api/autodoc_additional_props.rst
+docs/source/generated
+docs/source/auto_examples
+docs/source/api/autodoc_additional_props.rst
 
-docs/_tables
-docs/_static/example_gifs_very_old
+docs/source/_tables
+docs/source/_static/example_gifs_very_old
 
 logos
 tests/Images
@@ -32,3 +33,6 @@ _exclude*
 docs/jupyter_execute/*
 docs/.jupyter_cache/*
 docs/.virtual_documents/*
+
+# mac
+.DS_Store

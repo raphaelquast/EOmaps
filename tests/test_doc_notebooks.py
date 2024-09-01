@@ -20,7 +20,8 @@ import matplotlib.pyplot as plt
 
 plt.ion()  # use interactive mode to avoid blocking images
 
-basepath = Path(__file__).parent.parent / "docs" / "notebooks"
+basepath = Path(__file__).parent.parent / "docs"
+note_files = list(basepath.rglob("*.ipynb"))
 
 
 class TestDocNotebooks:
@@ -38,7 +39,7 @@ class TestDocNotebooks:
 
     @pytest.mark.parametrize(
         "notebook",
-        filter(lambda x: x.suffix == ".ipynb", basepath.iterdir()),
+        note_files,
         ids=lambda x: x.stem,
     )
     def test_doc_notebook(self, notebook):

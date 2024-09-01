@@ -48,5 +48,6 @@ dependencies:
   - sphinx
   - sphinx-copybutton
   - sphinx-design
-  - sphinx_rtd_theme
   - myst-nb
+  - pydata-sphinx-theme
+  - myst-sphinx-gallery = 0.2.2

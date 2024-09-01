@@ -9,7 +9,7 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from functools import lru_cache, wraps
 from itertools import repeat, chain
 from pathlib import Path
@@ -26,7 +26,7 @@ from pyproj import CRS
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.path import Path as mpath
+import matplotlib.path as mpath
 
 from cartopy import crs as ccrs
 
@@ -203,6 +203,7 @@ class Maps(MapsBase):
     __version__ = __version__
 
     from_file = from_file
+    new_layer_from_file = new_layer_from_file
     read_file = read_file
 
     CRS = ccrs
@@ -320,7 +321,7 @@ class Maps(MapsBase):
         if WebMapContainer is not None:
             self.add_wms = self.add_wms(weakref.proxy(self))
 
-        self._new_layer_from_file = new_layer_from_file(weakref.proxy(self))
+        self.new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
         self.set_shape = self.set_shape(weakref.proxy(self))
         self._shape = None
@@ -356,6 +357,35 @@ class Maps(MapsBase):
             self.util = Utilities(self)
         else:
             self.util = self.parent.util
+
+    @contextmanager
+    def delay_draw(self):
+        """
+        A contextmanager to delay drawing until the context exits.
+
+        This is particularly useful to avoid intermediate draw-events when plotting
+        a lot of features or datasets on the currently visible layer.
+
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> with m.delay_draw():
+        >>>     m.add_feature.preset.coastline()
+        >>>     m.add_feature.preset.ocean()
+        >>>     m.add_feature.preset.land()
+
+        """
+        try:
+            self.BM._disable_draw = True
+            self.BM._disable_update = True
+
+            yield
+        finally:
+            self.BM._disable_draw = False
+            self.BM._disable_update = False
+            self.redraw()
 
     @property
     def coll(self):
@@ -452,12 +482,6 @@ class Maps(MapsBase):
     @wraps(AnnotationEditor.__call__)
     def edit_annotations(self, b=True, **kwargs):
         self._edit_annotations(b, **kwargs)
-
-    @property
-    @wraps(new_layer_from_file)
-    def new_layer_from_file(self):
-        """Create a new layer from a file."""
-        return self._new_layer_from_file
 
     def new_map(
         self,
@@ -1254,9 +1278,43 @@ class Maps(MapsBase):
         else:
             _log.info(f"Centering Map to:\n    {r['display_name']}")
 
-    def set_frame(self, rounded=0, **kwargs):
+    def _set_gdf_path_boundary(self, gdf, set_extent=True):
+        geom = gdf.to_crs(self.crs_plot).unary_union
+        if "Polygon" in geom.geom_type:
+            geom = geom.boundary
+
+        if geom.geom_type == "MultiLineString":
+            boundary_linestrings = geom.geoms
+        elif geom.geom_type == "LineString":
+            boundary_linestrings = [geom]
+        else:
+            raise TypeError(
+                f"Geometries of type {geom.type} cannot be used as map-boundary."
+            )
+
+        vertices, codes = [], []
+        for g in boundary_linestrings:
+            x, y = g.xy
+            codes.extend(
+                [mpath.Path.MOVETO, *[mpath.Path.LINETO] * len(x), mpath.Path.CLOSEPOLY]
+            )
+            vertices.extend([(x[0], y[0]), *zip(x, y), (x[-1], y[-1])])
+
+        path = mpath.Path(vertices, codes)
+
+        self.ax.set_boundary(path, self.ax.transData)
+        if set_extent:
+            x0, y0 = np.min(vertices, axis=0)
+            x1, y1 = np.max(vertices, axis=0)
+
+            self.set_extent([x0, x1, y0, y1], gdf.crs)
+
+    def set_frame(self, rounded=0, gdf=None, set_extent=True, **kwargs):
         """
         Set the properties of the map boundary and the background patch.
+
+        You can either use a rectangle with rounded corners or arbitrary geometries
+        provided as a geopandas.GeoDataFrame.
 
         Parameters
         ----------
@@ -1264,6 +1322,15 @@ class Maps(MapsBase):
             If provided, use a rectangle with rounded corners as map boundary
             line. The corners will be rounded with respect to the provided
             fraction (0=no rounding, 1=max. radius). The default is None.
+        gdf : geopandas.GeoDataFrame or path
+            A geopandas.GeoDataFrame that contains geometries that should be used as
+            map-frame.
+
+            If a path (string or pathlib.Path) is provided, the corresponding file
+            will be read as a geopandas.GeoDataFrame and the boundaries of the
+            contained geometries will be used as map-boundary.
+
+            The default is None.
         kwargs :
             Additional kwargs to style the boundary line (e.g. the spine)
             and the background patch
@@ -1286,6 +1353,8 @@ class Maps(MapsBase):
         >>> m.add_feature.preset.ocean()
         >>> m.set_frame(fc="r", ec="b", lw=3, rounded=.2)
 
+        Customize the map-boundary style
+
         >>> import matplotlib.patheffects as pe
         >>> m = Maps()
         >>> m.add_feature.preset.ocean(fc="k")
@@ -1293,6 +1362,15 @@ class Maps(MapsBase):
         >>>     facecolor=(.8, .8, 0, .5), edgecolor="w", linewidth=2,
         >>>     rounded=.5,
         >>>     path_effects=[pe.withStroke(linewidth=7, foreground="m")])
+
+        Set the map-boundary to a custom polygon (in this case the boarder of Austria)
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.land(fc="k")
+        >>> # Get a GeoDataFrame with all country-boarders from NaturalEarth
+        >>> gdf = m.add_feature.cultural.admin_0_countries.get_gdf()
+        >>> # set the map-boundary to the Austrian country-boarder
+        >>> m.set_frame(gdf = gdf[gdf.NAME=="Austria"])
 
         """
 
@@ -1302,7 +1380,14 @@ class Maps(MapsBase):
 
         self.ax.spines["geo"].update(kwargs)
 
-        if rounded:
+        if gdf is not None:
+            assert (
+                rounded == 0
+            ), "EOmaps: using rounded > 0 is not supported for gdf frames!"
+
+            self._set_gdf_path_boundary(self._handle_gdf(gdf), set_extent=set_extent)
+
+        elif rounded:
             assert (
                 rounded <= 1
             ), "EOmaps: rounded corner fraction must be between 0 and 1"
@@ -1354,14 +1439,13 @@ class Maps(MapsBase):
                         y0 + r,
                     ]
 
-                    path = mpath(np.column_stack((xs, ys)))
+                    path = mpath.Path(np.column_stack((xs, ys)))
                     self.ax.set_boundary(path, transform=self.crs_plot)
 
                 self.BM._before_fetch_bg_actions.append(cb)
                 self.ax._EOmaps_rounded_spine_attached = True
 
-        self.redraw("__SPINES__")
-        self.redraw("__BG__")
+        self.redraw()
 
     @staticmethod
     def set_clipboard_kwargs(**kwargs):

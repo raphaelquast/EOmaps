@@ -1,0 +1,18 @@
+/* This file is used to style the gallery page */
+
+.myst-gallery-grid-item .sd-card-img-top {
+    margin: 10px auto;
+    background: none !important;
+    width: 90%;
+    display: block;
+}
+.myst-gallery-grid-item .sd-card-body {
+    margin: 1px auto;
+    display: block;
+}
+
+.myst-gallery-grid-item  .sd-card-title .reference {
+    color: var(--pst-color-on-surface);
+    font-size: var(--pst-font-size-h7);
+    font-weight: lighter;
+}

@@ -693,9 +693,14 @@ class ColorBar(ColorBarBase):
         parent_cb = None
         # check if there is already an existing colorbar for a Maps-object that shares
         # the same plot-axis. If yes, inherit the position of this colorbar!
-        if self._m.colorbar is not None and self._inherit_position is False:
-            parent_cb = None  # self._m.colorbar
+        if self._inherit_position is False:
+            parent_cb = None
+        elif self._m.colorbar is not None and self.layer == self._m.colorbar.layer:
+            # in case a colorbar is already present on the same layer, don't
+            # inherit the position (since they would overlap)
+            parent_cb = None
         elif isinstance(self._inherit_position, ColorBar):
+            # if a colorbar instance is provided, use it to inherit its position
             parent_cb = self._inherit_position
         else:
             # check if self is actually just another layer of an existing Maps object
@@ -706,6 +711,7 @@ class ColorBar(ColorBarBase):
                         if m.colorbar._parent_cb is None:
                             parent_cb = m.colorbar
                             break
+
         if parent_cb and parent_cb.orientation == self.orientation:
             return parent_cb
         else:
@@ -760,9 +766,8 @@ class ColorBar(ColorBarBase):
                 else:
                     BM.add_bg_artist(a, self._layer)
 
-        # we need to re-draw since the background axis size has changed!
-        BM._refetch_layer(self._layer)
-        BM._refetch_layer("__SPINES__")
+        # we need to re-draw all layers since the axis size has changed!
+        self._m.redraw()
 
     def _set_hist_size(self, *args, **kwargs):
         super()._set_hist_size(*args, **kwargs)

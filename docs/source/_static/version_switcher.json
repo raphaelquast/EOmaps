@@ -1,0 +1,39 @@
+[
+  {
+    "version": "latest",
+    "url": "https://eomaps.readthedocs.io/en/latest/",
+    "preferred": true
+  },
+  {
+    "version": "dev",
+    "url": "https://eomaps.readthedocs.io/en/dev/"
+  },
+  {
+    "version": "v8.3",
+    "url": "https://eomaps.readthedocs.io/en/v8.3/"
+  },
+  {
+    "version": "v8.2.1",
+    "url": "https://eomaps.readthedocs.io/en/v8.2.1/"
+  },
+  {
+    "version": "v8.1.1",
+    "url": "https://eomaps.readthedocs.io/en/v8.1.1/"
+  },
+  {
+    "version": "v8.0.2",
+    "url": "https://eomaps.readthedocs.io/en/v8.0.2/"
+  },
+  {
+    "version": "v7.3.3",
+    "url": "https://eomaps.readthedocs.io/en/v7.3.3/"
+  },
+  {
+    "version": "v6.5",
+    "url": "https://eomaps.readthedocs.io/en/v6.5/"
+  },
+  {
+    "version": "v5.4",
+    "url": "https://eomaps.readthedocs.io/en/v5.4/"
+  }
+]
