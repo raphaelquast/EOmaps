@@ -2978,10 +2978,6 @@ class Maps(MapsBase):
             kwargs passed to `datashader.mpl_ext.dsshow`
 
         """
-        _log.info(
-            "EOmaps: Plotting "
-            f"{self._data_manager.z_data.size} datapoints ({self.shape.name})"
-        )
 
         ds, mpl_ext, pd, xar = register_modules(
             "datashader", "datashader.mpl_ext", "pandas", "xarray"
@@ -3008,33 +3004,169 @@ class Maps(MapsBase):
             return
 
         plot_width, plot_height = self._get_shade_axis_size()
+        _log.info(
+            "EOmaps: Plotting "
+            f"{self._data_manager.z_data.size} datapoints ({self.shape.name})"
+        )
 
-        # get rid of unnecessary dimensions in the numpy arrays
-        zdata = zdata.squeeze()
-        x0 = self._data_manager.x0.squeeze()
-        y0 = self._data_manager.y0.squeeze()
+        dataset_lazy = False
+        if (
+            isinstance(self.data, xar.Dataset)
+            and self.data_specs.parameter is not None
+            and self.data.chunks
+            and self.get_crs("in") == self.get_crs("out")
+        ):
+            # pass chunked 2D datasets directly to allow lazy-loading
+            _log.info("EOmaps: Chunked xarray dataset is handled lazily with dask!")
 
-        # the shape is always set after _prepare data!
-        if self.shape.name == "shade_points" and self._data_manager.x0_1D is None:
-            # fill masked-values with None to avoid issues with numba not being
-            # able to deal with numpy-arrays
-            # TODO report this to datashader to get it fixed properly?
-            if isinstance(zdata, np.ma.masked_array):
-                zdata = zdata.filled(None)
+            df = self.data
 
-            df = pd.DataFrame(
-                dict(
-                    x=x0.ravel(),
-                    y=y0.ravel(),
-                    val=zdata.ravel(),
-                ),
-                copy=False,
-            )
+            if self.shape.name == "shade_raster":
+                if (
+                    len(zdata.shape) == 2
+                    and len(self._data_manager.x0.shape) == 1
+                    and len(self._data_manager.y0.shape) == 1
+                ):
 
+                    self.shape.glyph = ds.glyphs.QuadMeshRectilinear(
+                        self.data_specs.x, self.data_specs.y, self.data_specs.parameter
+                    )
+                else:
+                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear(
+                        self.data_specs.x, self.data_specs.y, self.data_specs.parameter
+                    )
+
+            elif self.shape.name == "shade_points":
+                df = self.data.to_dask_dataframe()
+
+            self.shape.aggregator.column = self.data_specs.parameter
+
+            dataset_lazy = True
         else:
-            if len(zdata.shape) == 2:
-                if (zdata.shape == x0.shape) and (zdata.shape == y0.shape):
-                    # 2D coordinates and 2D raster
+            # get rid of unnecessary dimensions in the numpy arrays
+            zdata = zdata.squeeze()
+            x0 = self._data_manager.x0.squeeze()
+            y0 = self._data_manager.y0.squeeze()
+
+            # required to avoid ambiguities
+            if isinstance(zdata, xar.DataArray):
+                zdata = zdata.data
+
+            # the shape is always set after _prepare data!
+            if self.shape.name == "shade_points" and self._data_manager.x0_1D is None:
+                # fill masked-values with None to avoid issues with numba not being
+                # able to deal with numpy-arrays
+                # TODO report this to datashader to get it fixed properly?
+                if isinstance(zdata, np.ma.masked_array):
+                    zdata = zdata.filled(None)
+
+                df = pd.DataFrame(
+                    dict(
+                        x=x0.ravel(),
+                        y=y0.ravel(),
+                        val=zdata.ravel(),
+                    ),
+                    copy=False,
+                )
+
+            else:
+                if len(zdata.shape) == 2:
+                    if (zdata.shape == x0.shape) and (zdata.shape == y0.shape):
+                        # 2D coordinates and 2D raster
+
+                        # use a curvilinear QuadMesh
+                        if self.shape.name == "shade_raster":
+                            self.shape.glyph = ds.glyphs.QuadMeshCurvilinear(
+                                "x", "y", "val"
+                            )
+
+                        df = xar.Dataset(
+                            data_vars=dict(val=(["xx", "yy"], zdata)),
+                            # dims=["x", "y"],
+                            coords=dict(
+                                x=(["xx", "yy"], x0),
+                                y=(["xx", "yy"], y0),
+                            ),
+                        )
+
+                    elif (
+                        ((zdata.shape[1],) == x0.shape)
+                        and ((zdata.shape[0],) == y0.shape)
+                        and (x0.shape != y0.shape)
+                    ):
+                        raise AssertionError(
+                            "EOmaps: it seems like you need to transpose your data! \n"
+                            + f"the dataset has a shape of {zdata.shape}, but the "
+                            + f"coordinates suggest ({x0.shape}, {y0.shape})"
+                        )
+                    elif (zdata.T.shape == x0.shape) and (zdata.T.shape == y0.shape):
+                        raise AssertionError(
+                            "EOmaps: it seems like you need to transpose your data! \n"
+                            + f"the dataset has a shape of {zdata.shape}, but the "
+                            + f"coordinates suggest {x0.shape}"
+                        )
+
+                    elif ((zdata.shape[0],) == x0.shape) and (
+                        (zdata.shape[1],) == y0.shape
+                    ):
+                        # 1D coordinates and 2D data
+
+                        # use a rectangular QuadMesh
+                        if self.shape.name == "shade_raster":
+                            self.shape.glyph = ds.glyphs.QuadMeshRectilinear(
+                                "x", "y", "val"
+                            )
+
+                        df = xar.DataArray(
+                            data=zdata,
+                            dims=["x", "y"],
+                            coords=dict(x=x0, y=y0),
+                        )
+                        df = xar.Dataset(dict(val=df))
+                else:
+                    try:
+                        # try if reprojected coordinates can be used as 2d grid and if yes,
+                        # directly use a curvilinear QuadMesh based on the reprojected
+                        # coordinates to display the data
+                        idx = pd.MultiIndex.from_arrays(
+                            [x0.ravel(), y0.ravel()], names=["x", "y"]
+                        )
+
+                        df = pd.DataFrame(
+                            data=dict(val=zdata.ravel()), index=idx, copy=False
+                        )
+                        df = df.to_xarray()
+                        xg, yg = np.meshgrid(df.x, df.y)
+                    except Exception:
+                        # first convert original coordinates of the 1D inputs to 2D,
+                        # then reproject the grid and use a curvilinear QuadMesh to display
+                        # the data
+                        _log.warning(
+                            "EOmaps: 1D data is converted to 2D prior to reprojection... "
+                            "Consider using 'shade_points' as plot-shape instead!"
+                        )
+                        xorig = self._data_manager.xorig.ravel()
+                        yorig = self._data_manager.yorig.ravel()
+
+                        idx = pd.MultiIndex.from_arrays(
+                            [xorig, yorig], names=["x", "y"]
+                        )
+
+                        df = pd.DataFrame(
+                            data=dict(val=zdata.ravel()), index=idx, copy=False
+                        )
+                        df = df.to_xarray()
+                        xg, yg = np.meshgrid(df.x, df.y)
+
+                        # transform the grid from input-coordinates to the plot-coordinates
+                        crs1 = CRS.from_user_input(self.data_specs.crs)
+                        crs2 = CRS.from_user_input(self._crs_plot)
+                        if crs1 != crs2:
+                            transformer = self._get_transformer(
+                                crs1,
+                                crs2,
+                            )
+                            xg, yg = transformer.transform(xg, yg)
 
                     # use a curvilinear QuadMesh
                     if self.shape.name == "shade_raster":
@@ -3043,102 +3175,12 @@ class Maps(MapsBase):
                         )
 
                     df = xar.Dataset(
-                        data_vars=dict(val=(["xx", "yy"], zdata)),
-                        # dims=["x", "y"],
-                        coords=dict(
-                            x=(["xx", "yy"], x0),
-                            y=(["xx", "yy"], y0),
-                        ),
+                        data_vars=dict(val=(["xx", "yy"], df.val.values.T)),
+                        coords=dict(x=(["xx", "yy"], xg), y=(["xx", "yy"], yg)),
                     )
 
-                elif (
-                    ((zdata.shape[1],) == x0.shape)
-                    and ((zdata.shape[0],) == y0.shape)
-                    and (x0.shape != y0.shape)
-                ):
-                    raise AssertionError(
-                        "EOmaps: it seems like you need to transpose your data! \n"
-                        + f"the dataset has a shape of {zdata.shape}, but the "
-                        + f"coordinates suggest ({x0.shape}, {y0.shape})"
-                    )
-                elif (zdata.T.shape == x0.shape) and (zdata.T.shape == y0.shape):
-                    raise AssertionError(
-                        "EOmaps: it seems like you need to transpose your data! \n"
-                        + f"the dataset has a shape of {zdata.shape}, but the "
-                        + f"coordinates suggest {x0.shape}"
-                    )
-
-                elif ((zdata.shape[0],) == x0.shape) and (
-                    (zdata.shape[1],) == y0.shape
-                ):
-                    # 1D coordinates and 2D data
-
-                    # use a rectangular QuadMesh
-                    if self.shape.name == "shade_raster":
-                        self.shape.glyph = ds.glyphs.QuadMeshRectilinear(
-                            "x", "y", "val"
-                        )
-
-                    df = xar.DataArray(
-                        data=zdata,
-                        dims=["x", "y"],
-                        coords=dict(x=x0, y=y0),
-                    )
-                    df = xar.Dataset(dict(val=df))
-            else:
-                try:
-                    # try if reprojected coordinates can be used as 2d grid and if yes,
-                    # directly use a curvilinear QuadMesh based on the reprojected
-                    # coordinates to display the data
-                    idx = pd.MultiIndex.from_arrays(
-                        [x0.ravel(), y0.ravel()], names=["x", "y"]
-                    )
-
-                    df = pd.DataFrame(
-                        data=dict(val=zdata.ravel()), index=idx, copy=False
-                    )
-                    df = df.to_xarray()
-                    xg, yg = np.meshgrid(df.x, df.y)
-                except Exception:
-                    # first convert original coordinates of the 1D inputs to 2D,
-                    # then reproject the grid and use a curvilinear QuadMesh to display
-                    # the data
-                    _log.warning(
-                        "EOmaps: 1D data is converted to 2D prior to reprojection... "
-                        "Consider using 'shade_points' as plot-shape instead!"
-                    )
-                    xorig = self._data_manager.xorig.ravel()
-                    yorig = self._data_manager.yorig.ravel()
-
-                    idx = pd.MultiIndex.from_arrays([xorig, yorig], names=["x", "y"])
-
-                    df = pd.DataFrame(
-                        data=dict(val=zdata.ravel()), index=idx, copy=False
-                    )
-                    df = df.to_xarray()
-                    xg, yg = np.meshgrid(df.x, df.y)
-
-                    # transform the grid from input-coordinates to the plot-coordinates
-                    crs1 = CRS.from_user_input(self.data_specs.crs)
-                    crs2 = CRS.from_user_input(self._crs_plot)
-                    if crs1 != crs2:
-                        transformer = self._get_transformer(
-                            crs1,
-                            crs2,
-                        )
-                        xg, yg = transformer.transform(xg, yg)
-
-                # use a curvilinear QuadMesh
-                if self.shape.name == "shade_raster":
-                    self.shape.glyph = ds.glyphs.QuadMeshCurvilinear("x", "y", "val")
-
-                df = xar.Dataset(
-                    data_vars=dict(val=(["xx", "yy"], df.val.values.T)),
-                    coords=dict(x=(["xx", "yy"], xg), y=(["xx", "yy"], yg)),
-                )
-
-            if self.shape.name == "shade_points":
-                df = df.to_dataframe().reset_index()
+                if self.shape.name == "shade_points":
+                    df = df.to_dataframe().reset_index()
 
         if set_extent is True and self._set_extent_on_plot is True:
             # convert to a numpy-array to support 2D indexing with boolean arrays
@@ -3165,10 +3207,6 @@ class Maps(MapsBase):
             ax=self.ax,
             plot_width=plot_width,
             plot_height=plot_height,
-            # x_range=(x0, x1),
-            # y_range=(y0, y1),
-            # x_range=(df.x.min(), df.x.max()),
-            # y_range=(df.y.min(), df.y.max()),
             x_range=x_range,
             y_range=y_range,
             vmin=self._vmin,
@@ -3176,7 +3214,10 @@ class Maps(MapsBase):
             **kwargs,
         )
 
-        coll.set_label("Dataset " f"({self.shape.name}  |  {zdata.shape})")
+        if dataset_lazy:
+            coll.set_label("(lazy) Dataset " f"({self.shape.name}  |  {zdata.shape})")
+        else:
+            coll.set_label("Dataset " f"({self.shape.name}  |  {zdata.shape})")
 
         self._coll = coll
 
