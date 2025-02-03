@@ -2748,7 +2748,7 @@ class Maps(MapsBase):
             circle with a red boundary.
 
             If a dict is provided, it can be used to update the appearance of the
-            masked points (arguments are passed to matpltolibs `plt.scatter()`)
+            masked points (arguments are passed to matplotlibs `plt.scatter()`)
             ('s': markersize, 'marker': the shape of the marker, ...)
 
             The default is False
@@ -2761,7 +2761,7 @@ class Maps(MapsBase):
             The zorder of the artist (e.g. the stacking level of overlapping artists)
             The default is 1
         kwargs
-            kwargs passed to the initialization of the matpltolib collection
+            kwargs passed to the initialization of the matplotlib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
 
             For "shade_points" or "shade_raster" shapes, kwargs are passed to

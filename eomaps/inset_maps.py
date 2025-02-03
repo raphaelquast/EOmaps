@@ -126,7 +126,7 @@ class InsetMaps(Maps):
         (x0, y0), (x1, y1) = bnd_verts.min(axis=0), bnd_verts.max(axis=0)
         self.ax.set_extent((x0, x1, y0, y1), crs=self.ax.projection)
 
-        # TODO turn off navigation until the matpltolib pull-request on
+        # TODO turn off navigation until the matplotlib pull-request on
         # zoom-events in overlapping axes is resolved
         # https://github.com/matplotlib/matplotlib/pull/22347
         # self.ax.set_navigate(False)

@@ -2162,7 +2162,7 @@ class Shapes(object):
 
             Note
             ----
-            This is a wrapper for matpltolibs contour-plot capabilities.
+            This is a wrapper for matplotlibs contour-plot capabilities.
 
             - contours for 2D datasets are evaluated with `plt.contour`
             - contours for 1D datasets are evaluated with `plt.tricontour`

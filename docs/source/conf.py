@@ -56,7 +56,7 @@ def mpl_rc_role_subst(name, rawtext, text, lineno, inliner, options={}, content=
 
     node = reference(
         "",
-        f"matpltolib rcParams['{text}']",
+        f"matplotlib rcParams['{text}']",
         refuri=r"https://matplotlib.org/stable/users/explain/customizing.html#matplotlibrc-sample",
     )
     return [node], []
