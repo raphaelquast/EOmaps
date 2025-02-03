@@ -2367,7 +2367,7 @@ class Maps(MapsBase):
         mark_points : str, dict or None, optional
             Set the marker-style for the anchor-points.
 
-            - If a string is provided, it is identified as a matploltib "format-string",
+            - If a string is provided, it is identified as a matplotlib "format-string",
               e.g. "r." for red dots, "gx" for green x markers etc.
             - if a dict is provided, it will be used to set the style of the markers
               e.g.: dict(marker="o", facecolor="orange", edgecolor="g")
