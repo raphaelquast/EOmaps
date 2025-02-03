@@ -155,9 +155,9 @@ class Maps(MapsBase):
         - A 3-digit integer
             Same as using a tuple of three single-digit integers.
             (e.g. 111 is the same as (1, 1, 1) )
-        - `matplotilb.gridspec.SubplotSpec`:
+        - `matplotlib.gridspec.SubplotSpec`:
             Use the SubplotSpec for initializing the axes.
-        - `matplotilb.Axes`:
+        - `matplotlib.Axes`:
             Directly use the provided figure and axes instances for plotting.
             NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
     preferred_wms_service : str, optional
@@ -532,9 +532,9 @@ class Maps(MapsBase):
             - A 3-digit integer
                 Same as using a tuple of three single-digit integers.
                 (e.g. 111 is the same as (1, 1, 1) )
-            - `matplotilb.gridspec.SubplotSpec`:
+            - `matplotlib.gridspec.SubplotSpec`:
                 Use the SubplotSpec for initializing the axes.
-            - `matplotilb.Axes`:
+            - `matplotlib.Axes`:
                 Directly use the provided figure and axes instances for plotting.
                 NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
         keep_on_top : bool
