@@ -1163,7 +1163,12 @@ class MapsBase(metaclass=_MapsMeta):
     def _get_cartopy_crs(crs):
         if isinstance(crs, str):
             try:
-                crs = int(crs.upper().removeprefix("EPSG:"))
+                # TODO use crs=int(crs.upper().removeprefix("EPSG:")) when python>=3.9
+                # is required
+                crs = crs.upper()
+                if crs.startswith("EPSG:"):
+                    crs = crs[5:]
+                crs = int(crs)
             except ValueError:
                 raise ValueError(
                     f"The provided crs '{crs}' cannot be identified. "
