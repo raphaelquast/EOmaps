@@ -1161,6 +1161,15 @@ class MapsBase(metaclass=_MapsMeta):
     @staticmethod
     @lru_cache()
     def _get_cartopy_crs(crs):
+        if isinstance(crs, str):
+            try:
+                crs = int(crs.upper().removeprefix("EPSG:"))
+            except ValueError:
+                raise ValueError(
+                    f"The provided crs '{crs}' cannot be identified. "
+                    "If a string is provided as CRS, it must be either an integer "
+                    "(e.g. '4326') or a string of the form: 'EPSG:4326'."
+                    )
         if isinstance(crs, ccrs.CRS):  # already a cartopy CRS
             cartopy_proj = crs
         elif crs == 4326:
