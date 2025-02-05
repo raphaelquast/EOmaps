@@ -878,7 +878,7 @@ Colors can also be set **manually** by providing one of the following arguments 
 Uniform colors
 **************
 
-To apply a uniform color to all datapoints, you can use `matpltolib's named colors <https://matplotlib.org/stable/gallery/color/named_colors.html>`_ or pass an RGB or RGBA tuple.
+To apply a uniform color to all datapoints, you can use `matplotlib's named colors <https://matplotlib.org/stable/gallery/color/named_colors.html>`_ or pass an RGB or RGBA tuple.
 
 - ``m.plot_map(fc="orange")``
 - ``m.plot_map(fc=(0.4, 0.3, 0.2))``

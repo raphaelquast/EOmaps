@@ -393,7 +393,7 @@ To adjust the margins of the subplots, use :py:meth:`m.subplots_adjust`, or have
 Multiple Maps/Plots in one Figure
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to combine multiple ``EOmaps`` maps and/or ordinary ``matpltolib`` plots in one figure.
+It is possible to combine multiple ``EOmaps`` maps and/or ordinary ``matplotlib`` plots in one figure.
 
 The **figure** used by a :py:class:`Maps` object is set via the ``f`` argument, e.g.: ``m = Maps(f=...)``.
 If no figure is provided, a new figure is created whenever you initialize a :py:class:`Maps` object.
@@ -714,7 +714,7 @@ MapsGrid objects
     the preferred way of combining multiple maps and/or matplotlib axes in a figure
     is by using one of the options presented in the previous sections!
 
-A :py:class:`MapsGrid` creates a grid of :py:class:`Maps` objects (and/or ordinary ``matpltolib`` axes),
+A :py:class:`MapsGrid` creates a grid of :py:class:`Maps` objects (and/or ordinary ``matplotlib`` axes),
 and provides convenience-functions to perform actions on all maps of the figure.
 
 .. code-block:: python
@@ -768,7 +768,7 @@ of the following structure:
 - ``m_inits`` is used to initialize :py:class:`Maps` objects
 - ``ax_inits`` is used to initialize ordinary ``matplotlib`` axes
 
-The individual :py:class:`Maps` objects and ``matpltolib-Axes`` are then accessible via:
+The individual :py:class:`Maps` objects and ``matplotlib-Axes`` are then accessible via:
 
 .. code-block:: python
     :name: test_mapsgrid_custom

@@ -439,7 +439,7 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _init_figure(self, **kwargs):
         if self.parent.f is None:
-            # do this on any new figure since "%matpltolib inline" tries to re-activate
+            # do this on any new figure since "%matplotlib inline" tries to re-activate
             # interactive mode all the time!
             _handle_backends()
 

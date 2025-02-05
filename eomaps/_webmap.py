@@ -132,7 +132,7 @@ class _WebMapLayer:
 
         Returns
         -------
-        legax : matpltolib.axes
+        legax : matplotlib.axes
             The axes-object.
 
         """

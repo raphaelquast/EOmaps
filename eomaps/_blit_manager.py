@@ -1081,7 +1081,7 @@ class BlitManager(LayerParser):
 
         Parameters
         ----------
-        art : matpltolib.Artist
+        art : matplotlib.Artist
             The artist to remove.
         layer : str, optional
             The layer to search for the artist. If None, all layers are searched.
@@ -1403,7 +1403,7 @@ class BlitManager(LayerParser):
         ----------
         artists : iterable
             the artists to draw
-        bg : matpltolib.BufferRegion, None or "active", optional
+        bg : matplotlib.BufferRegion, None or "active", optional
             A fetched background that is restored before drawing the artists.
             The default is "active".
         blit : bool
