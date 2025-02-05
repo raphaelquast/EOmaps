@@ -10,7 +10,7 @@ from matplotlib.patches import Rectangle
 
 import numpy as np
 
-from .helpers import _TransformedBoundsLocator, pairwise
+from .helpers import _TransformedBoundsLocator, pairwise, version, mpl_version
 
 import logging
 
@@ -943,7 +943,13 @@ class ColorBar(ColorBarBase):
         else:
             coll = contour_map.coll
 
-        if not coll.__class__.__name__ == "_CollectionAccessor":
+        # TODO remove this once mpl >=3.10 is required
+        if mpl_version < version.Version("3.10"):
+            expected_collections = ["_CollectionAccessor"]
+        else:
+            expected_collections = ["ContourSet", "TriContourSet", "GeoContourSet"]
+
+        if not coll.__class__.__name__ in expected_collections:
             raise TypeError(
                 "EOmaps: Contour-lines can only be added to the colorbar if a contour "
                 "was plotted first! If you want to indicate contours plotted on a "
@@ -958,7 +964,11 @@ class ColorBar(ColorBarBase):
                 exclude_levels[i] = len(levels) + val
 
         if colors is None:
-            if coll._filled is False:
+            # _filled is required for mpl <3.10 (e.g. _CollectionAccessor)
+            # TODO use only "coll.filled" once mpl >=3.10 is required
+            filled = coll._filled if hasattr(coll, "_filled") else coll.filled
+
+            if filled is False:
                 colors = (
                     np.array(coll.get_edgecolors(), dtype=object).squeeze().tolist()
                 )

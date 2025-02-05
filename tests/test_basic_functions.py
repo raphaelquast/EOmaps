@@ -95,7 +95,7 @@ class TestBasicPlotting(unittest.TestCase):
         plt.close("all")
 
         # rectangles
-        m = Maps(4326)
+        m = Maps("EPSG:4326")
         m.set_data(usedata, x="x", y="y", crs=3857)
         m.set_classify.EqualInterval(k=5)
         m.set_shape.rectangles()

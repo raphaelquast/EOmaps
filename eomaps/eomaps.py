@@ -155,9 +155,9 @@ class Maps(MapsBase):
         - A 3-digit integer
             Same as using a tuple of three single-digit integers.
             (e.g. 111 is the same as (1, 1, 1) )
-        - `matplotilb.gridspec.SubplotSpec`:
+        - `matplotlib.gridspec.SubplotSpec`:
             Use the SubplotSpec for initializing the axes.
-        - `matplotilb.Axes`:
+        - `matplotlib.Axes`:
             Directly use the provided figure and axes instances for plotting.
             NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
     preferred_wms_service : str, optional
@@ -532,9 +532,9 @@ class Maps(MapsBase):
             - A 3-digit integer
                 Same as using a tuple of three single-digit integers.
                 (e.g. 111 is the same as (1, 1, 1) )
-            - `matplotilb.gridspec.SubplotSpec`:
+            - `matplotlib.gridspec.SubplotSpec`:
                 Use the SubplotSpec for initializing the axes.
-            - `matplotilb.Axes`:
+            - `matplotlib.Axes`:
                 Directly use the provided figure and axes instances for plotting.
                 NOTE: The axes MUST be a geo-axes with `m.crs_plot` projection!
         keep_on_top : bool
@@ -2367,7 +2367,7 @@ class Maps(MapsBase):
         mark_points : str, dict or None, optional
             Set the marker-style for the anchor-points.
 
-            - If a string is provided, it is identified as a matploltib "format-string",
+            - If a string is provided, it is identified as a matplotlib "format-string",
               e.g. "r." for red dots, "gx" for green x markers etc.
             - if a dict is provided, it will be used to set the style of the markers
               e.g.: dict(marker="o", facecolor="orange", edgecolor="g")
@@ -2748,7 +2748,7 @@ class Maps(MapsBase):
             circle with a red boundary.
 
             If a dict is provided, it can be used to update the appearance of the
-            masked points (arguments are passed to matpltolibs `plt.scatter()`)
+            masked points (arguments are passed to matplotlibs `plt.scatter()`)
             ('s': markersize, 'marker': the shape of the marker, ...)
 
             The default is False
@@ -2761,7 +2761,7 @@ class Maps(MapsBase):
             The zorder of the artist (e.g. the stacking level of overlapping artists)
             The default is 1
         kwargs
-            kwargs passed to the initialization of the matpltolib collection
+            kwargs passed to the initialization of the matplotlib collection
             (dependent on the plot-shape) [linewidth, edgecolor, facecolor, ...]
 
             For "shade_points" or "shade_raster" shapes, kwargs are passed to

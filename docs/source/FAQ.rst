@@ -95,7 +95,7 @@ However, for some editors there are special settings that can be adjusted to imp
 
       To print a snapshot of the current state of a figure to the IPython terminal, call :py:meth:`Maps.show` or :py:meth:`Maps.snapshot`.
 
-    - Similar to Jupyter Notebooks, you can use *"magic"* commands to set the used matpltolib backend.
+    - Similar to Jupyter Notebooks, you can use *"magic"* commands to set the used matplotlib backend.
 
       - For interactive (popup) figures, switch to the default Qt backend using ``%matplotlib qt``
       - For interactive (inline) figures, you'll need to install `ipympl <https://github.com/matplotlib/ipympl>`_ and then activate the ``widget`` with ``%matplotlib widget``.

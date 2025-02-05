@@ -439,20 +439,13 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _init_figure(self, **kwargs):
         if self.parent.f is None:
-            # do this on any new figure since "%matpltolib inline" tries to re-activate
+            # do this on any new figure since "%matplotlib inline" tries to re-activate
             # interactive mode all the time!
             _handle_backends()
 
             self._f = plt.figure(**kwargs)
             # to hide canvas header in jupyter notebooks (default figure label)
             self._f.canvas.header_visible = False
-
-            # override Figure.savefig with Maps.savefig but keep original
-            # method accessible via Figure._mpl_orig_savefig
-            # (this ensures that using the save-buttons in the gui or pressing
-            # control+s will redirect the save process to the eomaps routine)
-            self._f._mpl_orig_savefig = self._f.savefig
-            self._f.savefig = self.savefig
 
             _log.debug("EOmaps: New figure created")
 
@@ -466,6 +459,14 @@ class MapsBase(metaclass=_MapsMeta):
             self.parent._add_child(self)
 
         if self.parent == self:  # use == instead of "is" since the parent is a proxy!
+
+            # override Figure.savefig with Maps.savefig but keep original
+            # method accessible via Figure._mpl_orig_savefig
+            # (this ensures that using the save-buttons in the gui or pressing
+            # control+s will redirect the save process to the eomaps routine)
+            self._f._mpl_orig_savefig = self._f.savefig
+            self._f.savefig = self.savefig
+
             # only attach resize- and close-callbacks if we initialize a parent
             # Maps-object
             # attach a callback that is executed when the figure is closed
@@ -1160,6 +1161,20 @@ class MapsBase(metaclass=_MapsMeta):
     @staticmethod
     @lru_cache()
     def _get_cartopy_crs(crs):
+        if isinstance(crs, str):
+            try:
+                # TODO use crs=int(crs.upper().removeprefix("EPSG:")) when python>=3.9
+                # is required
+                crs = crs.upper()
+                if crs.startswith("EPSG:"):
+                    crs = crs[5:]
+                crs = int(crs)
+            except ValueError:
+                raise ValueError(
+                    f"The provided crs '{crs}' cannot be identified. "
+                    "If a string is provided as CRS, it must be either an integer "
+                    "(e.g. '4326') or a string of the form: 'EPSG:4326'."
+                )
         if isinstance(crs, ccrs.CRS):  # already a cartopy CRS
             cartopy_proj = crs
         elif crs == 4326:
