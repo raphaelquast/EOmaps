@@ -16,7 +16,8 @@ from matplotlib.collections import Collection
 from pyproj import CRS
 import numpy as np
 
-from .helpers import register_modules
+from .helpers import register_modules, version, mpl_version
+
 
 _log = logging.getLogger(__name__)
 
@@ -2267,7 +2268,13 @@ class Shapes(object):
                         "x", "y", "z", data=data, **color_and_array
                     )
 
-            return _CollectionAccessor(cont, self._filled)
+            # from matplotlib v3.10 on the .collection kwarg is removed and
+            # since v3.8 ax.contour already returns a collection.
+            # TODO remove this once mpl >=3.10 is required
+            if mpl_version < version.Version("3.10"):
+                return _CollectionAccessor(cont, self._filled)
+            else:
+                return cont
 
         def get_coll(self, x, y, crs, **kwargs):
             x, y = np.asanyarray(x), np.asanyarray(y)
@@ -2277,6 +2284,7 @@ class Shapes(object):
 
             coll = self._get_contourf_colls(x, y, crs, **kwargs)
 
+            # TODO remove this once mpl >= 3.10 is required
             if isinstance(coll, _CollectionAccessor):
                 for c in coll.collections:
                     self._m.BM._ignored_unmanaged_artists.add(c)
