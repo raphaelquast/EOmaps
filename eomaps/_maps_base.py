@@ -447,13 +447,6 @@ class MapsBase(metaclass=_MapsMeta):
             # to hide canvas header in jupyter notebooks (default figure label)
             self._f.canvas.header_visible = False
 
-            # override Figure.savefig with Maps.savefig but keep original
-            # method accessible via Figure._mpl_orig_savefig
-            # (this ensures that using the save-buttons in the gui or pressing
-            # control+s will redirect the save process to the eomaps routine)
-            self._f._mpl_orig_savefig = self._f.savefig
-            self._f.savefig = self.savefig
-
             _log.debug("EOmaps: New figure created")
 
             # make sure we keep a "real" reference otherwise overwriting the
@@ -466,6 +459,14 @@ class MapsBase(metaclass=_MapsMeta):
             self.parent._add_child(self)
 
         if self.parent == self:  # use == instead of "is" since the parent is a proxy!
+
+            # override Figure.savefig with Maps.savefig but keep original
+            # method accessible via Figure._mpl_orig_savefig
+            # (this ensures that using the save-buttons in the gui or pressing
+            # control+s will redirect the save process to the eomaps routine)
+            self._f._mpl_orig_savefig = self._f.savefig
+            self._f.savefig = self.savefig
+
             # only attach resize- and close-callbacks if we initialize a parent
             # Maps-object
             # attach a callback that is executed when the figure is closed
