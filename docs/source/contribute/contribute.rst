@@ -153,6 +153,7 @@ To ensure uniform code style, EOmaps uses `pre-commit hooks <https://pre-commit.
 - Removal of trailing whitespaces in `.py` files
 - Making sure that files end with a newline
 - Compliance to the used `black <https://github.com/psf/black>`_ code formatting standards
+- Making sure files don't contain common typos as detected by the `codespell <https://github.com/codespell-project/codespell>`_ spell checker
 
 
 To initialize pre-commit hooks in your current environment, first install `pre-commit hooks <https://pre-commit.com/>`_ with
@@ -183,6 +184,7 @@ This will install the required pre-commit hooks in your current environment so t
     trim trailing whitespace.................................................Passed
     mixed line ending........................................................Passed
     black....................................................................Passed
+    codespell................................................................Passed
 
 
 .. note::
@@ -204,6 +206,9 @@ This will install the required pre-commit hooks in your current environment so t
   `pre-commit Issue #2178 comment <https://github.com/pre-commit/pre-commit/issues/2178#issuecomment-1002163763>`_
   for a potential resolution.
 
+.. tip::
+
+    - When using the `codespell` spell checker, false positives are possible. You should add these to the `[tool.codespell.ignore-words-list]` list in the `pyproject.toml` file.
 
 
 
