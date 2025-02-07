@@ -74,7 +74,7 @@ class _LayerSelectionWidget:
 
         >>> ["layer1", "layer2", ("layer", 0.4)]
 
-        To provide explict display-names for a layer, pass a list of the form
+        To provide explicit display-names for a layer, pass a list of the form
         `[display-name, <layer-assignment>]`
 
         >>> [["My Layer", "layer1"],
@@ -311,7 +311,7 @@ class LayerButton(ipywidgets.Button):
         The Maps-object to use.
     layer : str, list or tuple
         The layer to overlay.
-        Can be eiter a string, a tuple of a layer and a transparency or a list
+        Can be either a string, a tuple of a layer and a transparency or a list
         of the aforementioned types.
 
         See :py:meth:`Maps.show_layer` for more details.

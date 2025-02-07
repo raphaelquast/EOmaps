@@ -604,7 +604,7 @@ class AnnotationEditor(_EditorBase):
             The default is "all".
         sanitize_coordinates : bool, optional
             If Tue, annotation coordinates where the crs has not been specified
-            explicitly are reprojected to epsg=4326 to avoid amiguities (e.g. if the
+            explicitly are reprojected to epsg=4326 to avoid ambiguities (e.g. if the
             plot-crs changes etc.)
 
             If False, coordinates will be returned as-is (which might lead to incorrect
