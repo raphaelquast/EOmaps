@@ -1,104 +1,100 @@
 [build-system]
-requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-include = ["eomaps", "eomaps.scripts", "eomaps.qtcompanion", "eomaps.qtcompanion.widgets"]
-
-[tool.setuptools.package-data]
-eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
-
+requires = [ "setuptools>=61.0" ]
 
 [project]
 name = "eomaps"
 version = "8.3.2"
 description = "A library to create interactive maps of geographical datasets."
 readme = "README.md"
-license = {file = "LICENSE"}
+keywords = [ "Geographical Data", "Maps", "Plotting", "Visualization" ]
+
+license = { file = "LICENSE" }
+
+authors = [
+  { name = "Raphael Quast", email = "raphael.quast@geo.tuwien.ac.at" },
+]
 
 requires-python = ">=3.8"
 
-authors = [
-  { name="Raphael Quast", email="raphael.quast@geo.tuwien.ac.at" },
-]
-
-keywords = ["Visualization", "Plotting", "Maps", "Geographical Data"]
-
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: BSD License",
-    "Operating System :: OS Independent",
-    "Framework :: Matplotlib",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: GIS",
-    "Topic :: Scientific/Engineering :: Visualization",
+  "Framework :: Matplotlib",
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: GIS",
+  "Topic :: Scientific/Engineering :: Visualization",
 ]
 
 dependencies = [
-    "numpy",
-    "scipy",
-    "matplotlib>=3.4",
-    "cartopy>=0.20.0",
-    "pyproj",
-    "packaging",
-    "click"
+  "cartopy>=0.20.0",
+  "click",
+  "matplotlib>=3.4",
+  "numpy",
+  "packaging",
+  "pyproj",
+  "scipy",
 ]
 
-[project.optional-dependencies]
-
-all = ["eomaps[io, classify, wms, shade, gui]"]
-
-all_nogui = ["eomaps[io, classify, wms, shade]"]
-
-io = [
-    "pandas",
-    "geopandas",
-    "xarray",
-    "netcdf4",
-    "rioxarray"
+optional-dependencies.all = [ "eomaps[io,classify,wms,shade,gui]" ]
+optional-dependencies.all_nogui = [ "eomaps[io,classify,wms,shade]" ]
+optional-dependencies.classify = [ "mapclassify" ]
+optional-dependencies.gui = [
+  "pyqt5",
+  "qtpy",
 ]
-
-classify = ["mapclassify"]
-
-wms = [
-    "owslib",
-    "requests",
+optional-dependencies.io = [
+  "geopandas",
+  "netcdf4",
+  "pandas",
+  "rioxarray",
+  "xarray",
 ]
-
-shade = [
-    "datashader",
-    "dask[dataframe]",  # to address https://github.com/dask/dask/issues/10995
+optional-dependencies.shade = [
+  "dask[dataframe]", # to address https://github.com/dask/dask/issues/10995
+  "datashader",
 ]
-
-gui = [
-    "PyQt5",
-    "qtpy"
-    ]
-
-test = [
-    "eomaps[io, classify, wms, shade, gui, test]",
-    "pytest",
-    "pytest-mpl"
+optional-dependencies.test = [
+  "eomaps[io,classify,wms,shade,gui,test]",
+  "pytest",
+  "pytest-mpl",
 ]
+optional-dependencies.wms = [
+  "owslib",
+  "requests",
+]
+urls.Documentation = "https://eomaps.readthedocs.io/"
+urls.Repository = "https://github.com/raphaelquast/eomaps"
+scripts.eomaps = "eomaps.scripts.open:cli"
 
-[project.scripts]
-eomaps = "eomaps.scripts.open:cli"
+[tool.setuptools.packages.find]
+include = [ "eomaps", "eomaps.scripts", "eomaps.qtcompanion", "eomaps.qtcompanion.widgets" ]
 
-[project.urls]
-Documentation = "https://eomaps.readthedocs.io/"
-Repository = "https://github.com/raphaelquast/eomaps"
+[tool.setuptools.package-data]
+eomaps = [ "logo.png", "NE_features.json", "qtcompanion/icons/*" ]
+
+[tool.pyproject-fmt]
+keep_full_version = true
 
 [tool.pytest.ini_options]
 mpl-use-full-test-name = "True"
 mpl-default-style = "default"
 mpl-results-path = "img_comparison_results"
 filterwarnings = [
-    "ignore:Downloading*",
-    "ignore:Passing a SingleBlockManager to Series is deprecated *:DeprecationWarning",
-    "ignore:Passing a BlockManager to GeoDataFrame is deprecated *:DeprecationWarning",
-    "ignore:Passing a SingleBlockManager to GeoSeries is deprecated *:DeprecationWarning",
-    "ignore:Pyarrow will become a required dependency of pandas *:DeprecationWarning",
-    "ignore:Geometry is in a geographic CRS. Results from *:UserWarning",
-    "ignore:Back azimuth is being returned by default *:UserWarning",
-    "ignore:Conversion of an array with ndim > 0:DeprecationWarning"
+  "ignore:Downloading*",
+  "ignore:Passing a SingleBlockManager to Series is deprecated *:DeprecationWarning",
+  "ignore:Passing a BlockManager to GeoDataFrame is deprecated *:DeprecationWarning",
+  "ignore:Passing a SingleBlockManager to GeoSeries is deprecated *:DeprecationWarning",
+  "ignore:Pyarrow will become a required dependency of pandas *:DeprecationWarning",
+  "ignore:Geometry is in a geographic CRS. Results from *:UserWarning",
+  "ignore:Back azimuth is being returned by default *:UserWarning",
+  "ignore:Conversion of an array with ndim > 0:DeprecationWarning",
 ]
