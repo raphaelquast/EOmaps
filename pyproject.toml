@@ -102,3 +102,16 @@ filterwarnings = [
     "ignore:Back azimuth is being returned by default *:UserWarning",
     "ignore:Conversion of an array with ndim > 0:DeprecationWarning"
 ]
+
+[tool.codespell]
+ignore-words-list = [
+    "vor", # For voronoi, not "for"
+    "ot", # abbreviation for offset-top
+]
+skip = [
+    "eomaps/webmap_containers.py", # Non-English languages in docstrings
+
+]
+ignore-regex = [
+    "[A-Za-z0-9+/]{100,}" # Ignore long base64 strings
+]
