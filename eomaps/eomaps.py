@@ -3389,7 +3389,7 @@ class Maps(MapsBase):
     @wraps(MapsBase.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         with ExitStack() as stack:
-            # re-fetch webmap servies if required
+            # re-fetch webmap services if required
             if refetch_wms is False:
                 if _cx_refetch_wms_on_size_change is not None:
                     stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))

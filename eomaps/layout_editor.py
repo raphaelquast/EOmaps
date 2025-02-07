@@ -904,7 +904,7 @@ class LayoutEditor:
 
         Note
         ----
-        The layout is dependent on the order at which the axes ahve been created!
+        The layout is dependent on the order at which the axes have been created!
         It can only be re-applied to a given figure if the order at which the axes are
         created remains the same!
 
@@ -1013,7 +1013,7 @@ class LayoutEditor:
 
         Note
         ----
-        The layout is dependent on the order at which the axes ahve been created!
+        The layout is dependent on the order at which the axes have been created!
         It can only be re-applied to a given figure if the order at which the axes are
         created remains the same!
 

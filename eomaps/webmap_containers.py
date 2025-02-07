@@ -2351,7 +2351,7 @@ class WebMapContainer(object):
             (check: https://basemap.at/#lizenz for full details)
 
             basemap.at ist gemäß der Open Government Data Österreich Lizenz
-            CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+            CC-BY 4.0 sowohl für private also auch kommerzielle Zwecke frei
             sowie entgeltfrei nutzbar.
             """
 

@@ -759,7 +759,7 @@ of the following structure:
 .. code-block:: python
 
     dict(
-        name1 = N  # position the axis at the Nth grid cell (counting firs)
+        name1 = N  # position the axis at the Nth grid cell (counting first)
         name2 = (row, col), # position the axis at the (row, col) grid-cell
         name3 = (row, slice(col_start, col_end)) # span the axis over multiple columns
         name4 = (slice(row_start, row_end), col) # span the axis over multiple rows

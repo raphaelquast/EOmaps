@@ -5,7 +5,7 @@ User guide
 ==========
 
 
-The following chapters provide detailed informatio on how to use EOmaps
+The following chapters provide detailed information on how to use EOmaps
 with a lot of code-examples!
 
 

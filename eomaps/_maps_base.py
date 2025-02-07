@@ -151,7 +151,7 @@ class _MapsMeta(type):
         (e.g. when using `matplotlib.use("webagg")`)
 
         - Events that occur while draws are pending are dropped and only the
-          last event of each type that occured during the wait is finally executed.
+          last event of each type that occurred during the wait is finally executed.
 
         Note
         ----
@@ -216,7 +216,7 @@ class _MapsMeta(type):
                 # cache the latest event of each type so we can process it once we are ready
                 self._event_cache[event["type"]] = event
 
-                # a final savety precaution in case send count is lower than ack count
+                # a final safety precaution in case send count is lower than ack count
                 # (e.g. we wait for an image but there was no image sent)
                 if self.manager._send_cnt < self._ack_cnt:
                     # reset counts... they seem to be incorrect

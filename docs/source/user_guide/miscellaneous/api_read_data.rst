@@ -64,7 +64,7 @@ Create a new Map from a file
 
     m = Maps.from_file.GeoTIFF(
         "the filepath",
-        classify_specs=dict(Maps.CLASSFIERS.Quantiles, k=10),
+        classify_specs=dict(Maps.CLASSIFIERS.Quantiles, k=10),
         cmap="RdBu"
         )
     m.add_colorbar()
@@ -95,7 +95,7 @@ Similar to :py:class:`Maps.from_file` , a new layer based on a file can be added
         coords=("longitude", "latitude"),
         data_crs=4326,
         isel=dict(time=123),
-        classify_specs=dict(Maps.CLASSFIERS.Quantiles, k=10),
+        classify_specs=dict(Maps.CLASSIFIERS.Quantiles, k=10),
         cmap="RdBu"
         )
 
