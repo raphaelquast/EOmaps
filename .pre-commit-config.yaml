@@ -17,4 +17,4 @@ repos:
     hooks:
     -   id: codespell
         additional_dependencies:
-        -   tomli
+        -   tomli  # TODO only required for python < 3.11
