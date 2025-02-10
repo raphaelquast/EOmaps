@@ -6,15 +6,15 @@
 """The BlitManager used to handle drawing and caching of backgrounds."""
 
 import logging
-from itertools import chain
-from contextlib import contextmanager, ExitStack
-from weakref import WeakSet
+from contextlib import ExitStack, contextmanager
 from functools import lru_cache
+from itertools import chain
+from weakref import WeakSet
 
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.transforms import Bbox
+import numpy as np
 from matplotlib.spines import Spine
+from matplotlib.transforms import Bbox
 
 _log = logging.getLogger(__name__)
 
@@ -840,7 +840,6 @@ class BlitManager(LayerParser):
         loglevel = _log.getEffectiveLevel()
 
         if hasattr(cv, "get_renderer") and not cv.is_saving():
-
             renderer = cv.get_renderer()
             if renderer is None:
                 # don't run if no renderer is available
@@ -886,7 +885,7 @@ class BlitManager(LayerParser):
 
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
-            # check progress of the following issuse
+            # check progress of the following issues
             # https://github.com/matplotlib/matplotlib/issues/19116
             if self._mpl_backend_blit_fix:
                 self.update()
@@ -1368,7 +1367,7 @@ class BlitManager(LayerParser):
         if blit:
             # workaround for nbagg backend to avoid glitches
             # it's slow but at least it works...
-            # check progress of the following issuse
+            # check progress of the following issues
             # https://github.com/matplotlib/matplotlib/issues/19116
             if self._mpl_backend_force_full:
                 cv._force_full = True
@@ -1549,7 +1548,6 @@ class BlitManager(LayerParser):
             )
 
     def _cleanup_on_layer_activation(self, layer):
-
         try:
             # remove not yet executed lazy-activation methods
             # (e.g. not yet fetched WMS services)
