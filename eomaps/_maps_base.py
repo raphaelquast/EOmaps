@@ -1298,7 +1298,7 @@ class MapsBase(metaclass=_MapsMeta):
 
         Parameters
         ----------
-        extent : array-like
+        extents : array-like
             The extent in the given crs (x0, x1, y0, y1).
         crs : a crs identifier, optional
             The coordinate-system in which the extent is evaluated.
