@@ -3,7 +3,7 @@ channels:
   - conda-forge
 
 dependencies:
-  - python >= 3.8
+  - python >= 3.8, <3.13
   - numpy
   - scipy
   - matplotlib >=3.4
