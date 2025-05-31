@@ -3800,7 +3800,6 @@ class Maps(MapsBase):
             else:
                 clicked_map._companion_widget.show()
                 clicked_map._indicate_companion_map(True)
-
                 # execute all actions that should trigger before opening the widget
                 # (e.g. update tabs to show visible layers etc.)
                 for f in clicked_map._on_show_companion_widget:
@@ -3838,7 +3837,7 @@ class Maps(MapsBase):
                     " Maps-object!"
                 )
                 return
-            if plt.get_backend() in ["QtAgg", "Qt5Agg"]:
+            if plt.get_backend().lower() in ["qtagg", "qt5agg"]:
                 # only pass parent if Qt is used as a backend for matplotlib!
                 self._companion_widget = MenuWindow(m=self, parent=self.f.canvas)
             else:
