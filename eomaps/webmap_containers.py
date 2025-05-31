@@ -2535,7 +2535,7 @@ class WebMapContainer(object):
                 )
             else:
                 service = _WebServiceCollection(
-                    self._m, service_type="wms", url=url, **kwargs
+                    self._m, service_type=service_type, url=url, **kwargs
                 )
 
         return service
