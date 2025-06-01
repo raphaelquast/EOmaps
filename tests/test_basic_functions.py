@@ -1405,6 +1405,11 @@ class TestBasicPlotting(unittest.TestCase):
         self.assertTrue(m2.ax.spines["geo"].get_edgecolor() == (0, 1, 0, 1))
         self.assertTrue(m2.ax.spines["geo"].get_linewidth() == 4)
 
+    def test_set_frame_to_country(self):
+        # just a sanity-check if function throws an error...
+        m = Maps()
+        m.set_frame(countries=["Austria", "Italy"], fc="k", ec="r", lw=2)
+
     def test_add_gdf(self):
         # test some basic gdf clipping capabilities
 
