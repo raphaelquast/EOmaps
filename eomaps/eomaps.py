@@ -15,6 +15,7 @@ from itertools import repeat, chain
 from pathlib import Path
 from types import SimpleNamespace
 from textwrap import fill
+from difflib import get_close_matches
 
 import copy
 import importlib.metadata
@@ -1309,12 +1310,50 @@ class Maps(MapsBase):
 
             self.set_extent([x0, x1, y0, y1], gdf.crs)
 
-    def set_frame(self, rounded=0, gdf=None, set_extent=True, **kwargs):
+    def _set_country_frame(self, countries, scale=50):
+        """
+        Set the map-frame to one (or more) country boarders defined by
+        the NaturalEarth admin_0_countries dataset.
+
+        For more details, see:
+
+            https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/
+
+        Parameters
+        ----------
+        countries : str or list of str
+            The countries who should be included in the map-frame.
+        scale : int, optional
+            The scale factor of the used NaturalEarth dataset.
+            One of 10, 50, 110.
+            The default is 50.
+
+        """
+        countries = [i.lower() for i in np.atleast_1d(countries)]
+        gdf = self.add_feature.cultural.admin_0_countries.get_gdf(scale=scale)
+        names = gdf.NAME.str.lower().values
+
+        q = np.isin(names, countries)
+
+        if np.count_nonzero(q) == len(countries):
+            self.set_frame(gdf=gdf[q])
+        else:
+            for c in countries:
+                if c not in names:
+                    print(
+                        f"Unable to identify the country '{c}'. "
+                        f"Fid you mean {get_close_matches(c, gdf.NAME)}"
+                    )
+
+    def set_frame(self, rounded=0, gdf=None, countries=None, **kwargs):
         """
         Set the properties of the map boundary and the background patch.
 
-        You can either use a rectangle with rounded corners or arbitrary geometries
-        provided as a geopandas.GeoDataFrame.
+        - use `rounded` kwarg to get a rectangle border with rounded corners
+        - use `gdf` kwarg to use `geopandas.GeoDataFrame` geometries as map-border
+        - use `countries` kwarg to set the map-border to one (or more) countries.
+
+        All additional kwargs are used to style the border-line.
 
         Parameters
         ----------
@@ -1346,6 +1385,17 @@ class Maps(MapsBase):
 
             - "facecolor" or "fc": The color of the background patch
 
+        Other Parameters
+        ----------------
+        set_extent : bool, optional
+            Only relevant if `gdf` is used.
+            If True, the map-extent is set to the extent of the provided geometry.
+            The default is True.
+        scale : int, optional
+            Only relevant if `countries` is used.
+            The scale factor of the used NaturalEarth dataset.
+            Must be one of [10, 50, 110]. The default is 50.
+
         Examples
         --------
 
@@ -1372,6 +1422,11 @@ class Maps(MapsBase):
         >>> # set the map-boundary to the Austrian country-boarder
         >>> m.set_frame(gdf = gdf[gdf.NAME=="Austria"])
 
+        Set the map-boundary to the country-border of Austria and Italy
+
+        >>> m = Maps(facecolor="0.4")
+        >>> m.set_frame(countries=["Austria", "Italy"], ec="r", lw=2, fc="k")
+
         """
 
         for key in ("fc", "facecolor"):
@@ -1384,8 +1439,18 @@ class Maps(MapsBase):
             assert (
                 rounded == 0
             ), "EOmaps: using rounded > 0 is not supported for gdf frames!"
+            assert countries is None, "You cannot specify both 'gdf' and 'countries'"
 
-            self._set_gdf_path_boundary(self._handle_gdf(gdf), set_extent=set_extent)
+            self._set_gdf_path_boundary(
+                self._handle_gdf(gdf), set_extent=kwargs.pop("set_extent", True)
+            )
+        elif countries is not None:
+            assert (
+                rounded == 0
+            ), "EOmaps: using rounded > 0 is not supported for country-border frames!"
+            assert gdf is None, "You cannot specify both 'gdf' and 'countries'"
+
+            self._set_country_frame(countries, scale=kwargs.pop("scale", 50))
 
         elif rounded:
             assert (
