@@ -1018,6 +1018,15 @@ class GridFactory:
 
             The default is: (ec="0.2", lw=0.5, zorder=100)
 
+        Other Parameters
+        ----------------
+        clip_on: bool, optional
+            If True, clip the gridlines at the map-boundary.
+            If False, clip the gridliens at the figure-boundary.
+            This is useful if you want gridlines to extend beyond custom map-boundaries
+            set with :py:meth:`Maps.set_frame`.
+            Note: This has to be set for the grid-labels as well!
+
         Returns
         -------
         g : GridLines
