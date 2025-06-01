@@ -2358,7 +2358,7 @@ class WebMapContainer(object):
             WMTS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
-                url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
+                url="https://mapsneu.wien.gv.at/basemapneu/1.0.0/WMTSCapabilities.xml",
             )
             WMTS._EOmaps_info = type(self).AT_basemap.__doc__
             WMTS._EOmaps_source_code = (
@@ -2385,7 +2385,7 @@ class WebMapContainer(object):
             WMTS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
-                url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
+                url="https://mapsneu.wien.gv.at/wmtsneu/1.0.0/WMTSCapabilities.xml",
             )
             WMTS._EOmaps_info = type(self).Wien_basemap.__doc__
             WMTS._EOmaps_source_code = (
