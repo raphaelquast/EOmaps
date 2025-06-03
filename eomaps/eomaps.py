@@ -15,6 +15,7 @@ from itertools import repeat, chain
 from pathlib import Path
 from types import SimpleNamespace
 from textwrap import fill
+from difflib import get_close_matches
 
 import copy
 import importlib.metadata
@@ -1309,12 +1310,50 @@ class Maps(MapsBase):
 
             self.set_extent([x0, x1, y0, y1], gdf.crs)
 
-    def set_frame(self, rounded=0, gdf=None, set_extent=True, **kwargs):
+    def _set_country_frame(self, countries, scale=50):
+        """
+        Set the map-frame to one (or more) country boarders defined by
+        the NaturalEarth admin_0_countries dataset.
+
+        For more details, see:
+
+            https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/
+
+        Parameters
+        ----------
+        countries : str or list of str
+            The countries who should be included in the map-frame.
+        scale : int, optional
+            The scale factor of the used NaturalEarth dataset.
+            One of 10, 50, 110.
+            The default is 50.
+
+        """
+        countries = [i.lower() for i in np.atleast_1d(countries)]
+        gdf = self.add_feature.cultural.admin_0_countries.get_gdf(scale=scale)
+        names = gdf.NAME.str.lower().values
+
+        q = np.isin(names, countries)
+
+        if np.count_nonzero(q) == len(countries):
+            self.set_frame(gdf=gdf[q])
+        else:
+            for c in countries:
+                if c not in names:
+                    print(
+                        f"Unable to identify the country '{c}'. "
+                        f"Fid you mean {get_close_matches(c, gdf.NAME)}"
+                    )
+
+    def set_frame(self, rounded=0, gdf=None, countries=None, **kwargs):
         """
         Set the properties of the map boundary and the background patch.
 
-        You can either use a rectangle with rounded corners or arbitrary geometries
-        provided as a geopandas.GeoDataFrame.
+        - use `rounded` kwarg to get a rectangle border with rounded corners
+        - use `gdf` kwarg to use `geopandas.GeoDataFrame` geometries as map-border
+        - use `countries` kwarg to set the map-border to one (or more) countries.
+
+        All additional kwargs are used to style the border-line.
 
         Parameters
         ----------
@@ -1346,6 +1385,17 @@ class Maps(MapsBase):
 
             - "facecolor" or "fc": The color of the background patch
 
+        Other Parameters
+        ----------------
+        set_extent : bool, optional
+            Only relevant if `gdf` is used.
+            If True, the map-extent is set to the extent of the provided geometry.
+            The default is True.
+        scale : int, optional
+            Only relevant if `countries` is used.
+            The scale factor of the used NaturalEarth dataset.
+            Must be one of [10, 50, 110]. The default is 50.
+
         Examples
         --------
 
@@ -1372,6 +1422,11 @@ class Maps(MapsBase):
         >>> # set the map-boundary to the Austrian country-boarder
         >>> m.set_frame(gdf = gdf[gdf.NAME=="Austria"])
 
+        Set the map-boundary to the country-border of Austria and Italy
+
+        >>> m = Maps(facecolor="0.4")
+        >>> m.set_frame(countries=["Austria", "Italy"], ec="r", lw=2, fc="k")
+
         """
 
         for key in ("fc", "facecolor"):
@@ -1384,8 +1439,18 @@ class Maps(MapsBase):
             assert (
                 rounded == 0
             ), "EOmaps: using rounded > 0 is not supported for gdf frames!"
+            assert countries is None, "You cannot specify both 'gdf' and 'countries'"
 
-            self._set_gdf_path_boundary(self._handle_gdf(gdf), set_extent=set_extent)
+            self._set_gdf_path_boundary(
+                self._handle_gdf(gdf), set_extent=kwargs.pop("set_extent", True)
+            )
+        elif countries is not None:
+            assert (
+                rounded == 0
+            ), "EOmaps: using rounded > 0 is not supported for country-border frames!"
+            assert gdf is None, "You cannot specify both 'gdf' and 'countries'"
+
+            self._set_country_frame(countries, scale=kwargs.pop("scale", 50))
 
         elif rounded:
             assert (
@@ -3389,7 +3454,7 @@ class Maps(MapsBase):
     @wraps(MapsBase.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         with ExitStack() as stack:
-            # re-fetch webmap servies if required
+            # re-fetch webmap services if required
             if refetch_wms is False:
                 if _cx_refetch_wms_on_size_change is not None:
                     stack.enter_context(_cx_refetch_wms_on_size_change(refetch_wms))
@@ -3800,7 +3865,6 @@ class Maps(MapsBase):
             else:
                 clicked_map._companion_widget.show()
                 clicked_map._indicate_companion_map(True)
-
                 # execute all actions that should trigger before opening the widget
                 # (e.g. update tabs to show visible layers etc.)
                 for f in clicked_map._on_show_companion_widget:
@@ -3838,7 +3902,7 @@ class Maps(MapsBase):
                     " Maps-object!"
                 )
                 return
-            if plt.get_backend() in ["QtAgg", "Qt5Agg"]:
+            if plt.get_backend().lower() in ["qtagg", "qt5agg"]:
                 # only pass parent if Qt is used as a backend for matplotlib!
                 self._companion_widget = MenuWindow(m=self, parent=self.f.canvas)
             else:

@@ -88,7 +88,7 @@ conda install -c conda-forge eomaps
 
 
 > Advanced users can also use `pip` to install **EOmaps** (and selectively install optional dependency groups)
-> ```pyhton
+> ```python
 > pip install eomaps       # install only minimal required dependencies
 > pip install eomaps[all]  # install all optional dependencies
 > ...

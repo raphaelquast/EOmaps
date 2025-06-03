@@ -11,7 +11,7 @@ eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
 
 [project]
 name = "eomaps"
-version = "8.3.2"
+version = "8.3.3"
 description = "A library to create interactive maps of geographical datasets."
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -101,4 +101,17 @@ filterwarnings = [
     "ignore:Geometry is in a geographic CRS. Results from *:UserWarning",
     "ignore:Back azimuth is being returned by default *:UserWarning",
     "ignore:Conversion of an array with ndim > 0:DeprecationWarning"
+]
+
+[tool.codespell]
+ignore-words-list = [
+    "vor", # For voronoi, not "for"
+    "ot", # abbreviation for offset-top
+]
+skip = [
+    "eomaps/webmap_containers.py", # Non-English languages in docstrings
+
+]
+ignore-regex = [
+    "[A-Za-z0-9+/]{100,}" # Ignore long base64 strings
 ]

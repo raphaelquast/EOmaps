@@ -2351,14 +2351,14 @@ class WebMapContainer(object):
             (check: https://basemap.at/#lizenz for full details)
 
             basemap.at ist gemäß der Open Government Data Österreich Lizenz
-            CC-BY 4.0 sowohl für private als auch kommerzielle Zwecke frei
+            CC-BY 4.0 sowohl für private also auch kommerzielle Zwecke frei
             sowie entgeltfrei nutzbar.
             """
 
             WMTS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
-                url="http://maps.wien.gv.at/basemap/1.0.0/WMTSCapabilities.xml",
+                url="https://mapsneu.wien.gv.at/basemapneu/1.0.0/WMTSCapabilities.xml",
             )
             WMTS._EOmaps_info = type(self).AT_basemap.__doc__
             WMTS._EOmaps_source_code = (
@@ -2385,7 +2385,7 @@ class WebMapContainer(object):
             WMTS = _WebServiceCollection(
                 m=self._m,
                 service_type="wmts",
-                url="http://maps.wien.gv.at/wmts/1.0.0/WMTSCapabilities.xml",
+                url="https://mapsneu.wien.gv.at/wmtsneu/1.0.0/WMTSCapabilities.xml",
             )
             WMTS._EOmaps_info = type(self).Wien_basemap.__doc__
             WMTS._EOmaps_source_code = (
@@ -2535,7 +2535,7 @@ class WebMapContainer(object):
                 )
             else:
                 service = _WebServiceCollection(
-                    self._m, service_type="wms", url=url, **kwargs
+                    self._m, service_type=service_type, url=url, **kwargs
                 )
 
         return service

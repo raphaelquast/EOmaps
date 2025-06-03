@@ -5,16 +5,16 @@
 
 """Definition of the LayoutEditor used to interactively re-position axes."""
 
+import json
 import logging
 from contextlib import ExitStack
 from pathlib import Path
-import json
 
 import numpy as np
-from matplotlib.lines import Line2D
-from matplotlib.transforms import Bbox
 from matplotlib.axis import XAxis, YAxis
+from matplotlib.lines import Line2D
 from matplotlib.spines import Spine
+from matplotlib.transforms import Bbox
 
 _log = logging.getLogger(__name__)
 
@@ -904,11 +904,11 @@ class LayoutEditor:
 
         Note
         ----
-        The layout is dependent on the order at which the axes ahve been created!
+        The layout is dependent on the order at which the axes have been created!
         It can only be re-applied to a given figure if the order at which the axes are
         created remains the same!
 
-        Maps aways preserve the aspect ratio.
+        Maps laways preserve the aspect ratio.
         If you provide values for width/height that do not match the aspect-ratio
         of the map, the values will be adjusted accordingly. By default, smaller values
         take precedence. To fix one value and adjust the other accordingly, use `-1`
@@ -1013,11 +1013,11 @@ class LayoutEditor:
 
         Note
         ----
-        The layout is dependent on the order at which the axes ahve been created!
+        The layout is dependent on the order at which the axes have been created!
         It can only be re-applied to a given figure if the order at which the axes are
         created remains the same!
 
-        Maps aways preserve the aspect ratio.
+        Maps always preserve the aspect ratio.
         If you provide values for width/height that do not match the aspect-ratio
         of the map, the values will be adjusted accordingly. By default, smaller values
         take precedence. To fix one value and adjust the other accordingly, use `-1`

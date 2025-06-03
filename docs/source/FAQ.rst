@@ -216,7 +216,7 @@ Most notably (start of 2024), the **required dependency** `cartopy <https://gith
 
 .. tip::
 
-    If you want to get a quick overview of the licenses of an existing pyhton environment, I recommend having a look at the `pip-licenses <https://github.com/raimon49/pip-licenses>`_ package!
+    If you want to get a quick overview of the licenses of an existing python environment, I recommend having a look at the `pip-licenses <https://github.com/raimon49/pip-licenses>`_ package!
 
 
 Important changes between major versions
