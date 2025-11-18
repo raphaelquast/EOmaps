@@ -3825,6 +3825,7 @@ class Maps(MapsBase):
 
                 if m.ax.contains_point(xy):
                     clicked_map = m
+                    break
 
         return clicked_map
 
