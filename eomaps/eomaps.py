@@ -1280,7 +1280,7 @@ class Maps(MapsBase):
             _log.info(f"Centering Map to:\n    {r['display_name']}")
 
     def _set_gdf_path_boundary(self, gdf, set_extent=True):
-        geom = gdf.to_crs(self.crs_plot).unary_union
+        geom = gdf.to_crs(self.crs_plot).union_all()
         if "Polygon" in geom.geom_type:
             geom = geom.boundary
 
