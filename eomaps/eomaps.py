@@ -3815,6 +3815,20 @@ class Maps(MapsBase):
 
         self.BM.update()
 
+    def _identify_maps_object(self, xy):
+        clicked_map = None
+        if xy is not None:
+            for m in (self.parent, *self.parent._children):
+                if not m._new_axis_map:
+                    # only search for Maps-object that initialized new axes
+                    continue
+
+                if m.ax.contains_point(xy):
+                    clicked_map = m
+
+        return clicked_map
+
+
     def _open_companion_widget(self, xy=None):
         """
         Open the companion-widget.
@@ -3830,15 +3844,7 @@ class Maps(MapsBase):
 
         """
 
-        clicked_map = self
-        if xy is not None:
-            for m in (self.parent, *self.parent._children):
-                if not m._new_axis_map:
-                    # only search for Maps-object that initialized new axes
-                    continue
-
-                if m.ax.contains_point(xy):
-                    clicked_map = m
+        clicked_map = self._identify_maps_object(xy)
 
         if clicked_map is None:
             _log.error(
