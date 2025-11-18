@@ -3966,12 +3966,15 @@ class Maps(MapsBase):
                 )
 
     def _get_always_on_top(self):
-        if "qt" in plt.get_backend().lower():
-            from qtpy import QtCore
+        try:
+            if "qt" in plt.get_backend().lower():
+                from qtpy import QtCore
 
-            w = self.f.canvas.window()
-            return bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint)
-
+                w = self.f.canvas.window()
+                return bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint)
+        except Exception:
+            _log.debug("Error while trying to get 'always_on_top' flag")
+            return False
         return False
 
     def _set_always_on_top(self, q):
