@@ -939,7 +939,7 @@ class LayoutEditor:
         layout : dict or None
             A dict of the positions of all axes, e.g.: {1:(x0, y0, width height), ...}
         """
-        figsize = [*self.f.get_size_inches()]
+        figsize = [float(i) for i in self.f.get_size_inches()]
 
         axes = [
             a for a in self.axes if a.get_label() not in ["EOmaps_cb", "EOmaps_cb_hist"]
