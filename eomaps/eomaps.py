@@ -3908,6 +3908,7 @@ class Maps(MapsBase):
             else:
                 self._companion_widget = MenuWindow(m=self)
                 self._companion_widget.toggle_always_on_top()
+                self._companion_widget.hide() # hide on init
 
             # connect any pending signals
             for key, funcs in getattr(self, "_connect_signals_on_init", dict()).items():
