@@ -11,12 +11,12 @@ eomaps = ["logo.png", "NE_features.json", "qtcompanion/icons/*"]
 
 [project]
 name = "eomaps"
-version = "8.3.3"
+version = "8.4"
 description = "A library to create interactive maps of geographical datasets."
 readme = "README.md"
 license = {file = "LICENSE"}
 
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 
 authors = [
   { name="Raphael Quast", email="raphael.quast@geo.tuwien.ac.at" },
