@@ -903,14 +903,14 @@ class BlitManager(LayerParser):
             if loglevel <= 5:
                 _log.log(5, "There was an error during draw!", exc_info=True)
 
-    def add_artist(self, art, layer=None):
+    def add_artist(self, *artists, layer=None):
         """
         Add a dynamic-artist to be managed.
         (Dynamic artists are re-drawn on every update!)
 
         Parameters
         ----------
-        art : Artist
+        artists : Artist
 
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
@@ -922,38 +922,38 @@ class BlitManager(LayerParser):
 
             The default is None in which case the layer of the base-Maps object is used.
         """
-
-        if art.figure != self.figure:
-            raise RuntimeError(
-                "EOmaps: The artist does not belong to the figure"
-                "of this Maps-object!"
-            )
-
         if layer is None:
             layer = self._m.layer
 
         # make sure all layers are converted to string
         layer = str(layer)
 
-        self._artists.setdefault(layer, list())
+        for art in artists:
+            if art.figure != self.figure:
+                raise RuntimeError(
+                    "EOmaps: The artist does not belong to the figure"
+                    "of this Maps-object!"
+                )
 
-        if art in self._artists[layer]:
-            return
-        else:
-            art.set_animated(True)
-            self._artists[layer].append(art)
+            self._artists.setdefault(layer, list())
 
-            if isinstance(art, plt.Axes):
-                self._managed_axes.add(art)
+            if art in self._artists[layer]:
+                continue
+            else:
+                art.set_animated(True)
+                self._artists[layer].append(art)
 
-    def add_bg_artist(self, art, layer=None, draw=True):
+                if isinstance(art, plt.Axes):
+                    self._managed_axes.add(art)
+
+    def add_bg_artist(self, *artists, layer=None, draw=True):
         """
         Add a background-artist to be managed.
         (Background artists are only updated on zoom-events... they are NOT animated!)
 
         Parameters
         ----------
-        art : Artist
+        artists : Artist
             The artist to be added.  Will be set to 'animated' (just
             to be safe).  *art* must be in the figure associated with
             the canvas this class is managing.
@@ -974,31 +974,32 @@ class BlitManager(LayerParser):
         # make sure all layer names are converted to string
         layer = str(layer)
 
-        if art.figure != self.figure:
-            raise RuntimeError
+        for art in artists:
+            if art.figure != self.figure:
+                raise RuntimeError
 
-        # put all artist of inset-maps on dedicated layers
-        if (
-            getattr(art, "axes", None) is not None
-            and art.axes.get_label() == "inset_map"
-            and not layer.startswith("__inset_")
-        ):
-            layer = "__inset_" + str(layer)
+            # put all artist of inset-maps on dedicated layers
+            if (
+                getattr(art, "axes", None) is not None
+                and art.axes.get_label() == "inset_map"
+                and not layer.startswith("__inset_")
+            ):
+                layer = "__inset_" + str(layer)
 
-        if layer in self._bg_artists and art in self._bg_artists[layer]:
-            _log.info(
-                f"EOmaps: Background-artist '{art}' already added on layer '{layer}'"
-            )
-            return
+            if layer in self._bg_artists and art in self._bg_artists[layer]:
+                _log.info(
+                    f"EOmaps: Background-artist '{art}' already added on layer '{layer}'"
+                )
+                continue
 
-        art.set_animated(True)
-        self._bg_artists.setdefault(layer, []).append(art)
+            art.set_animated(True)
+            self._bg_artists.setdefault(layer, []).append(art)
 
-        if isinstance(art, plt.Axes):
-            self._managed_axes.add(art)
+            if isinstance(art, plt.Axes):
+                self._managed_axes.add(art)
 
-        # tag all relevant layers for refetch
-        self._refetch_layer(layer)
+            # tag all relevant layers for refetch
+            self._refetch_layer(layer)
 
         for f in self._on_add_bg_artist:
             f()
