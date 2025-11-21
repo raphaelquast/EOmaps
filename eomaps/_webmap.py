@@ -1396,7 +1396,7 @@ class SlippyImageArtistNew(AxesImage):
                 # only re-fetch tiles if the extent has changed
                 located_images = self.raster_source.fetch_raster(
                     ax.projection,
-                    extent=[x1, x2, y1, y2],
+                    extent=list(map(float, [x1, x2, y1, y2])),
                     target_resolution=(window_extent.width, window_extent.height),
                 )
                 self.cache = located_images
