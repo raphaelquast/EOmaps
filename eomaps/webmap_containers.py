@@ -254,13 +254,11 @@ class WebMapContainer(object):
             m=self._m,
             service_type="wms",
             url="https://wms.gebco.net/mapserv?request=getcapabilities&service=wms&version=1.3.0",
-            version="1.3.0"
+            version="1.3.0",
         )
 
         WMS._EOmaps_info = type(self).GEBCO.__doc__
-        WMS._EOmaps_source_code = (
-            "m.add_wms.GEBCO.add_layer.<layer>(transparent=True)"
-        )
+        WMS._EOmaps_source_code = "m.add_wms.GEBCO.add_layer.<layer>(transparent=True)"
         WMS.__doc__ = type(self).GEBCO.__doc__
         return WMS
 
