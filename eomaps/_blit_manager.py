@@ -510,7 +510,7 @@ class BlitManager(LayerParser):
         if _log.getEffectiveLevel() <= 10:
             logmsg = (
                 f"Adding {'persistent' if persistent else 'single-shot'} "
-                f"layer change action for: '{layer}'"
+                f"layer change action for: '{layer if layer else 'all layers'}': {getattr(func, '__qualname__', func)}"
             )
             _log.debug(logmsg)
 
