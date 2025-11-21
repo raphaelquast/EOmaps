@@ -913,6 +913,29 @@ class Maps(MapsBase):
 
         return m2
 
+    @_add_to_docstring(
+        prefix=(
+            "Convenience wrapper around `Figure.add_subplot` to"
+            " add a new matpltolib-subplot to a figure.\n "
+        ),
+        insert={
+            "Other Parameters": (
+                "layer : str\n"
+                "    The layer at which the subplot should be visible.\n"
+                "    If None, the layer of the calling Maps-object is used.",
+                1,
+            )
+        },
+    )
+    @wraps(
+        plt.Figure.add_subplot,
+        assigned=("__doc__", "__annotations__", "__type_params__"),
+    )
+    def new_subplot(self, *args, layer=None, **kwargs):
+        ax = self.f.add_subplot(**kwargs)
+        self.BM.add_artist(ax, layer=layer)
+        return ax
+
     def set_data(
         self,
         data=None,
