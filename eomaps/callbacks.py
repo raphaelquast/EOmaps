@@ -654,11 +654,11 @@ class _MoveClickPickCallbacks(_CallbacksBase):
         if permanent is False:
             # make the annotation temporary
             self._temporary_artists.append(marker)
-            self.m.BM.add_artist(marker, layer)
+            self.m.BM.add_artist(marker, layer=layer)
         elif permanent is None:
-            self.m.BM.add_bg_artist(marker, layer)
+            self.m.BM.add_bg_artist(marker, layer=layer)
         elif permanent is True:
-            self.m.BM.add_artist(marker, layer)
+            self.m.BM.add_artist(marker, layer=layer)
 
             if not hasattr(self, "permanent_markers"):
                 self.permanent_markers = [marker]

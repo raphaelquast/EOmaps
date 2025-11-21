@@ -315,7 +315,7 @@ class _EditorBase:
             fontfamily="monospace",
         )
 
-        self.m.BM.add_artist(self._info_artist, "all")
+        self.m.BM.add_artist(self._info_artist, layer="all")
 
         self._info_cids.add(
             self.m.f.canvas.mpl_connect("button_press_event", self._on_press)

@@ -304,7 +304,7 @@ class InsetMaps(Maps):
         l = self._parent.ax.add_artist(l)
         l.set_clip_on(False)
 
-        self.BM.add_bg_artist(l, self.layer, draw=False)
+        self.BM.add_bg_artist(l, layer=self.layer, draw=False)
         self._indicator_lines.append((l, m))
 
         if isinstance(m, InsetMaps):
@@ -326,7 +326,7 @@ class InsetMaps(Maps):
             l2.set_clip_on(True)
 
             l2 = m.ax.add_artist(l2)
-            self.BM.add_bg_artist(l2, self.layer)
+            self.BM.add_bg_artist(l2, layer=self.layer)
             self._indicator_lines.append((l2, m))
 
         self._update_indicator_lines()
