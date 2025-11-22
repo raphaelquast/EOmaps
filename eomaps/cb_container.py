@@ -748,10 +748,10 @@ class _ClickContainer(_CallbackContainer):
                 self._m.cb.pick._set_artist(self._m.coll)
                 self._m.cb.pick._init_cbs()
                 self._m.cb._methods.add("pick")
-        except Exception as ex:
+        except Exception:
             _log.exception(
                 "EOmaps: There was an error while trying to initialize "
-                f"pick-callbacks!",
+                "pick-callbacks!",
             )
 
     def _add_callback(
