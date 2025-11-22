@@ -8,6 +8,7 @@
 import logging
 from types import SimpleNamespace
 from functools import partial, wraps
+from contextlib import contextmanager
 from itertools import chain
 from weakref import proxy
 
@@ -240,6 +241,43 @@ class _CallbackContainer(object):
 
         if self._method == "click":
             self._m.cb._click_move.share_events(*args)
+
+    @contextmanager
+    def make_artists_temporary(self, layer=None):
+        """
+        A contextmanager to make all artists created within the context
+        temporary (e.g. they are removed on the next relevant event)
+
+        Parameters
+        ----------
+        layer : str, optional
+            The layer at which the artists will be added.
+            If None, the layer of the calling Maps-object is used
+            The default is None.
+
+        Exampes
+        -------
+
+        >>> m = Maps()
+        >>> m.add_title("Click on the map to remove temporary features")
+        >>> m.add_feature.preset.coastline()
+        >>> with m.cb.click.make_artists_temporary():
+        >>>     m.ax.plot([-60,-20,10,20,30,40], "g.-", label="A temporary line")
+        >>>     m.ax.text(45, 50, "A temporary Text", c="r")
+        >>>     m.ax.legend(title="A temporary legend")
+
+        See Also
+        --------
+        add_temporary_artist:  Make one (or more) artists temporary.
+
+        """
+        try:
+            artists_before = set(chain(*[ax.get_children() for ax in self._m.f.axes]))
+            yield
+        finally:
+            artists_after = set(chain(*[ax.get_children() for ax in self._m.f.axes]))
+            new_artists = artists_after.difference(artists_before)
+            self.add_temporary_artist(*new_artists, layer=layer)
 
     def add_temporary_artist(self, *artists, layer=None):
         """
