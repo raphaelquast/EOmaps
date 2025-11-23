@@ -81,6 +81,16 @@ test = [
     "pytest-mpl"
 ]
 
+docs = [
+    "docutils",
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "myst-nb",
+    "pydata-sphinx-theme",
+    "myst-sphinx-gallery==0.2.2"
+]
+
 [project.scripts]
 eomaps = "eomaps.scripts.open:cli"
 
