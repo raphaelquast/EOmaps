@@ -239,7 +239,16 @@ class WMS_Austria(WMSBase):
             self._Wien_layers = []
             _log_problem(self.name)
 
-        self.wmslayers = [*self._AT_layers, *self._Wien_layers]
+        try:
+            self._Wien_data_layers = [
+                "WienData__" + key
+                for key in self.m.add_wms.Austria.Wien_data.add_layer.__dict__
+            ]
+        except Exception:
+            self._Wien_data_layers = []
+            _log_problem(self.name)
+
+        self.wmslayers = [*self._AT_layers, *self._Wien_layers, *self._Wien_data_layers]
 
     def do_add_layer(self, wmslayer, layer):
         if wmslayer in self._AT_layers:
@@ -251,6 +260,11 @@ class WMS_Austria(WMSBase):
             wms = getattr(
                 self.m.add_wms.Austria.Wien_basemap.add_layer,
                 remove_prefix(wmslayer, "Wien__"),
+            )
+        elif wmslayer in self._Wien_data_layers:
+            wms = getattr(
+                self.m.add_wms.Austria.Wien_data.add_layer,
+                remove_prefix(wmslayer, "WienData__"),
             )
 
         wms(layer=layer, transparent=True)
