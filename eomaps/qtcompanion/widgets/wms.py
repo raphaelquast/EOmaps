@@ -6,7 +6,7 @@
 import logging
 
 from qtpy import QtWidgets
-from qtpy.QtCore import Qt, QThread, QObject, Signal, Slot, QTimer
+from qtpy.QtCore import Qt, QObject, Signal, Slot
 from qtpy.QtGui import QStatusTipEvent
 
 from ... import Maps, _data_dir
@@ -566,7 +566,7 @@ class WMS_OpenPlanetary(WMSBase):
                 for i in m.add_wms.OpenPlanetary.Moon.add_layer.__dict__
                 if not i.startswith("_")
             ]
-        except Exception as ex:
+        except Exception:
             self._moon = []
             _log_problem(self.name)
 
@@ -576,7 +576,7 @@ class WMS_OpenPlanetary(WMSBase):
                 for i in m.add_wms.OpenPlanetary.Mars.add_layer.__dict__
                 if not i.startswith("_")
             ]
-        except Exception as ex:
+        except Exception:
             self._mars = []
             _log_problem(self.name)
 
@@ -669,8 +669,8 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                     self._submenus = json.load(file)
             except Exception:
                 _log.error(
-                    f"EOmaps: Unable to load cached wms-layers from: \n"
-                    "{wms_layers_dumppath}",
+                    "EOmaps: Unable to load cached wms-layers from: \n"
+                    f"{wms_layers_dumppath}",
                 )
                 self._submenus = dict()
         else:
@@ -777,7 +777,7 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             self.sub_menus[wmsname].aboutToShow.disconnect()
 
             self._fetch_submenu(wmsname)
-        except Exception as ex:
+        except Exception:
             _log.error(
                 f"EOmaps: problem while trying to fetch the submenu for {wmsname}",
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
@@ -802,23 +802,6 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
         Maps._companion_wms_submenus[wmsname] = sub_features
 
         self._update_layer_cache(wmsname, wms.wmslayers)
-
-    def populate_submenu(self, wmsname=None):
-        if wmsname not in self._submenus:
-            _log.info("No layers found for the WMS: {wmsname}")
-            return
-        else:
-            sub_features = self.select_wmslayers(wmsname, self._submenus[wmsname])
-
-        try:
-            submenu = self.sub_menus[wmsname]
-
-            for wmslayer in sub_features:
-                action = submenu.addAction(wmslayer)
-                action.triggered.connect(self.menu_callback_factory(wmsname, wmslayer))
-
-        except Exception:
-            _log.error(f"There was a problem with the WMS: {wmsname}")
 
     def _group_services(self, iterable, splits=2):
         # group objects by prefix (before last underscore)
