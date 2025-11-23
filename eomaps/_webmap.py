@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from urllib3.exceptions import InsecureRequestWarning
 from io import BytesIO
 from pprint import PrettyPrinter
+from textwrap import dedent
 
 from packaging import version
 
@@ -336,6 +337,17 @@ class _WebMapLayer:
 
         return style
 
+    def _get_layer_info_text(self):
+        """Get layer-specific info text of a given layer"""
+        t = ""
+        abstract = getattr(self.wms_layer, "abstract", None)
+        if abstract:
+            t += f"**Abstract**: <i>{abstract}</i>\n  \n----  \n  "
+
+        t += f"{dedent(getattr(self, '_EOmaps_info', ''))}"
+
+        return t
+
 
 class _WMTSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
@@ -440,7 +452,7 @@ class _WMTSLayer(_WebMapLayer):
 
         # attach the info to the artist so it can be identified by the companion widget
         if hasattr(self, "_EOmaps_info"):
-            art._EOmaps_info = self._EOmaps_info
+            art._EOmaps_info = self._get_layer_info_text()
         if hasattr(self, "_EOmaps_source_code"):
             art._EOmaps_source_code = self._EOmaps_source_code
 
@@ -581,12 +593,10 @@ class _WMSLayer(_WebMapLayer):
         art = self._add_wms(
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
-
         art.set_label(f"WebMap service: {self.name}")
-
         # attach the info to the artist so it can be identified by the companion widget
         if hasattr(self, "_EOmaps_info"):
-            art._EOmaps_info = self._EOmaps_info
+            art._EOmaps_info = self._get_layer_info_text()
         if hasattr(self, "_EOmaps_source_code"):
             art._EOmaps_source_code = self._EOmaps_source_code
 
