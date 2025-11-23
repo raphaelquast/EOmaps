@@ -255,8 +255,8 @@ class _CallbackContainer(object):
             If None, the layer of the calling Maps-object is used
             The default is None.
 
-        Exampes
-        -------
+        Examples
+        --------
 
         >>> m = Maps()
         >>> m.add_title("Click on the map to remove temporary features")
