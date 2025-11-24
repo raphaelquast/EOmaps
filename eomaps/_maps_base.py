@@ -1222,7 +1222,7 @@ class MapsBase(metaclass=_MapsMeta):
 
     def transform_plot_to_lonlat(self, x, y):
         """
-        Transfrom plot-coordinates to longitude and latitude values.
+        Transform plot-coordinates to longitude and latitude values.
 
         Parameters
         ----------
@@ -1231,15 +1231,14 @@ class MapsBase(metaclass=_MapsMeta):
 
         Returns
         -------
-        lon, lat : array-like
-            The coordinates transformed to longitude and latitude values.
+        lon, lat : The coordinates transformed to longitude and latitude values.
 
         """
         return self._transf_plot_to_lonlat.transform(x, y)
 
     def transform_lonlat_to_plot(self, lon, lat):
         """
-        Transfrom longitude and latitude values to plot coordinates.
+        Transform longitude and latitude values to plot coordinates.
 
         Parameters
         ----------
@@ -1248,8 +1247,7 @@ class MapsBase(metaclass=_MapsMeta):
 
         Returns
         -------
-        x, y : array-like
-            The coordinates transformed to the plot-coordinate system.
+        x, y : The coordinates transformed to the plot-coordinate system.
 
         """
         return self._transf_lonlat_to_plot.transform(lon, lat)
