@@ -272,10 +272,20 @@ class _CallbackContainer(object):
 
         """
         try:
-            artists_before = set(chain(*[ax.get_children() for ax in self._m.f.axes]))
+            artists_before = set(
+                chain(
+                    *[ax.get_children() for ax in self._m.f.axes],
+                    self._m.f.get_children(),
+                )
+            )
             yield
         finally:
-            artists_after = set(chain(*[ax.get_children() for ax in self._m.f.axes]))
+            artists_after = set(
+                chain(
+                    *[ax.get_children() for ax in self._m.f.axes],
+                    self._m.f.get_children(),
+                )
+            )
             new_artists = artists_after.difference(artists_before)
             self.add_temporary_artist(*new_artists, layer=layer)
 
