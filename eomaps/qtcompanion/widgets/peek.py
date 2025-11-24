@@ -504,7 +504,7 @@ class PeekTabs(QtWidgets.QTabWidget):
         # a tab that is used to create new tabs
         newtabwidget = NewPeekTabWidget(peektabs=self)
         newtablayout = QtWidgets.QHBoxLayout()
-        l = QtWidgets.QLabel("Click to open a new <b>peek layer</b> tab!")
+        l = QtWidgets.QLabel("Click to <b>compare layers</b>!")
         newtablayout.addWidget(l)
         newtabwidget.setLayout(newtablayout)
 
