@@ -186,7 +186,7 @@ class _CallbacksBase:
             else:
                 if not crs_is_lonlat:
                     xlabel, ylabel = "x", "y"
-                    lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
+                    lon, lat = self.m.transform_plot_to_lonlat(*pos)
                     lon, lat = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
                         for i in (lon, lat)

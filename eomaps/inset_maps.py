@@ -167,7 +167,7 @@ class InsetMaps(Maps):
         verts = s.get_verts()
 
         verts = self.ax.transData.inverted().transform(s.get_verts())
-        verts = np.column_stack(self._transf_plot_to_lonlat.transform(*verts.T))
+        verts = np.column_stack(self.transform_plot_to_lonlat(*verts.T))
 
         return verts
 
