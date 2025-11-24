@@ -2,13 +2,18 @@
 Multiple Maps and Data-classification
 =====================================
 
--  Create grids of maps via ``MapsGrid``
--  | Classify your data via ``m.set_classify_specs(scheme, **kwargs)``
-   | (using classifiers provided by the ``mapclassify`` module)
--  | Add individual callback functions to each subplot via
-   | ``m.cb.click.attach``, ``m.cb.pick.attach``
--  | Share events between Maps-objects of the MapsGrid via
-   | ``mg.share_click_events()`` and ``mg.share_pick_events()``
+.. currentmodule:: eomaps.eomaps
+
+- Create additional :py:class:`Maps` objects on a figure with :py:meth:`Maps.new_map()`
+- | Classify your data via :py:attr:`Maps.set_classify`
+  | (using classifiers provided by the ``mapclassify`` module)
+- Set the way how datasets are represented on the map with :py:attr:`Maps.set_shape`
+- Add callback functions that are executed if you click on a map with :py:attr:`Maps.cb.click.attach`
+- Add callback functions that are executed if you click on a datapoint of a map with :py:attr:`Maps.cb.pick.attach`
+- Share callback events between :py:class:`Maps`-objects with
+  :py:meth:`Maps.cb.click.share_events()` and :py:meth:`Maps.cb.pick.share_events()`
+- Use :py:meth:`Maps.apply_layout` to restore a previously saved map-layout.
+
 
 .. image:: /_static/example_images/example_multiple_maps.gif
     :width: 75%

@@ -19,12 +19,12 @@ m3 = m.new_map(ax=133, crs=3035)
 
 # --------- set specs for the first map
 m.text(0.5, 1.1, "epsg=4326", transform=m.ax.transAxes)
-m.set_classify_specs(scheme="EqualInterval", k=10)
+m.set_classify.EqualInterval(k=10)
 
 # --------- set specs for the second map
 m2.text(0.5, 1.1, "Stereographic", transform=m2.ax.transAxes)
 m2.set_shape.rectangles()
-m2.set_classify_specs(scheme="Quantiles", k=8)
+m2.set_classify.Quantiles(k=8)
 
 # --------- set specs for the third map
 m3.text(0.5, 1.1, "epsg=3035", transform=m3.ax.transAxes)
@@ -53,7 +53,7 @@ for m_i in [m, m2, m3]:
 m21 = m2.new_layer(layer="layer 2")
 m21.inherit_data(m2)
 m21.set_shape.delaunay_triangulation(mask_radius=0.5)
-m21.set_classify_specs(scheme="Quantiles", k=4)
+m21.set_classify.Quantiles(k=4)
 m21.plot_map(cmap="RdYlBu")
 m21.add_colorbar(extend="neither")
 # add an annotation that is only executed if "layer 2" is active
