@@ -20,4 +20,4 @@ A example how to quickly visualize a dataset.
    :align: center
 
 
-.. literalinclude:: /../../examples/01-Maps/basics.py
+.. literalinclude:: /../../examples/00-basics/basics.py
