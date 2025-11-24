@@ -18,7 +18,8 @@ def cb_location_indicator_grid(pos, **kwargs):
         # add single gridline (with labels)
         m.add_gridlines(d=([lon], [lat]), labels=True, dynamic=True)
         # add bounded grid around intersection-point
-        m.add_gridlines(d=(lon_g, lat_g), bounds = bounds, dynamic=True)
+        m.add_gridlines(d=(lon_g, lat_g), bounds=bounds, dynamic=True)
+
 
 # attach the callback
 m.cb.move.attach(cb_location_indicator_grid)
