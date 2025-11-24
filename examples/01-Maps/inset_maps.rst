@@ -18,4 +18,4 @@ Quickly create nice inset-maps to show details for specific regions.
     :align: center
 
 
-.. literalinclude:: ../../../../examples/01-Maps/inset_maps.py
+.. literalinclude:: /../../examples/01-Maps/inset_maps.py
