@@ -916,9 +916,9 @@ class DataManager:
                 self.m.ax.add_collection(coll, autolim=False)
 
             if self.m._coll_dynamic:
-                self.m.BM.add_artist(coll, self.layer)
+                self.m.BM.add_artist(coll, layer=self.layer)
             else:
-                self.m.BM.add_bg_artist(coll, self.layer)
+                self.m.BM.add_bg_artist(coll, layer=self.layer)
 
             self.m._coll = coll
 
