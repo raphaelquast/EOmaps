@@ -458,12 +458,47 @@ class LayoutEditor:
         self.blit_artists()
 
     def blit_artists(self):
-        artists = [*self._ax_picked]
+        self.m.BM.blit_artists([], self._current_bg, blit=False)
 
-        if getattr(self, "_info_text", None) is not None:
-            artists.append(self._info_text)
+        # get a "sorted" list of axes where the picked-axes is last
+        # to make sure it is blitted on top of all other axes
+        axes = reversed(dict.fromkeys((*self._ax_picked, *self.f.axes)))
+        for ax in axes:
+            if curr_bg := getattr(ax, "_curr_bg", None):
+                renderer = self.m.BM._get_renderer()
 
-        self.m.BM.blit_artists(artists, self._current_bg)
+                x0, y0, x1, y1 = ax.bbox.bounds
+                (x0, y0), (x1, y1) = np.floor([x0, y0]), np.ceil([x1, y1])
+                bbox = Bbox.from_bounds(x0, y0, x1, y1)
+
+                bbox = ax.bbox
+                x0, y0, w, h = bbox.x0, bbox.y0, bbox.width, bbox.height
+
+                x = curr_bg.get_extents()
+                ncols, nrows = x[2] - x[0], x[3] - x[1]
+
+                argb = (
+                    np.frombuffer(curr_bg, dtype=np.uint8).reshape((nrows, ncols, 4))
+                )[::-1, :, :]
+
+                gc = renderer.new_gc()
+                gc.set_clip_rectangle(bbox)
+
+                from scipy.ndimage import zoom
+
+                argb = zoom(
+                    argb, (h / ax._init_size[1], w / ax._init_size[0], 1), order=0
+                )
+
+                renderer.draw_image(gc, x0, y0, argb)
+                gc.restore()
+
+        self.m.BM.blit_artists(self.f.axes, None, blit=False)
+
+        if getattr(self, "_info_text", None) is not None and not self._info_text_hidden:
+            self.m.BM.blit_artists([self._info_text], None, blit=False)
+
+        self.f.canvas.blit()
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -511,6 +546,9 @@ class LayoutEditor:
     def cb_key_press(self, event):
         # release shift key on every keypress
         self._shift_pressed = False
+        if event.key == "r":
+            self.refetch_axes_images()
+            return
 
         if (event.key == self.modifier) and (not self.modifier_pressed):
             self._make_draggable()
@@ -624,6 +662,10 @@ class LayoutEditor:
         return False
 
     def _make_draggable(self, filepath=None):
+        for ax in self.f.axes:
+            ax._curr_bg = self.f.canvas.copy_from_bbox(ax.bbox)
+            ax._init_size = (ax.bbox.width, ax.bbox.height)
+
         # Uncheck active pan/zoom actions of the matplotlib toolbar.
         # use a try-except block to avoid issues with ipympl in jupyter notebooks
         # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
@@ -721,7 +763,7 @@ class LayoutEditor:
                     self._add_revert_props(child, "facecolor")
 
                     # make sure patches are visible (and re-drawn on draw)
-                    child.set_visible(True)
+                    child.set_visible(False)
                     child.set_facecolor("w")
                     child.set_alpha(0.75)  # for overlapping axes
 
@@ -739,7 +781,10 @@ class LayoutEditor:
 
         self.m._emit_signal("layoutEditorActivated")
 
-        self.m.redraw()
+        # self.m.redraw()
+        self.fetch_current_background()
+
+        self.blit_artists()
 
     def _add_revert_props(self, child, *args):
         for prop in args:
@@ -822,6 +867,24 @@ class LayoutEditor:
         except Exception:
             pass
 
+    def refetch_axes_images(self):
+        # remember visibility of info-textbox
+        if self._info_text and self._info_text.get_visible() is False:
+            info_txt_hidden = True
+        else:
+            info_txt_hidden = False
+
+        self._undo_draggable()
+        self.m.f.canvas.draw()
+        self._make_draggable()
+
+        # hide info-text in case it was hidden before
+        if self._info_text and info_txt_hidden:
+            self._info_text.set_visible(False)
+            self._info_text_hidden = True
+
+        self.blit_artists()
+
     def _reset_callbacks(self):
         # disconnect all callbacks of the layout-editor
         while len(self.cids) > 0:
@@ -874,6 +937,7 @@ class LayoutEditor:
             markerfacecolor="steelblue",
             markeredgecolor="none",
             ms=(snapx + snapy) / 6,
+            animated=True,
         )
         self._snap_grid_artist = self.m.f.add_artist(l)
 
