@@ -609,15 +609,11 @@ class LayoutEditor:
         elif ax in self.maxes:
             return True
         else:
-            for layer in (self.m.BM.bg_layer, "__SPINES__", "all"):
+            for layer in (*self.m.BM._get_active_layers_alphas[0], "__SPINES__", "all"):
                 # logos are put on the spines-layer to appear on top of spines!
-                if ax in self.m.BM.get_bg_artists(
-                    self.m.BM._parse_multi_layer_str(layer)[0]
-                ):
+                if ax in self.m.BM.get_bg_artists(layer):
                     return True
-                elif ax in self.m.BM.get_artists(
-                    self.m.BM._get_active_layers_alphas[0]
-                ):
+                elif ax in self.m.BM.get_artists(layer):
                     return True
 
         return False
