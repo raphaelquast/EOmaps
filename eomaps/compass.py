@@ -270,8 +270,8 @@ class Compass:
 
     def _get_transform(self, pos):
 
-        lon, lat = self._m._transf_plot_to_lonlat.transform(*pos)
-        x, y = self._m._transf_lonlat_to_plot.transform([lon, lon], [lat, lat + 0.01])
+        lon, lat = self._m.transform_plot_to_lonlat(*pos)
+        x, y = self._m.transform_lonlat_to_plot([lon, lon], [lat, lat + 0.01])
 
         try:
             ang = -np.arctan2(x[1] - x[0], y[1] - y[0])

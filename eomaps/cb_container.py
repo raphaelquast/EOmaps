@@ -8,6 +8,7 @@
 import logging
 from types import SimpleNamespace
 from functools import partial, wraps
+from contextlib import contextmanager
 from itertools import chain
 from weakref import proxy
 
@@ -241,31 +242,89 @@ class _CallbackContainer(object):
         if self._method == "click":
             self._m.cb._click_move.share_events(*args)
 
-    def add_temporary_artist(self, artist, layer=None):
+    @contextmanager
+    def make_artists_temporary(self, layer=None):
+        """
+        A contextmanager to make all artists created within the context
+        temporary (e.g. they are removed on the next relevant event)
+
+        Parameters
+        ----------
+        layer : str, optional
+            The layer at which the artists will be added.
+            If None, the layer of the calling Maps-object is used
+            The default is None.
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> m.add_title("Click on the map to remove temporary features")
+        >>> m.add_feature.preset.coastline()
+        >>> with m.cb.click.make_artists_temporary():
+        >>>     m.ax.plot([-60,-20,10,20,30,40], "g.-", label="A temporary line")
+        >>>     m.ax.text(45, 50, "A temporary Text", c="r")
+        >>>     m.ax.legend(title="A temporary legend")
+
+        See Also
+        --------
+        add_temporary_artist:  Make one (or more) artists temporary.
+
+        """
+        try:
+            artists_before = set(
+                chain(
+                    *[ax.get_children() for ax in self._m.f.axes],
+                    self._m.f.get_children(),
+                )
+            )
+            yield
+        finally:
+            artists_after = set(
+                chain(
+                    *[ax.get_children() for ax in self._m.f.axes],
+                    self._m.f.get_children(),
+                )
+            )
+            new_artists = artists_after.difference(artists_before)
+            self.add_temporary_artist(*new_artists, layer=layer)
+
+    def add_temporary_artist(self, *artists, layer=None):
         """
         Make an artist temporary (remove it from the map at the next event).
 
         Parameters
         ----------
-        artist : matplotlib.artist
-            The artist to use
+        artists : matplotlib.artist
+            The artist(s) to use as temporary artists.
         layer : str or None, optional
             The layer to put the artist on.
             If None, the layer of the used Maps-object is used. (e.g. `m.layer`)
+        Examples
+        --------
+        Add artists that will be removed with the next click on the map.
+
+        >>> m = Maps()
+        >>> text = m.ax.text(45, 45, "click map to remove")
+        >>> line, = m.ax.plot([10,20,50])
+        >>>
+        >>> m.cb.click.add_temporary_artist(text, line)
+
         """
         if layer is None:
             layer = self._m.layer
 
-        # in case the artist has already been added as normal or background
-        # artist, remove it first!
-        if artist in chain(*self._m.BM._bg_artists.values()):
-            self._m.BM.remove_bg_artist(artist)
+        for artist in artists:
+            # in case the artist has already been added as normal or background
+            # artist, remove it first!
+            if artist in chain(*self._m.BM._bg_artists.values()):
+                self._m.BM.remove_bg_artist(artist)
 
-        if artist in chain(*self._m.BM._artists.values()):
-            self._m.BM.remove_artist(artist)
+            if artist in chain(*self._m.BM._artists.values()):
+                self._m.BM.remove_artist(artist)
 
-        self._m.BM.add_artist(artist, layer=layer)
-        self._temporary_artists.append(artist)
+            self._m.BM.add_artist(artist, layer=layer)
+            self._temporary_artists.append(artist)
 
     def _execute_cb(self, layer):
         """
@@ -737,10 +796,10 @@ class _ClickContainer(_CallbackContainer):
                 self._m.cb.pick._set_artist(self._m.coll)
                 self._m.cb.pick._init_cbs()
                 self._m.cb._methods.add("pick")
-        except Exception as ex:
+        except Exception:
             _log.exception(
                 "EOmaps: There was an error while trying to initialize "
-                f"pick-callbacks!",
+                "pick-callbacks!",
             )
 
     def _add_callback(

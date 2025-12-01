@@ -1220,6 +1220,38 @@ class MapsBase(metaclass=_MapsMeta):
             self.crs_plot,
         )
 
+    def transform_plot_to_lonlat(self, x, y):
+        """
+        Transform plot-coordinates to longitude and latitude values.
+
+        Parameters
+        ----------
+        x, y : float or array-like
+            The coordinates values in the coordinate-system of the plot.
+
+        Returns
+        -------
+        lon, lat : The coordinates transformed to longitude and latitude values.
+
+        """
+        return self._transf_plot_to_lonlat.transform(x, y)
+
+    def transform_lonlat_to_plot(self, lon, lat):
+        """
+        Transform longitude and latitude values to plot coordinates.
+
+        Parameters
+        ----------
+        lon, lat : float or array-like
+            The longitude and latitude values to transform.
+
+        Returns
+        -------
+        x, y : The coordinates transformed to the plot-coordinate system.
+
+        """
+        return self._transf_lonlat_to_plot.transform(lon, lat)
+
     def on_layer_activation(self, func, layer=None, persistent=False, **kwargs):
         """
         Attach a callback that is executed if the associated layer is activated.

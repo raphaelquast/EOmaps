@@ -913,6 +913,29 @@ class Maps(MapsBase):
 
         return m2
 
+    @_add_to_docstring(
+        prefix=(
+            "Convenience wrapper around `Figure.add_subplot` to"
+            " add a new matpltolib-subplot to a figure.\n "
+        ),
+        insert={
+            "Other Parameters": (
+                "layer : str\n"
+                "    The layer at which the subplot should be visible.\n"
+                "    If None, the layer of the calling Maps-object is used.",
+                1,
+            )
+        },
+    )
+    @wraps(
+        plt.Figure.add_subplot,
+        assigned=("__doc__", "__annotations__", "__type_params__"),
+    )
+    def new_subplot(self, *args, layer=None, **kwargs):
+        ax = self.f.add_subplot(**kwargs)
+        self.BM.add_artist(ax, layer=layer)
+        return ax
+
     def set_data(
         self,
         data=None,
@@ -1280,7 +1303,7 @@ class Maps(MapsBase):
             _log.info(f"Centering Map to:\n    {r['display_name']}")
 
     def _set_gdf_path_boundary(self, gdf, set_extent=True):
-        geom = gdf.to_crs(self.crs_plot).unary_union
+        geom = gdf.to_crs(self.crs_plot).union_all()
         if "Polygon" in geom.geom_type:
             geom = geom.boundary
 
@@ -1861,9 +1884,9 @@ class Maps(MapsBase):
             for art, prefix in zip(artists, prefixes):
                 art.set_label(f"EOmaps GeoDataframe ({prefix.lstrip('_')}, {len(gdf)})")
                 if permanent is True:
-                    self.BM.add_bg_artist(art, layer)
+                    self.BM.add_bg_artist(art, layer=layer)
                 else:
-                    self.BM.add_artist(art, layer)
+                    self.BM.add_artist(art, layer=layer)
         return artists
 
     def _handle_gdf(
@@ -2582,7 +2605,7 @@ class Maps(MapsBase):
             raise TypeError(f"EOmaps: '{connect}' is not a valid connection-method!")
 
         art.set_label(f"Line ({connect})")
-        self.BM.add_bg_artist(art, layer)
+        self.BM.add_bg_artist(art, layer=layer)
 
         if mark_points:
             zorder = kwargs.get("zorder", 10)
@@ -2599,7 +2622,7 @@ class Maps(MapsBase):
                 (art2,) = self.ax.plot(xplot, yplot, mark_points, zorder=zorder, lw=0)
 
             art2.set_label(f"Line Marker ({connect})")
-            self.BM.add_bg_artist(art2, layer)
+            self.BM.add_bg_artist(art2, layer=layer)
 
         return out_d_int, out_d_tot
 
@@ -2680,7 +2703,7 @@ class Maps(MapsBase):
         figax.set_axis_off()
         _ = figax.imshow(im, aspect="equal", zorder=999, interpolation_stage="rgba")
 
-        self.BM.add_bg_artist(figax, layer)
+        self.BM.add_bg_artist(figax, layer=layer)
 
         if fix_position:
             fixed_pos = (
@@ -3246,9 +3269,9 @@ class Maps(MapsBase):
         self._coll = coll
 
         if dynamic is True:
-            self.BM.add_artist(coll, layer)
+            self.BM.add_artist(coll, layer=layer)
         else:
-            self.BM.add_bg_artist(coll, layer)
+            self.BM.add_bg_artist(coll, layer=layer)
 
         if dynamic is True:
             self.BM.update(clear=False)
@@ -3811,7 +3834,7 @@ class Maps(MapsBase):
             )
 
             self.ax.add_artist(self._companion_map_indicator)
-            self.BM.add_artist(self._companion_map_indicator, "all")
+            self.BM.add_artist(self._companion_map_indicator, layer="all")
 
         self.BM.update()
 
@@ -3828,7 +3851,6 @@ class Maps(MapsBase):
                     break
 
         return clicked_map
-
 
     def _open_companion_widget(self, xy=None):
         """
@@ -3915,7 +3937,7 @@ class Maps(MapsBase):
             else:
                 self._companion_widget = MenuWindow(m=self)
                 self._companion_widget.toggle_always_on_top()
-                self._companion_widget.hide() # hide on init
+                self._companion_widget.hide()  # hide on init
 
             # connect any pending signals
             for key, funcs in getattr(self, "_connect_signals_on_init", dict()).items():

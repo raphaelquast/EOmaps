@@ -186,7 +186,7 @@ class _CallbacksBase:
             else:
                 if not crs_is_lonlat:
                     xlabel, ylabel = "x", "y"
-                    lon, lat = self.m._transf_plot_to_lonlat.transform(*pos)
+                    lon, lat = self.m.transform_plot_to_lonlat(*pos)
                     lon, lat = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)
                         for i in (lon, lat)
@@ -654,11 +654,11 @@ class _MoveClickPickCallbacks(_CallbacksBase):
         if permanent is False:
             # make the annotation temporary
             self._temporary_artists.append(marker)
-            self.m.BM.add_artist(marker, layer)
+            self.m.BM.add_artist(marker, layer=layer)
         elif permanent is None:
-            self.m.BM.add_bg_artist(marker, layer)
+            self.m.BM.add_bg_artist(marker, layer=layer)
         elif permanent is True:
-            self.m.BM.add_artist(marker, layer)
+            self.m.BM.add_artist(marker, layer=layer)
 
             if not hasattr(self, "permanent_markers"):
                 self.permanent_markers = [marker]

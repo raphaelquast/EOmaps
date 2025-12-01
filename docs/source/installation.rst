@@ -72,6 +72,7 @@ In addition, you can use the following dependency-groups to activate only select
 - ``pip install eomaps[io]`` Add support for ``pandas``, ``xarray``, ``geopandas`` and ``rioxarray``
 - ``pip install eomaps[shade]`` Add capabilities to visualize extremely large datasets (via ``datashader``)
 - ``pip install eomaps[classify]`` Add support for ``mapclassify`` to classify datasets
+- ``pip install eomaps[docs]`` Install all required dependencies to build the docs
 
 It is also possible to combine dependency-groups, e.g.: ``pip install eomaps[wms, gui]``.
 

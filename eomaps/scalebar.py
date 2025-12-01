@@ -508,14 +508,13 @@ class ScaleBar:
     def _get_autopos(self, pos):
         # try to position the colorbar at the lower right corner of the axis
         x0, y0 = (self._m.ax.transAxes + self._m.ax.transData.inverted()).transform(pos)
-        lon, lat = self._m._transf_plot_to_lonlat.transform(x0, y0)
+        lon, lat = self._m.transform_plot_to_lonlat(x0, y0)
 
         if not all(np.isfinite([x0, y0])):
             # if it fails, try to position it at the center of the extent
             extent = self._m.get_extent()
-            lon, lat = self._m._transf_plot_to_lonlat.transform(
-                np.mean(extent[:2]),
-                np.mean(extent[2:]),
+            lon, lat = self._m.transform_plot_to_lonlat(
+                np.mean(extent[:2]), np.mean(extent[2:])
             )
         return lon, lat
 
@@ -1455,9 +1454,7 @@ class ScaleBar:
             # reference point of the scalebar
             xdata, ydata = event.xdata, event.ydata
             if xdata is not None and ydata is not None:
-                lon0, lat0 = self._m._transf_plot_to_lonlat.transform(
-                    event.xdata, event.ydata
-                )
+                lon0, lat0 = self._m.transform_plot_to_lonlat(event.xdata, event.ydata)
                 self._pick_start_offset = self._lon - lon0, self._lat - lat0
             else:
                 # None event coordinates happen if you click outside
@@ -1481,9 +1478,7 @@ class ScaleBar:
 
         ox, oy = self._pick_start_offset
         try:
-            lon, lat = self._m._transf_plot_to_lonlat.transform(
-                event.xdata, event.ydata
-            )
+            lon, lat = self._m.transform_plot_to_lonlat(event.xdata, event.ydata)
         except Exception:
             _log.info("EOmaps: Unable to position scalebar.")
             return
