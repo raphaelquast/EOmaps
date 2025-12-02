@@ -243,7 +243,7 @@ class DataManager:
                 "EOmaps: provided dataset has more than 2 dimensions..."
                 f"({data[parameter].dims})."
             )
-            z_data = data[parameter].values
+            z_data = data[parameter]  # .values
             data_dims = data[parameter].dims
         else:
             assert len(data.dims) <= 2, (
@@ -251,7 +251,7 @@ class DataManager:
                 f"({data.dims})."
             )
 
-            z_data = data.values
+            z_data = data  # .values
             data_dims = data.dims
             parameter = data.name
 
@@ -430,7 +430,9 @@ class DataManager:
         z_data, xorig, yorig, ids, parameter = self._identify_data()
 
         # check if Fill-value is provided, and mask the data accordingly
-        if self.m.data_specs.encoding:
+        # TODO currently this is only applied to numpy datasets
+        # (e.g. not to lazy xarray.Datasets handled with dask)
+        if self.m.data_specs.encoding and isinstance(z_data, np.ndarray):
             fill_value = self.m.data_specs.encoding.get("_FillValue", None)
             if fill_value:
                 z_data = np.ma.MaskedArray(
@@ -549,7 +551,7 @@ class DataManager:
         props["xorig"] = np.asanyarray(xorig)
         props["yorig"] = np.asanyarray(yorig)
         props["ids"] = ids
-        props["z_data"] = np.asanyarray(z_data)
+        props["z_data"] = z_data
         props["x0"] = np.asanyarray(x0)
         props["y0"] = np.asanyarray(y0)
 
@@ -1450,7 +1452,13 @@ class DataManager:
         # (to pick the correct value, we need to pick the transposed one!)
 
         if self.m.shape.name == "shade_raster" and self.x0_1D is not None:
-            val = self.z_data.T.flat[ind]
+            if isinstance(self.z_data, np.ndarray):
+                val = self.z_data.T.flat[ind]
+            else:
+                # TODO
+                # for xarray.Datasets we use 2d indexing to support lazy dask arrays
+                val = self.z_data.T[np.unravel_index(ind, self.z_data.shape)].values
+
         else:
             val = self.z_data.flat[ind]
 
