@@ -1456,8 +1456,6 @@ class Maps(MapsBase):
             if key in kwargs:
                 self.ax.patch.set_facecolor(kwargs.pop(key))
 
-        self.ax.spines["geo"].update(kwargs)
-
         if gdf is not None:
             assert (
                 rounded == 0
@@ -1532,6 +1530,8 @@ class Maps(MapsBase):
 
                 self.BM._before_fetch_bg_actions.append(cb)
                 self.ax._EOmaps_rounded_spine_attached = True
+
+        self.ax.spines["geo"].update(kwargs)
 
         self.redraw()
 
