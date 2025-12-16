@@ -951,7 +951,6 @@ class LayoutEditor:
             self._info_text_hidden = True
 
         self.m.f.canvas.restore_region(newbg)
-        self.blit_artists()
 
     def _reset_callbacks(self):
         # disconnect all callbacks of the layout-editor
