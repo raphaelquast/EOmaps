@@ -932,7 +932,7 @@ class Maps(MapsBase):
         assigned=("__doc__", "__annotations__", "__type_params__"),
     )
     def new_subplot(self, *args, layer=None, **kwargs):
-        ax = self.f.add_subplot(**kwargs)
+        ax = self.f.add_subplot(*args, **kwargs)
         self.BM.add_artist(ax, layer=layer)
         return ax
 
