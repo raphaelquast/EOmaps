@@ -480,17 +480,16 @@ class LayoutEditor:
         for ax in axes:
             if (curr_argb := getattr(ax, "_curr_argb", None)) is not None:
                 h0, w0 = curr_argb.shape[:2]
-
-                # bbox = ax.bbox
-                # x0, y0, w, h = bbox.x0, bbox.y0, bbox.width, bbox.height
+                w0, h0 = ax._curr_size
 
                 bbox = ax.bbox
-                # (x0, y0), (x1, y1) = np.floor([bbox.x0, bbox.y0]).astype(int), np.ceil([bbox.x1, bbox.y1]).astype(int)
-                x0, y0 = np.floor((bbox.x0, bbox.y0)).astype(int)
+                x0, y0, w, h = map(int, (bbox.x0, bbox.y0, bbox.width, bbox.height))
 
-                w, h = bbox.width, bbox.height
+                # bbox = ax.bbox
+                x0, y0 = np.floor([bbox.x0, bbox.y0]).astype(int)
 
                 argb = curr_argb.copy()
+                # make background image semi-transparent
                 argb[:, :, -1] = (argb[:, :, -1] * 0.5).astype(np.int8)
 
                 gc = renderer.new_gc()
@@ -670,7 +669,14 @@ class LayoutEditor:
 
         return False
 
-    def _make_draggable(self, filepath=None):
+    @staticmethod
+    def _checkboard_array(shape, blocksize=(10, 10), a=100, b=50):
+        rx, ry = np.ceil(np.array(shape) / blocksize / 2).astype(int)
+        return np.kron([[a, b] * ry, [b, a] * ry] * rx, np.ones(blocksize))[
+            : shape[0], : shape[1]
+        ]
+
+    def _make_draggable(self, filepath=None, blit=True):
         fig_buffer = self.m.BM._get_active_bg()
         x = fig_buffer.get_extents()
         ncols, nrows = x[2] - x[0], x[3] - x[1]
@@ -681,12 +687,47 @@ class LayoutEditor:
 
         for ax in self.f.axes:
             bbox = ax.bbox
-            (x0, y0), (x1, y1) = np.floor([bbox.x0, bbox.y0]).astype(int), np.ceil(
-                [bbox.x1, bbox.y1]
-            ).astype(int)
-            x0, y0 = np.clip((x0, y0), 0, None)
+            (x0, y0), (x1, y1) = (
+                np.floor([bbox.x0, bbox.y0]).astype(int),
+                np.ceil([bbox.x1, bbox.y1]).astype(int),
+            )
 
-            ax._curr_argb = argb[y0:y1, x0:x1, :]
+            # get dummy background image in case axes is partly outside of figure
+            full_shp = np.ceil((ax.bbox.height, ax.bbox.width)).astype(int)
+
+            argb_full = np.stack(
+                [
+                    *[self._checkboard_array(full_shp, (10, 10), 255, 100)] * 3,
+                    np.full(full_shp, 255),
+                ],
+                axis=2,
+            )
+
+            # clip axes bounds with respect to figure extent
+            x0c, x1c = np.clip((x0, x1), 0, int(np.ceil(self.m.f.bbox.width)))
+            y0c, y1c = np.clip((y0, y1), 0, int(np.ceil(self.m.f.bbox.height)))
+
+            # get axes image pixel values
+            curr_argb = argb[y0c:y1c, x0c:x1c, :]
+
+            # get shifts of the axes rel. to clip image
+            sx, sy = x0c - x0, y0c - y0
+            # get slices
+            slx = slice(sx, sx + curr_argb.shape[1])
+            sly = slice(sy, sy + curr_argb.shape[0])
+
+            # TODO implement proper rounding of bbox bounds
+            # to avoid issues with single-pixel shifts we evaluate the shape first and
+            # make sure the array is clipped to the size
+            overlap_shp = argb_full[sly, slx, ...].shape
+            curr_argb = curr_argb[: overlap_shp[0], : overlap_shp[1], ...]
+
+            # fill values with image-values if available
+            argb_full[sly, slx, ...] = curr_argb
+
+            # remember background
+            ax._curr_argb = argb_full
+            ax._curr_size = ax.bbox.width, ax.bbox.height
 
         self.f.set_visible(False)
 
@@ -807,7 +848,8 @@ class LayoutEditor:
 
         self.m._emit_signal("layoutEditorActivated")
 
-        self.blit_artists()
+        if blit:
+            self.blit_artists()
 
     def _add_revert_props(self, child, *args):
         for prop in args:
@@ -900,13 +942,15 @@ class LayoutEditor:
             info_txt_hidden = False
 
         self._undo_draggable()
-        self._make_draggable()
+        newbg = self.m.f.canvas.copy_from_bbox(self.m.f.bbox)
+        self._make_draggable(blit=False)
 
         # hide info-text in case it was hidden before
         if self._info_text and info_txt_hidden:
             self._info_text.set_visible(False)
             self._info_text_hidden = True
 
+        self.m.f.canvas.restore_region(newbg)
         self.blit_artists()
 
     def _reset_callbacks(self):
