@@ -1333,9 +1333,9 @@ class Maps(MapsBase):
 
             self.set_extent([x0, x1, y0, y1], gdf.crs)
 
-    def _set_country_frame(self, countries, scale=50):
+    def _get_country_frame(self, countries, scale=50):
         """
-        Set the map-frame to one (or more) country boarders defined by
+        Get the map-frame to one (or more) country boarders defined by
         the NaturalEarth admin_0_countries dataset.
 
         For more details, see:
@@ -1350,7 +1350,6 @@ class Maps(MapsBase):
             The scale factor of the used NaturalEarth dataset.
             One of 10, 50, 110.
             The default is 50.
-
         """
         countries = [i.lower() for i in np.atleast_1d(countries)]
         gdf = self.add_feature.cultural.admin_0_countries.get_gdf(scale=scale)
@@ -1359,7 +1358,7 @@ class Maps(MapsBase):
         q = np.isin(names, countries)
 
         if np.count_nonzero(q) == len(countries):
-            self.set_frame(gdf=gdf[q])
+            return gdf[q]
         else:
             for c in countries:
                 if c not in names:
@@ -1451,27 +1450,23 @@ class Maps(MapsBase):
         >>> m.set_frame(countries=["Austria", "Italy"], ec="r", lw=2, fc="k")
 
         """
+        set_extent = kwargs.pop("set_extent", True)
 
         for key in ("fc", "facecolor"):
             if key in kwargs:
                 self.ax.patch.set_facecolor(kwargs.pop(key))
 
+        if countries is not None:
+            assert gdf is None, "You cannot specify both 'gdf' and 'countries'"
+
+            gdf = self._get_country_frame(countries, scale=kwargs.pop("scale", 50))
+
         if gdf is not None:
             assert (
                 rounded == 0
             ), "EOmaps: using rounded > 0 is not supported for gdf frames!"
-            assert countries is None, "You cannot specify both 'gdf' and 'countries'"
 
-            self._set_gdf_path_boundary(
-                self._handle_gdf(gdf), set_extent=kwargs.pop("set_extent", True)
-            )
-        elif countries is not None:
-            assert (
-                rounded == 0
-            ), "EOmaps: using rounded > 0 is not supported for country-border frames!"
-            assert gdf is None, "You cannot specify both 'gdf' and 'countries'"
-
-            self._set_country_frame(countries, scale=kwargs.pop("scale", 50))
+            self._set_gdf_path_boundary(self._handle_gdf(gdf), set_extent=set_extent)
 
         elif rounded:
             assert (
