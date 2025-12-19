@@ -990,7 +990,9 @@ class MapsBase(metaclass=_MapsMeta):
     @wraps(GridSpec.update)
     def subplots_adjust(self, **kwargs):
         """Adjust the margins of subplots."""
-        self.parent._gridspec.update(**kwargs)
+        with self.delay_draw():
+            for m in (self.parent, *self.parent._children):
+                m.ax.get_gridspec().update(**kwargs)
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
 
