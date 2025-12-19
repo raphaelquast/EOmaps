@@ -46,6 +46,7 @@ Layers and Maps
 
     Maps.new_map
     Maps.new_inset_map
+    Maps.new_subplot
 
 
 .. autosummary::

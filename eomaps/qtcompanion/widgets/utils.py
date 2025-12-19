@@ -9,6 +9,7 @@ from eomaps import Maps
 from functools import lru_cache
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgba
 
 
 @lru_cache()
@@ -227,11 +228,11 @@ class GetColorWidget(QtWidgets.QFrame):
         super().__init__()
 
         if isinstance(facecolor, str):
-            self.facecolor = QtGui.QColor(facecolor)
+            self.facecolor = QtGui.QColor(*(int(i * 255) for i in to_rgba(facecolor)))
         else:
             self.facecolor = QtGui.QColor(*facecolor)
         if isinstance(edgecolor, str):
-            self.edgecolor = QtGui.QColor(edgecolor)
+            self.edgecolor = QtGui.QColor(*(int(i * 255) for i in to_rgba(edgecolor)))
         else:
             self.edgecolor = QtGui.QColor(*edgecolor)
 
@@ -327,7 +328,7 @@ class GetColorWidget(QtWidgets.QFrame):
 
     def set_facecolor(self, color):
         if isinstance(color, str):
-            color = QtGui.QColor(color)
+            color = QtGui.QColor(*(int(i * 255) for i in to_rgba(color)))
         elif isinstance(color, (list, tuple)):
             color = QtGui.QColor(*color)
 
@@ -340,7 +341,7 @@ class GetColorWidget(QtWidgets.QFrame):
 
     def set_edgecolor(self, color):
         if isinstance(color, str):
-            color = QtGui.QColor(color)
+            color = QtGui.QColor(*(int(i * 255) for i in to_rgba(color)))
         elif isinstance(color, (list, tuple)):
             color = QtGui.QColor(*color)
 

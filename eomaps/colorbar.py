@@ -762,9 +762,9 @@ class ColorBar(ColorBarBase):
         for a in (self.ax_cb, self.ax_cb_plot):
             if a is not None:
                 if dynamic is True:
-                    BM.add_artist(a, self._layer)
+                    BM.add_artist(a, layer=self._layer)
                 else:
-                    BM.add_bg_artist(a, self._layer)
+                    BM.add_bg_artist(a, layer=self._layer)
 
         # we need to re-draw all layers since the axis size has changed!
         self._m.redraw()

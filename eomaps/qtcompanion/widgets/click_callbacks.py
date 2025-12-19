@@ -203,8 +203,8 @@ class ClickCallbacks(QtWidgets.QFrame):
 
         self.buttons = dict()
 
-        self.t_click = QtWidgets.QLabel("<b>Click</b> callbacks:")
-        self.t_pick = QtWidgets.QLabel("<b>Pick</b> callbacks:")
+        self.t_click = QtWidgets.QLabel("<b>Click</b>:")
+        self.t_pick = QtWidgets.QLabel("<b>Pick</b>:")
 
         # number of points to pick
         # (init before pick map dropdown to update n)

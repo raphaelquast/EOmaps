@@ -253,13 +253,12 @@ class WebMapContainer(object):
         WMS = _WebServiceCollection(
             m=self._m,
             service_type="wms",
-            url="https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?request=getcapabilities&service=wms&version=1.1.1",
+            url="https://wms.gebco.net/mapserv?request=getcapabilities&service=wms&version=1.3.0",
+            version="1.3.0",
         )
 
         WMS._EOmaps_info = type(self).GEBCO.__doc__
-        WMS._EOmaps_source_code = (
-            "m.add_wms.GEBCO.add_layer." f"<layer>(transparent=True)"
-        )
+        WMS._EOmaps_source_code = "m.add_wms.GEBCO.add_layer.<layer>(transparent=True)"
         WMS.__doc__ = type(self).GEBCO.__doc__
         return WMS
 
@@ -2393,6 +2392,33 @@ class WebMapContainer(object):
             )
             WMTS.__doc__ = WMTS._EOmaps_info
             return WMTS
+
+        @property
+        @lru_cache()
+        def Wien_data(self):
+            """
+            Map layers provided by the city of Vienna.
+            https://www.data.wien.gv.at
+
+            Note
+            ----
+            **LICENSE-info (without any warranty for correctness!!)**
+
+            check used layer at: https://www.data.wien.gv.at
+
+            Most services are under CC-BY 4.0
+            """
+            WMS = _WebServiceCollection(
+                m=self._m,
+                service_type="wms",
+                url="https://data.wien.gv.at/daten/wms?service=WMS&request=GetCapabilities&version=1.1.1",
+            )
+            WMS._EOmaps_info = type(self).Wien_data.__doc__
+            WMS._EOmaps_source_code = (
+                "m.add_wms.Austria.Wien_data.add_layer.<layer>(transparent=True)"
+            )
+            WMS.__doc__ = WMS._EOmaps_info
+            return WMS
 
     @property
     @lru_cache()
