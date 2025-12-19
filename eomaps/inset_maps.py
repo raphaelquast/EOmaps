@@ -152,7 +152,7 @@ class InsetMaps(Maps):
 
         # add a background patch to the "all" layer
         if background_color is not None:
-            self._bg_patch = self._add_background_patch(
+            self._bg_patch = self.add_background_patch(
                 color=background_color, layer=self.layer
             )
         else:
@@ -199,21 +199,6 @@ class InsetMaps(Maps):
             art = m.ax.add_patch(p)
             self.BM.add_bg_artist(art, layer=m.layer, draw=False)
             self._patches.add(art)
-
-    def _add_background_patch(self, color, layer="all"):
-        (art,) = self.ax.fill(
-            [0, 0, 1, 1],
-            [0, 1, 1, 0],
-            fc=color,
-            ec="none",
-            zorder=-9999,
-            transform=self.ax.transAxes,
-        )
-
-        art.set_label("Inset map background patch")
-
-        self.BM.add_bg_artist(art, layer=layer)
-        return art
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]

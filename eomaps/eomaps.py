@@ -2732,6 +2732,49 @@ class Maps(MapsBase):
         """Add gridlines to the Map."""
         return self.parent._grid.add_grid(m=self, *args, **kwargs)
 
+    def add_background_patch(self, color, layer=None, **kwargs):
+        """
+        Add a background-patch for the map.
+
+        Useful for overlapping axes if you don't want to "see-through"
+        the top map.
+
+        Parameters
+        ----------
+        color : str, rgba tuple
+            The color of the patch.
+        layer : str, optional
+            The layer to use.
+            If None, the layer assigned to the Maps-object is used.
+            The default is None.
+        kwargs :
+            All additional kwargs are passed to the created Patch.
+            (e.g. alpha, hatch, ...)
+
+        Returns
+        -------
+        art : TYPE
+            DESCRIPTION.
+
+        """
+        if layer is None:
+            layer = self.layer
+
+        (art,) = self.ax.fill(
+            [0, 0, 1, 1],
+            [0, 1, 1, 0],
+            fc=color,
+            ec="none",
+            zorder=-9999,
+            transform=self.ax.transAxes,
+            **kwargs,
+        )
+
+        art.set_label("Background patch")
+
+        self.BM.add_bg_artist(art, layer=layer)
+        return art
+
     def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
         """
         Indicate a rectangular extent in a given crs on the map.
