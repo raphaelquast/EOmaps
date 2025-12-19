@@ -992,7 +992,13 @@ class MapsBase(metaclass=_MapsMeta):
         """Adjust the margins of subplots."""
         with self.delay_draw():
             for m in (self.parent, *self.parent._children):
-                m.ax.get_gridspec().update(**kwargs)
+                try:
+                    m.ax.get_gridspec().update(**kwargs)
+                except AttributeError:
+                    # TODO fix this properly
+                    # ignore gridspecs that don't provide an update method
+                    # (like GridSpecFromSubplotSpec)
+                    pass
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
 
