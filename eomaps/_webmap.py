@@ -1420,6 +1420,12 @@ class SlippyImageArtistNew(AxesImage):
                     # (otherwise the path might still correspond to a previous extent)
                     clippath._adjust_location()
 
+                    if clippath.get_path().vertices.size == 0:
+                        # in case the clip-path is an empty-path don't draw.
+                        # This is used to allow clipped-webmaps outside the
+                        # current field-of-view
+                        return
+
                     self.set_clip_path(
                         clippath.get_path(),
                         transform=self.axes.projection._as_mpl_transform(self.axes),
