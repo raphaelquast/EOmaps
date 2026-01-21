@@ -426,11 +426,11 @@ class Shapes(object):
                 # make sure props are defined otherwise we can't estimate the radius!
                 if m._data_manager.x0 is None:
                     m._data_manager.set_props(None)
-
+                # TODO check this!
                 # check if the first element of x0 is nonzero...
                 # (to avoid slow performance of np.any for large arrays)
-                if not np.any(m._data_manager.x0.take(0)):
-                    return None
+                # if not np.any(m._data_manager.x0.take(0)):
+                #     return None
 
                 _log.info("EOmaps: Estimating shape radius...")
                 radiusx, radiusy = Shapes._estimate_radius(m, radius_crs)

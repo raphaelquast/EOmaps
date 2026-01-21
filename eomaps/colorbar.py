@@ -685,7 +685,7 @@ class ColorBar(ColorBarBase):
         if self._dynamic_shade_indicator is True:
             data = self._m.coll.get_ds_data().values
         else:
-            data = self._m._data_manager.z_data
+            data = np.asanyarray(self._m._data_manager.z_data)
 
         return data
 
