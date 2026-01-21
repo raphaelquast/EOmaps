@@ -1240,7 +1240,9 @@ class Maps(MapsBase):
         else:
             self._inherit_classification = None
 
-    def set_extent_to_location(self, location, annotate=False, user_agent=None):
+    def set_extent_to_location(
+        self, location, buffer=0, annotate=False, user_agent=None
+    ):
         """
         Set the map-extent based on a given location query.
 
@@ -1266,7 +1268,9 @@ class Maps(MapsBase):
 
             For example:
                 "Austria", "Vienna"
-
+        buffer : float
+            Fraction of the found extent added as a buffer.
+            The default is 0.
         annotate : bool, optional
             Indicator if an annotation should be added to the center of the identified
             location or not. The default is False.
@@ -1288,6 +1292,12 @@ class Maps(MapsBase):
 
         # get bbox of found location
         lon0, lon1, lat0, lat1 = map(float, r["boundingbox"])
+
+        dlon, dlat = lon1 - lon0, lat1 - lat0
+        lon0 -= dlon * buffer
+        lon1 += dlon * buffer
+        lat0 -= dlat * buffer
+        lat1 += dlat * buffer
 
         # set extent to found bbox
         self.set_extent((lat0, lat1, lon0, lon1), crs=Maps.CRS.PlateCarree())
