@@ -2642,6 +2642,7 @@ class Maps(MapsBase):
         pad=0.1,
         layer=None,
         fix_position=False,
+        **kwargs,
     ):
         """
         Add a small image (png, jpeg etc.) to the map.
@@ -2676,7 +2677,8 @@ class Maps(MapsBase):
 
             NOTE: If True, the logo can NOT be moved with the layout_editor!
             The default is False.
-
+        kwargs :
+            Additional kwargs are passed to plt.imshow
         """
         if layer is None:
             layer = "__SPINES__"
@@ -2709,7 +2711,12 @@ class Maps(MapsBase):
 
         figax.set_navigate(False)
         figax.set_axis_off()
-        _ = figax.imshow(im, aspect="equal", zorder=999, interpolation_stage="rgba")
+
+        kwargs.setdefault("aspect", "equal")
+        kwargs.setdefault("zorder", 999)
+        kwargs.setdefault("interpolation_stage", "rgba")
+
+        _ = figax.imshow(im, **kwargs)
 
         self.BM.add_bg_artist(figax, layer=layer)
 
