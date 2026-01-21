@@ -739,6 +739,7 @@ class ColorBar(ColorBarBase):
 
         self.ax_cb.remove()
         self.ax_cb_plot.remove()
+        self._ax.remove()
 
     def _set_map(self, m):
         self._m = m
