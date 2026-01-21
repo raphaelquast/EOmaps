@@ -152,7 +152,7 @@ class InsetMaps(Maps):
 
         # add a background patch to the "all" layer
         if background_color is not None:
-            self._bg_patch = self._add_background_patch(
+            self._bg_patch = self.add_background_patch(
                 color=background_color, layer=self.layer
             )
         else:
@@ -167,7 +167,7 @@ class InsetMaps(Maps):
         verts = s.get_verts()
 
         verts = self.ax.transData.inverted().transform(s.get_verts())
-        verts = np.column_stack(self._transf_plot_to_lonlat.transform(*verts.T))
+        verts = np.column_stack(self.transform_plot_to_lonlat(*verts.T))
 
         return verts
 
@@ -199,21 +199,6 @@ class InsetMaps(Maps):
             art = m.ax.add_patch(p)
             self.BM.add_bg_artist(art, layer=m.layer, draw=False)
             self._patches.add(art)
-
-    def _add_background_patch(self, color, layer="all"):
-        (art,) = self.ax.fill(
-            [0, 0, 1, 1],
-            [0, 1, 1, 0],
-            fc=color,
-            ec="none",
-            zorder=-9999,
-            transform=self.ax.transAxes,
-        )
-
-        art.set_label("Inset map background patch")
-
-        self.BM.add_bg_artist(art, layer=layer)
-        return art
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
@@ -304,7 +289,7 @@ class InsetMaps(Maps):
         l = self._parent.ax.add_artist(l)
         l.set_clip_on(False)
 
-        self.BM.add_bg_artist(l, self.layer, draw=False)
+        self.BM.add_bg_artist(l, layer=self.layer, draw=False)
         self._indicator_lines.append((l, m))
 
         if isinstance(m, InsetMaps):
@@ -326,7 +311,7 @@ class InsetMaps(Maps):
             l2.set_clip_on(True)
 
             l2 = m.ax.add_artist(l2)
-            self.BM.add_bg_artist(l2, self.layer)
+            self.BM.add_bg_artist(l2, layer=self.layer)
             self._indicator_lines.append((l2, m))
 
         self._update_indicator_lines()

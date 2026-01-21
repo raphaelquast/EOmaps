@@ -4,7 +4,7 @@
 # See LICENSE in the root of the repository for full licensing details.
 
 from qtpy import QtWidgets
-from qtpy.QtCore import Qt, Signal, Slot, QSize, QObject
+from qtpy.QtCore import Qt, Slot
 from qtpy.QtGui import QKeySequence
 
 from .base import AlwaysOnTopWindow

@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from urllib3.exceptions import InsecureRequestWarning
 from io import BytesIO
 from pprint import PrettyPrinter
+from textwrap import dedent
 
 from packaging import version
 
@@ -171,7 +172,7 @@ class _WebMapLayer:
             if not self._m.BM._layer_visible(self._layer):
                 legax.set_visible(False)
 
-            self._m.BM.add_artist(legax, self._layer)
+            self._m.BM.add_artist(legax, layer=self._layer)
 
             def cb_move(event):
                 if not self._legend_picked:
@@ -336,6 +337,17 @@ class _WebMapLayer:
 
         return style
 
+    def _get_layer_info_text(self):
+        """Get layer-specific info text of a given layer"""
+        t = ""
+        abstract = getattr(self.wms_layer, "abstract", None)
+        if abstract:
+            t += f"**Abstract**: <i>{abstract}</i>\n  \n----  \n  "
+
+        t += f"{dedent(getattr(self, '_EOmaps_info', ''))}"
+
+        return t
+
 
 class _WMTSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
@@ -440,7 +452,7 @@ class _WMTSLayer(_WebMapLayer):
 
         # attach the info to the artist so it can be identified by the companion widget
         if hasattr(self, "_EOmaps_info"):
-            art._EOmaps_info = self._EOmaps_info
+            art._EOmaps_info = self._get_layer_info_text()
         if hasattr(self, "_EOmaps_source_code"):
             art._EOmaps_source_code = self._EOmaps_source_code
 
@@ -581,12 +593,10 @@ class _WMSLayer(_WebMapLayer):
         art = self._add_wms(
             m.ax, self._wms, self.name, interpolation="spline36", **kwargs
         )
-
         art.set_label(f"WebMap service: {self.name}")
-
         # attach the info to the artist so it can be identified by the companion widget
         if hasattr(self, "_EOmaps_info"):
-            art._EOmaps_info = self._EOmaps_info
+            art._EOmaps_info = self._get_layer_info_text()
         if hasattr(self, "_EOmaps_source_code"):
             art._EOmaps_source_code = self._EOmaps_source_code
 
@@ -1396,7 +1406,7 @@ class SlippyImageArtistNew(AxesImage):
                 # only re-fetch tiles if the extent has changed
                 located_images = self.raster_source.fetch_raster(
                     ax.projection,
-                    extent=[x1, x2, y1, y2],
+                    extent=list(map(float, [x1, x2, y1, y2])),
                     target_resolution=(window_extent.width, window_extent.height),
                 )
                 self.cache = located_images
@@ -1409,6 +1419,12 @@ class SlippyImageArtistNew(AxesImage):
                     # make sure the geo-spine is updated before setting it as clippath
                     # (otherwise the path might still correspond to a previous extent)
                     clippath._adjust_location()
+
+                    if clippath.get_path().vertices.size == 0:
+                        # in case the clip-path is an empty-path don't draw.
+                        # This is used to allow clipped-webmaps outside the
+                        # current field-of-view
+                        return
 
                     self.set_clip_path(
                         clippath.get_path(),

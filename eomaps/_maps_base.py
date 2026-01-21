@@ -990,7 +990,15 @@ class MapsBase(metaclass=_MapsMeta):
     @wraps(GridSpec.update)
     def subplots_adjust(self, **kwargs):
         """Adjust the margins of subplots."""
-        self.parent._gridspec.update(**kwargs)
+        with self.delay_draw():
+            for m in (self.parent, *self.parent._children):
+                try:
+                    m.ax.get_gridspec().update(**kwargs)
+                except AttributeError:
+                    # TODO fix this properly
+                    # ignore gridspecs that don't provide an update method
+                    # (like GridSpecFromSubplotSpec)
+                    pass
         # after changing margins etc. a redraw is required
         # to fetch the updated background!
 
@@ -1219,6 +1227,38 @@ class MapsBase(metaclass=_MapsMeta):
             self.get_crs(self.crs_plot.as_geodetic()),
             self.crs_plot,
         )
+
+    def transform_plot_to_lonlat(self, x, y):
+        """
+        Transform plot-coordinates to longitude and latitude values.
+
+        Parameters
+        ----------
+        x, y : float or array-like
+            The coordinates values in the coordinate-system of the plot.
+
+        Returns
+        -------
+        lon, lat : The coordinates transformed to longitude and latitude values.
+
+        """
+        return self._transf_plot_to_lonlat.transform(x, y)
+
+    def transform_lonlat_to_plot(self, lon, lat):
+        """
+        Transform longitude and latitude values to plot coordinates.
+
+        Parameters
+        ----------
+        lon, lat : float or array-like
+            The longitude and latitude values to transform.
+
+        Returns
+        -------
+        x, y : The coordinates transformed to the plot-coordinate system.
+
+        """
+        return self._transf_lonlat_to_plot.transform(lon, lat)
 
     def on_layer_activation(self, func, layer=None, persistent=False, **kwargs):
         """

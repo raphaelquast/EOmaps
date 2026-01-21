@@ -573,7 +573,9 @@ class GridLabels:
         if self._g._bounds is not None:
             self._kwargs.setdefault("clip_on", True)
             self._kwargs.setdefault("clip_box", self._g.m.ax.bbox)
-        self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
+
+        if not self._g._dynamic:
+            self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
 
     def _set_exclude(self, exclude):
         # a list of tick values to exclude

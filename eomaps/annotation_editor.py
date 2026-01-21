@@ -315,7 +315,7 @@ class _EditorBase:
             fontfamily="monospace",
         )
 
-        self.m.BM.add_artist(self._info_artist, "all")
+        self.m.BM.add_artist(self._info_artist, layer="all")
 
         self._info_cids.add(
             self.m.f.canvas.mpl_connect("button_press_event", self._on_press)
@@ -655,11 +655,9 @@ class AnnotationEditor(_EditorBase):
 
                 xy_crs = 4326
                 if ann.transf is not None:
-                    xy = self.m._transf_plot_to_lonlat.transform(
-                        *ann.transf.transform(*a.xy)
-                    )
+                    xy = self.m.transform_plot_to_lonlat(*ann.transf.transform(*a.xy))
                 else:
-                    xy = self.m._transf_plot_to_lonlat.transform(*a.xy)
+                    xy = self.m.transform_plot_to_lonlat(*a.xy)
 
                 if not all(i in replace for i in ("xy", "xy_crs")):
                     s = "# NOTE: Anchor coordinates reprojected to epsg=4326!\n" + s

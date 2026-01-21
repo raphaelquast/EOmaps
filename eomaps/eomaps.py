@@ -469,7 +469,10 @@ class Maps(MapsBase):
             if crs == "in":
                 crs = self.data_specs.crs
             elif crs == "out" or crs == "plot":
-                crs = self.crs_plot
+                if self.crs_plot == self.CRS.PlateCarree():
+                    crs = 4326
+                else:
+                    crs = self.crs_plot
 
         crs = CRS.from_user_input(crs)
         return crs
@@ -913,6 +916,29 @@ class Maps(MapsBase):
 
         return m2
 
+    @_add_to_docstring(
+        prefix=(
+            "Convenience wrapper around `Figure.add_subplot` to"
+            " add a new matpltolib-subplot to a figure.\n "
+        ),
+        insert={
+            "Other Parameters": (
+                "layer : str\n"
+                "    The layer at which the subplot should be visible.\n"
+                "    If None, the layer of the calling Maps-object is used.",
+                1,
+            )
+        },
+    )
+    @wraps(
+        plt.Figure.add_subplot,
+        assigned=("__doc__", "__annotations__", "__type_params__"),
+    )
+    def new_subplot(self, *args, layer=None, **kwargs):
+        ax = self.f.add_subplot(*args, **kwargs)
+        self.BM.add_artist(ax, layer=layer)
+        return ax
+
     def set_data(
         self,
         data=None,
@@ -1214,7 +1240,9 @@ class Maps(MapsBase):
         else:
             self._inherit_classification = None
 
-    def set_extent_to_location(self, location, annotate=False, user_agent=None):
+    def set_extent_to_location(
+        self, location, buffer=0, annotate=False, user_agent=None
+    ):
         """
         Set the map-extent based on a given location query.
 
@@ -1240,7 +1268,9 @@ class Maps(MapsBase):
 
             For example:
                 "Austria", "Vienna"
-
+        buffer : float
+            Fraction of the found extent added as a buffer.
+            The default is 0.
         annotate : bool, optional
             Indicator if an annotation should be added to the center of the identified
             location or not. The default is False.
@@ -1263,6 +1293,12 @@ class Maps(MapsBase):
         # get bbox of found location
         lon0, lon1, lat0, lat1 = map(float, r["boundingbox"])
 
+        dlon, dlat = lon1 - lon0, lat1 - lat0
+        lon0 -= dlon * buffer
+        lon1 += dlon * buffer
+        lat0 -= dlat * buffer
+        lat1 += dlat * buffer
+
         # set extent to found bbox
         self.set_extent((lat0, lat1, lon0, lon1), crs=Maps.CRS.PlateCarree())
 
@@ -1280,7 +1316,7 @@ class Maps(MapsBase):
             _log.info(f"Centering Map to:\n    {r['display_name']}")
 
     def _set_gdf_path_boundary(self, gdf, set_extent=True):
-        geom = gdf.to_crs(self.crs_plot).unary_union
+        geom = gdf.to_crs(self.crs_plot).union_all()
         if "Polygon" in geom.geom_type:
             geom = geom.boundary
 
@@ -1310,9 +1346,9 @@ class Maps(MapsBase):
 
             self.set_extent([x0, x1, y0, y1], gdf.crs)
 
-    def _set_country_frame(self, countries, scale=50):
+    def _get_country_frame(self, countries, scale=50):
         """
-        Set the map-frame to one (or more) country boarders defined by
+        Get the map-frame to one (or more) country boarders defined by
         the NaturalEarth admin_0_countries dataset.
 
         For more details, see:
@@ -1327,7 +1363,6 @@ class Maps(MapsBase):
             The scale factor of the used NaturalEarth dataset.
             One of 10, 50, 110.
             The default is 50.
-
         """
         countries = [i.lower() for i in np.atleast_1d(countries)]
         gdf = self.add_feature.cultural.admin_0_countries.get_gdf(scale=scale)
@@ -1336,7 +1371,7 @@ class Maps(MapsBase):
         q = np.isin(names, countries)
 
         if np.count_nonzero(q) == len(countries):
-            self.set_frame(gdf=gdf[q])
+            return gdf[q]
         else:
             for c in countries:
                 if c not in names:
@@ -1428,29 +1463,23 @@ class Maps(MapsBase):
         >>> m.set_frame(countries=["Austria", "Italy"], ec="r", lw=2, fc="k")
 
         """
+        set_extent = kwargs.pop("set_extent", True)
 
         for key in ("fc", "facecolor"):
             if key in kwargs:
                 self.ax.patch.set_facecolor(kwargs.pop(key))
 
-        self.ax.spines["geo"].update(kwargs)
+        if countries is not None:
+            assert gdf is None, "You cannot specify both 'gdf' and 'countries'"
+
+            gdf = self._get_country_frame(countries, scale=kwargs.pop("scale", 50))
 
         if gdf is not None:
             assert (
                 rounded == 0
             ), "EOmaps: using rounded > 0 is not supported for gdf frames!"
-            assert countries is None, "You cannot specify both 'gdf' and 'countries'"
 
-            self._set_gdf_path_boundary(
-                self._handle_gdf(gdf), set_extent=kwargs.pop("set_extent", True)
-            )
-        elif countries is not None:
-            assert (
-                rounded == 0
-            ), "EOmaps: using rounded > 0 is not supported for country-border frames!"
-            assert gdf is None, "You cannot specify both 'gdf' and 'countries'"
-
-            self._set_country_frame(countries, scale=kwargs.pop("scale", 50))
+            self._set_gdf_path_boundary(self._handle_gdf(gdf), set_extent=set_extent)
 
         elif rounded:
             assert (
@@ -1509,6 +1538,8 @@ class Maps(MapsBase):
 
                 self.BM._before_fetch_bg_actions.append(cb)
                 self.ax._EOmaps_rounded_spine_attached = True
+
+        self.ax.spines["geo"].update(kwargs)
 
         self.redraw()
 
@@ -1861,9 +1892,9 @@ class Maps(MapsBase):
             for art, prefix in zip(artists, prefixes):
                 art.set_label(f"EOmaps GeoDataframe ({prefix.lstrip('_')}, {len(gdf)})")
                 if permanent is True:
-                    self.BM.add_bg_artist(art, layer)
+                    self.BM.add_bg_artist(art, layer=layer)
                 else:
-                    self.BM.add_artist(art, layer)
+                    self.BM.add_artist(art, layer=layer)
         return artists
 
     def _handle_gdf(
@@ -2582,7 +2613,7 @@ class Maps(MapsBase):
             raise TypeError(f"EOmaps: '{connect}' is not a valid connection-method!")
 
         art.set_label(f"Line ({connect})")
-        self.BM.add_bg_artist(art, layer)
+        self.BM.add_bg_artist(art, layer=layer)
 
         if mark_points:
             zorder = kwargs.get("zorder", 10)
@@ -2599,7 +2630,7 @@ class Maps(MapsBase):
                 (art2,) = self.ax.plot(xplot, yplot, mark_points, zorder=zorder, lw=0)
 
             art2.set_label(f"Line Marker ({connect})")
-            self.BM.add_bg_artist(art2, layer)
+            self.BM.add_bg_artist(art2, layer=layer)
 
         return out_d_int, out_d_tot
 
@@ -2611,6 +2642,7 @@ class Maps(MapsBase):
         pad=0.1,
         layer=None,
         fix_position=False,
+        **kwargs,
     ):
         """
         Add a small image (png, jpeg etc.) to the map.
@@ -2645,7 +2677,8 @@ class Maps(MapsBase):
 
             NOTE: If True, the logo can NOT be moved with the layout_editor!
             The default is False.
-
+        kwargs :
+            Additional kwargs are passed to plt.imshow
         """
         if layer is None:
             layer = "__SPINES__"
@@ -2678,9 +2711,14 @@ class Maps(MapsBase):
 
         figax.set_navigate(False)
         figax.set_axis_off()
-        _ = figax.imshow(im, aspect="equal", zorder=999, interpolation_stage="rgba")
 
-        self.BM.add_bg_artist(figax, layer)
+        kwargs.setdefault("aspect", "equal")
+        kwargs.setdefault("zorder", 999)
+        kwargs.setdefault("interpolation_stage", "rgba")
+
+        _ = figax.imshow(im, **kwargs)
+
+        self.BM.add_bg_artist(figax, layer=layer)
 
         if fix_position:
             fixed_pos = (
@@ -2713,6 +2751,49 @@ class Maps(MapsBase):
     def add_gridlines(self, *args, **kwargs):
         """Add gridlines to the Map."""
         return self.parent._grid.add_grid(m=self, *args, **kwargs)
+
+    def add_background_patch(self, color, layer=None, **kwargs):
+        """
+        Add a background-patch for the map.
+
+        Useful for overlapping axes if you don't want to "see-through"
+        the top map.
+
+        Parameters
+        ----------
+        color : str, rgba tuple
+            The color of the patch.
+        layer : str, optional
+            The layer to use.
+            If None, the layer assigned to the Maps-object is used.
+            The default is None.
+        kwargs :
+            All additional kwargs are passed to the created Patch.
+            (e.g. alpha, hatch, ...)
+
+        Returns
+        -------
+        art : TYPE
+            DESCRIPTION.
+
+        """
+        if layer is None:
+            layer = self.layer
+
+        (art,) = self.ax.fill(
+            [0, 0, 1, 1],
+            [0, 1, 1, 0],
+            fc=color,
+            ec="none",
+            zorder=-9999,
+            transform=self.ax.transAxes,
+            **kwargs,
+        )
+
+        art.set_label("Background patch")
+
+        self.BM.add_bg_artist(art, layer=layer)
+        return art
 
     def indicate_extent(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
         """
@@ -3246,9 +3327,9 @@ class Maps(MapsBase):
         self._coll = coll
 
         if dynamic is True:
-            self.BM.add_artist(coll, layer)
+            self.BM.add_artist(coll, layer=layer)
         else:
-            self.BM.add_bg_artist(coll, layer)
+            self.BM.add_bg_artist(coll, layer=layer)
 
         if dynamic is True:
             self.BM.update(clear=False)
@@ -3811,7 +3892,7 @@ class Maps(MapsBase):
             )
 
             self.ax.add_artist(self._companion_map_indicator)
-            self.BM.add_artist(self._companion_map_indicator, "all")
+            self.BM.add_artist(self._companion_map_indicator, layer="all")
 
         self.BM.update()
 
@@ -3828,7 +3909,6 @@ class Maps(MapsBase):
                     break
 
         return clicked_map
-
 
     def _open_companion_widget(self, xy=None):
         """
@@ -3915,7 +3995,7 @@ class Maps(MapsBase):
             else:
                 self._companion_widget = MenuWindow(m=self)
                 self._companion_widget.toggle_always_on_top()
-                self._companion_widget.hide() # hide on init
+                self._companion_widget.hide()  # hide on init
 
             # connect any pending signals
             for key, funcs in getattr(self, "_connect_signals_on_init", dict()).items():
