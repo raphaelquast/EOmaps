@@ -425,6 +425,11 @@ class LayoutEditor:
             if not self.modifier_pressed:
                 return False
 
+        # skip re-positioning if shift is pressed to avoid re-positioning already
+        # selected axes when selecting multiple axes
+        if self._shift_pressed:
+            return
+
         if event.button != 1:
             return
 
