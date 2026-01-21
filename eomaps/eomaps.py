@@ -469,7 +469,10 @@ class Maps(MapsBase):
             if crs == "in":
                 crs = self.data_specs.crs
             elif crs == "out" or crs == "plot":
-                crs = self.crs_plot
+                if self.crs_plot == self.CRS.PlateCarree():
+                    crs = 4326
+                else:
+                    crs = self.crs_plot
 
         crs = CRS.from_user_input(crs)
         return crs
