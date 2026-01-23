@@ -4,7 +4,7 @@ import numpy as np
 # create a new map
 m = Maps(Maps.CRS.Robinson(), figsize=(8, 4))
 m.add_feature.preset.ocean()
-gl = m.add_gridlines(d=5, lw=0.25, ls=":")
+m.add_gridlines(d=5, lw=0.25, ls=":")
 
 
 def cb_location_indicator_grid(pos, **kwargs):
