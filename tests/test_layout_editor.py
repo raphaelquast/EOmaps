@@ -158,6 +158,7 @@ class TestLayoutEditor(unittest.TestCase):
         x6 = (mg.m_1_1.colorbar.ax_cb.bbox.x1 + mg.m_1_1.colorbar.ax_cb.bbox.x0) / 2
         y6 = (mg.m_1_1.colorbar.ax_cb.bbox.y1 + mg.m_1_1.colorbar.ax_cb.bbox.y0) / 2
         button_press_event(cv, x6, y6, 1, False)
+        button_release_event(cv, x6, y6, 1, False)
 
         # undo the last 5 events
         nhist = len(mg.parent._layout_editor._history)
