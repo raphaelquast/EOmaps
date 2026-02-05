@@ -564,3 +564,26 @@ class SearchTree:
             i = None
 
         return i
+
+
+def _get_rect_poly_verts(x0, y0, x1, y1, npts=100):
+    """
+    Return vertices of a rectangle with npts number of points.
+
+    Parameters
+    ----------
+    x0, y0, y1, y1 : float
+        the boundaries of the shape
+    npts : int, optional
+        The number of points used to draw the polygon-lines. The default is 100.
+
+    Returns
+    -------
+    gdf : geopandas.GeoDataFrame
+        the geodataframe with the shape and crs defined
+
+    """
+    xs, ys = np.linspace([x0, y0], [x1, y1], npts).T
+    x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
+    verts = np.column_stack(((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))).T
+    return verts

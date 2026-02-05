@@ -19,7 +19,7 @@ class TestConfig(unittest.TestCase):
         m.add_feature.preset.coastline()
         m.f.canvas.draw()
 
-        self.assertTrue(m._companion_widget_key == "x")
+        self.assertTrue(m._CompanionMixin__companion_widget_key == "x")
         self.assertTrue(m._always_on_top is True)
         self.assertTrue(m.BM._snapshot_on_update is False)
         self.assertTrue(m._use_interactive_mode is True)
@@ -38,7 +38,7 @@ class TestConfig(unittest.TestCase):
         m.add_feature.preset.coastline()
         m.f.canvas.draw()
 
-        self.assertTrue(m._companion_widget_key == "w")
+        self.assertTrue(m._CompanionMixin__companion_widget_key == "w")
         self.assertTrue(m._always_on_top is False)
         self.assertTrue(m.BM._snapshot_on_update is True)
         self.assertTrue(m._use_interactive_mode is False)

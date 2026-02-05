@@ -5,22 +5,24 @@
 
 """Base class for Maps objects."""
 
-import gc
 import logging
-from contextlib import ExitStack
-from pyproj import CRS, Transformer
+
+_log = logging.getLogger(__name__)
+
+from contextlib import contextmanager, ExitStack
 from functools import lru_cache, wraps
 from itertools import chain
+from textwrap import fill
+import importlib.metadata
 import weakref
-
-import numpy as np
-
-from cartopy import crs as ccrs
+import gc
 
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec, SubplotSpec
+from cartopy import crs as ccrs
 
-_log = logging.getLogger(__name__)
+from pyproj import CRS, Transformer
+import numpy as np
 
 from .helpers import _parse_log_level
 from .layout_editor import LayoutEditor
@@ -130,7 +132,7 @@ class _MapsMeta(type):
         from . import set_loglevel
 
         if companion_widget_key is not None:
-            cls._companion_widget_key = companion_widget_key
+            cls._CompanionMixin__companion_widget_key = companion_widget_key
 
         if always_on_top is not None:
             cls._always_on_top = always_on_top
@@ -233,6 +235,142 @@ class _MapsMeta(type):
         FigureManagerWebAgg.refresh_all = refresh_all
 
 
+class MultiCaller:
+    """
+    A class to distribute attribute-access and method calls across
+    multiple objects.
+    """
+
+    def __init__(self, elements):
+        self._elements = elements
+
+    def __call__(self, *args, **kwargs):
+        ret = [obj.__call__(*args, **kwargs) for obj in self]
+        if ret.count(None) != len(self):
+            return ret
+
+    def __dir__(self):
+        # to support autocompletion, return public attributes of elements
+        return [i for i in dir(self._elements[0]) if not i.startswith("_")]
+
+    @property
+    def __doc__(self):
+        return self._elements[0].__doc__
+
+    def __getattr__(self, name):
+        return MultiCaller([getattr(i, name) for i in self])
+
+    def __getattribute__(self, name):
+        if name.startswith("_"):
+            return object.__getattribute__(self, name)
+
+        return MultiCaller(
+            [
+                object.__getattribute__(i, name)
+                for i in object.__getattribute__(self, "_elements")
+            ]
+        )
+
+    def __getitem__(self, name):
+        return MultiCaller([i[name] for i in self])
+
+    def __iter__(self):
+        return (i for i in self._elements)
+
+    def __len__(self):
+        return len(self._elements)
+
+    def __add__(self, value):
+        return MultiCaller([*self._elements, value])
+
+
+class LayerNamespace:
+    """
+    Accessor to create and access layers on the map.
+
+    `m.l.my_layer` will return a :py:class:`Maps` object on the layer
+    named`"my_layer"`.
+
+    - If no :py:class:`Maps` object exists in the LayerNamespace, it will be created.
+    - Otherwise, the existing :py:class:`Maps` object is returned
+        - To create additional :py:class`Maps` objects on the same layer,
+          you can use double-underscores in the name, e.g. "my_layer__a"
+
+    Examples
+    --------
+
+    Create a :py:class:`Maps` object on the `"overlay"` layer and populate
+    the layer with the "ocean" and "land" features.
+
+    >>> m = Maps()
+    >>> m.l.overlay.add_feature.preset.ocean()
+    >>> m.l.overlay.add_feature.preset.land()
+
+    """
+
+    def __init__(self, m):
+        self._m = m
+        self._layers = {}
+
+        self._ingest_layer(self._m)
+
+    def _ingest_layer(self, m, name=None):
+        # don't include the all-layer
+        # (it's special and only accessible via m.all)
+        if name == "all":
+            return
+
+        if name is None:
+            name = m.layer
+
+        if name in self._layers:
+            i = 0
+            while name in self._layers:
+                name = f"{m.layer}__{i}"
+                i += 1
+
+            print(
+                f"The layer name '{m.layer}' already exists!\n"
+                f"It has been re-named to {name} in the LayerNamespace!"
+            )
+
+        self._layers[name] = m
+        super().__setattr__(name, m)
+
+    def __iter__(self):
+        return iter(self._layers.values())
+
+    def __len__(self):
+        return len(self._layers)
+
+    def __getitem__(self, name):
+        if isinstance(name, str):
+            return getattr(self, name)
+        else:
+            return MultiCaller([getattr(self, n) for n in name])
+
+    def __repr__(self):
+        return fill(
+            'LayerNamespace("' + '", "'.join(i for i in sorted(self._layers)) + '")'
+        )
+
+    def __setattr__(self, name, value):
+        if not name.startswith("_"):
+            raise TypeError("LayerNamespace does not allow attribute assignment.")
+
+        super().__setattr__(name, value)
+
+    def __getattr__(self, name):
+        # private attributes are handled in ordinary manner.
+        # only public attribute names will trigger layer-creation!
+        if name.startswith("_"):
+            return super().__getattribute__(name)
+
+        # Note: new_layer calls "LayerNamespace._ingest_layer" to ingest
+        # the new layer into the namespace!
+        return self._layers.get(name, self._m.new_layer(name))
+
+
 class MapsBase(metaclass=_MapsMeta):
     def __init__(
         self,
@@ -245,6 +383,10 @@ class MapsBase(metaclass=_MapsMeta):
 
         self._BM = None
         self._layout_editor = None
+        self._parent = None
+
+        self._log_on_event_messages = dict()
+        self._log_on_event_cids = dict()
 
         # make sure the used layer-name is valid
         layer = BlitManager._check_layer_name(layer)
@@ -262,7 +404,6 @@ class MapsBase(metaclass=_MapsMeta):
             self._f = f
 
         self._ax = None
-        self._parent = None
         self._children = set()  # weakref.WeakSet()
         self._after_add_child = list()
 
@@ -316,6 +457,34 @@ class MapsBase(metaclass=_MapsMeta):
 
         self._crs_plot_cartopy = self._get_cartopy_crs(self._crs_plot)
 
+        if self.parent == self and self.__class__._always_on_top:
+            self._set_always_on_top(True)
+
+        # TODO find a better way to ensure that the LayerNamespace
+        # is always used from the "first maps-object of the chosen axes"
+        try:
+            usem = next(
+                x
+                for x in (self.parent, *self.parent._children)
+                if x.ax == self.ax and x.layer == self.layer
+            )
+        except StopIteration:
+            usem = self
+
+        self._l = LayerNamespace(usem)
+
+        super().__init__()
+
+    def __add__(self, value):
+        return MultiCaller([self, value])
+
+    # to add support for sum()
+    def __radd__(self, value):
+        if value == 0:
+            return MultiCaller([self])
+        else:
+            return self.__add__(value)
+
     def __repr__(self):
         try:
             return f"<eomaps.Maps object on layer '{self.layer}'>"
@@ -345,46 +514,27 @@ class MapsBase(metaclass=_MapsMeta):
             plt.close(self.f)
         gc.collect()
 
-    def _emit_signal(self, *args, **kwargs):
-        # TODO
-        pass
+    @property
+    def f(self):
+        """The matplotlib Figure associated with this Maps-object."""
+        # always return the figure of the parent object
+        return self._f
 
-    def _handle_spines(self):
-        # put cartopy spines on a separate layer
-        for spine in self.ax.spines.values():
-            if spine and spine not in self.BM._bg_artists.get("__SPINES__", []):
-                self.BM.add_bg_artist(spine, layer="__SPINES__")
+    @property
+    def ax(self):
+        """The matplotlib (cartopy) GeoAxes associated with this Maps-object."""
+        return self._ax
 
-    def _on_resize(self, event):
-        # make sure the background is re-fetched if the canvas has been resized
-        # (required for peeking layers after the canvas has been resized
-        #  and for webagg and nbagg backends to correctly re-draw the layer)
+    @property
+    def layer(self):
+        """The layer-name associated with this Maps-object."""
+        return self._layer
 
-        self.BM._refetch_bg = True
-        self.BM._refetch_blank = True
-
-        # update the figure dimensions in case shading is used.
-        # Avoid flushing events during resize
-        # TODO
-        if hasattr(self, "_update_shade_axis_size"):
-            self._update_shade_axis_size(flush=False)
-
-    def _on_close(self, event):
-        # reset attributes that might use up a lot of memory when the figure is closed
-        for m in [self.parent, *self.parent._children]:
-            if hasattr(m.f, "_EOmaps_parent"):
-                m.f._EOmaps_parent = None
-
-            m.cleanup()
-
-        # run garbage-collection to immediately free memory
-        gc.collect
-
-    def _on_xlims_change(self, *args, **kwargs):
-        self.BM._refetch_bg = True
-
-    def _on_ylims_change(self, *args, **kwargs):
-        self.BM._refetch_bg = True
+    @property
+    def l(self):
+        """The LayerNamespace accessor to create/access layers on the map."""
+        # TODO always return the namespace of the most "parent" layer!
+        return self._l
 
     @property
     def BM(self):
@@ -394,22 +544,6 @@ class MapsBase(metaclass=_MapsMeta):
             self.parent._BM = BlitManager(m)
             self.parent._BM._bg_layer = m.parent.layer
         return self.parent._BM
-
-    @property
-    def ax(self):
-        """The matplotlib (cartopy) GeoAxes associated with this Maps-object."""
-        return self._ax
-
-    @property
-    def f(self):
-        """The matplotlib Figure associated with this Maps-object."""
-        # always return the figure of the parent object
-        return self._f
-
-    @property
-    def layer(self):
-        """The layer-name associated with this Maps-object."""
-        return self._layer
 
     @property
     def all(self):
@@ -436,181 +570,6 @@ class MapsBase(metaclass=_MapsMeta):
             self._set_parent()
 
         return self._parent
-
-    def _init_figure(self, **kwargs):
-        if self.parent.f is None:
-            # do this on any new figure since "%matplotlib inline" tries to re-activate
-            # interactive mode all the time!
-            _handle_backends()
-
-            self._f = plt.figure(**kwargs)
-            # to hide canvas header in jupyter notebooks (default figure label)
-            self._f.canvas.header_visible = False
-
-            _log.debug("EOmaps: New figure created")
-
-            # make sure we keep a "real" reference otherwise overwriting the
-            # variable of the parent Maps-object while keeping the figure open
-            # causes all weakrefs to be garbage-collected!
-            self.parent.f._EOmaps_parent = self.parent._real_self
-        else:
-            if not hasattr(self.parent.f, "_EOmaps_parent"):
-                self.parent.f._EOmaps_parent = self.parent._real_self
-            self.parent._add_child(self)
-
-        if self.parent == self:  # use == instead of "is" since the parent is a proxy!
-
-            # override Figure.savefig with Maps.savefig but keep original
-            # method accessible via Figure._mpl_orig_savefig
-            # (this ensures that using the save-buttons in the gui or pressing
-            # control+s will redirect the save process to the eomaps routine)
-            self._f._mpl_orig_savefig = self._f.savefig
-            self._f.savefig = self.savefig
-
-            # only attach resize- and close-callbacks if we initialize a parent
-            # Maps-object
-            # attach a callback that is executed when the figure is closed
-            self._cid_onclose = self.f.canvas.mpl_connect("close_event", self._on_close)
-            # attach a callback that is executed if the figure canvas is resized
-            self._cid_resize = self.f.canvas.mpl_connect(
-                "resize_event", self._on_resize
-            )
-
-        # if we haven't attached an axpicker so far, do it!
-        if self.parent._layout_editor is None:
-            self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
-
-        active_backend = plt.get_backend()
-
-        if active_backend == "module://matplotlib_inline.backend_inline":
-            # close the figure to avoid duplicated (empty) plots created
-            # by the inline-backend manager in jupyter notebooks
-            plt.close(self.f)
-
-    def _init_axes(self, ax, plot_crs, **kwargs):
-        if isinstance(ax, plt.Axes):
-            # check if the axis is already used by another maps-object
-            if ax not in (i.ax for i in (self.parent, *self.parent._children)):
-                newax = True
-                ax.set_animated(True)
-                # make sure axes are drawn once to properly set transforms etc.
-                # (otherwise pan/zoom, ax.contains_point etc. will not work)
-                ax.draw(self.f.canvas.get_renderer())
-
-            else:
-                newax = False
-        else:
-            newax = True
-            # create a new axis
-            if ax is None:
-                gs = GridSpec(
-                    nrows=1, ncols=1, left=0.01, right=0.99, bottom=0.05, top=0.95
-                )
-                gsspec = [gs[:]]
-            elif isinstance(ax, SubplotSpec):
-                gsspec = [ax]
-            elif isinstance(ax, (list, tuple)) and len(ax) == 4:
-                # absolute position
-                l, b, w, h = ax
-
-                gs = GridSpec(
-                    nrows=1, ncols=1, left=l, bottom=b, right=l + w, top=b + h
-                )
-                gsspec = [gs[:]]
-            elif isinstance(ax, int) and len(str(ax)) == 3:
-                gsspec = [ax]
-            elif isinstance(ax, tuple) and len(ax) == 3:
-                gsspec = ax
-            else:
-                raise TypeError("EOmaps: The provided value for 'ax' is invalid.")
-
-            projection = self._get_cartopy_crs(plot_crs)
-
-            ax = self.f.add_subplot(
-                *gsspec,
-                projection=projection,
-                aspect="equal",
-                adjustable="box",
-                label=self._get_ax_label(),
-                animated=True,
-            )
-            # make sure axes are drawn once to properly set transforms etc.
-            # (otherwise pan/zoom, ax.contains_point etc. will not work)
-            ax.draw(self.f.canvas.get_renderer())
-
-        self._ax = ax
-        self._gridspec = ax.get_gridspec()
-
-        # add support for "frameon" kwarg
-        if kwargs.get("frameon", True) is False:
-            self.ax.spines["geo"].set_edgecolor("none")
-
-        if newax:  # only if a new axis has been created
-            self._new_axis_map = True
-
-            # explicitly set initial limits to global to avoid issues if NE-features
-            # are added (and clipped) before actual limits are set
-            # TODO
-            if hasattr(self.ax, "set_global"):
-                self.ax.set_global()
-
-            self._cid_xlim = self.ax.callbacks.connect(
-                "xlim_changed", self._on_xlims_change
-            )
-            self._cid_xlim = self.ax.callbacks.connect(
-                "ylim_changed", self._on_ylims_change
-            )
-        else:
-            self._new_axis_map = False
-
-    def _get_ax_label(self):
-        return "map"
-
-    def _set_parent(self):
-        """Identify the parent object."""
-        assert self._parent is None, "EOmaps: There is already a parent Maps object!"
-        # check if the figure to which the Maps-object is added already has a parent
-        parent = None
-        if getattr(self._f, "_EOmaps_parent", False):
-            parent = self._proxy(self._f._EOmaps_parent)
-
-        if parent is None:
-            parent = self
-
-        self._parent = self._proxy(parent)
-
-        if parent not in [self, None]:
-            # add the child to the topmost parent-object
-            self.parent._add_child(self)
-
-    @staticmethod
-    def _proxy(obj):
-        # None cannot be weak-referenced!
-        if obj is None:
-            return None
-
-        # create a proxy if the object is not yet a proxy
-        if type(obj) is not weakref.ProxyType:
-            return weakref.proxy(obj)
-        else:
-            return obj
-
-    @property
-    def _real_self(self):
-        # workaround to obtain a non-weak reference for the parent
-        # (e.g. self.parent._real_self is a non-weak ref to parent)
-        # see https://stackoverflow.com/a/49319989/9703451
-        return self
-
-    def _add_child(self, m):
-        self.parent._children.add(m)
-
-        # execute hooks to notify the gui that a new child was added
-        for action in self._after_add_child:
-            try:
-                action()
-            except Exception:
-                _log.exception("EOmaps: Problem executing 'on_add_child' action:")
 
     def redraw(self, *args):
         """
@@ -751,6 +710,8 @@ class MapsBase(metaclass=_MapsMeta):
         show_layer : Set the currently visible layer.
         """
 
+        self.show_layer(self.layer)
+
         try:
             __IPYTHON__
         except NameError:
@@ -763,6 +724,77 @@ class MapsBase(metaclass=_MapsMeta):
                 self.snapshot(clear=clear)
             else:
                 plt.show()
+
+    def set_extent(self, extents, crs=None):
+        """
+        Set the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+
+        Parameters
+        ----------
+        extents : array-like
+            The extent in the given crs (x0, x1, y0, y1).
+        crs : a crs identifier, optional
+            The coordinate-system in which the extent is evaluated.
+
+            - if None, epsg=4326 (e.g. lon/lat projection) is used
+
+            The default is None.
+
+        """
+        # just a wrapper to make sure that previously set extents are not
+        # reset when plotting data!
+
+        # ( e.g. once .set_extent is called .plot_map does NOT set the extent!)
+        if crs is not None:
+            crs = self._get_cartopy_crs(crs)
+        else:
+            crs = ccrs.PlateCarree()
+
+        self.ax.set_extent(extents, crs=crs)
+        self._set_extent_on_plot = False
+
+    def get_extent(self, crs=None):
+        """
+        Get the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+
+        Parameters
+        ----------
+        crs : a crs identifier, optional
+            The coordinate-system in which the extent is evaluated.
+
+            - if None, the extent is provided in epsg=4326 (e.g. lon/lat projection)
+
+            The default is None.
+
+        Returns
+        -------
+        extent : The extent in the given crs (x0, x1, y0, y1).
+
+        """
+
+        # fast track if plot-crs is requested
+        if crs == self.crs_plot:
+            x0, x1, y0, y1 = (*self.ax.get_xlim(), *self.ax.get_ylim())
+
+            bnds = self._crs_boundary_bounds
+            # clip the map-extent with respect to the boundary bounds
+            # (to avoid returning values outside the crs bounds)
+            try:
+                x0, x1 = np.clip([x0, x1], bnds[0], bnds[2])
+                y0, y1 = np.clip([y0, y1], bnds[1], bnds[3])
+            except Exception:
+                _log.debug(
+                    "EOmaps: Error while trying to clip map extent", exc_info=True
+                )
+        else:
+            if crs is not None:
+                crs = self._get_cartopy_crs(crs)
+            else:
+                crs = self._get_cartopy_crs(4326)
+
+            x0, x1, y0, y1 = self.ax.get_extent(crs=crs)
+
+        return x0, x1, y0, y1
 
     def fetch_layers(self, layers=None):
         """
@@ -946,14 +978,6 @@ class MapsBase(metaclass=_MapsMeta):
             )
         finally:
             self._snapshotting = False
-
-    def _get_snapshot(self, layer=None):
-        if layer is None:
-            buf = self.f.canvas.print_to_buffer()
-            x = np.frombuffer(buf[0], dtype=np.uint8).reshape(buf[1][1], buf[1][0], 4)
-        else:
-            x = self.BM._get_array(layer)[::-1, ...]
-        return x
 
     @wraps(LayoutEditor.get_layout)
     def get_layout(self, *args, **kwargs):
@@ -1166,6 +1190,206 @@ class MapsBase(metaclass=_MapsMeta):
         """The crs used for plotting."""
         return self._crs_plot_cartopy
 
+    @lru_cache()
+    def get_crs(self, crs="plot"):
+        """
+        Get the pyproj CRS instance of a given crs specification.
+
+        Parameters
+        ----------
+        crs : "in", "out" or a crs definition
+            the crs to return
+
+            - if "in" : the crs defined in m.data_specs.crs
+            - if "out" or "plot" : the crs used for plotting
+
+        Returns
+        -------
+        crs : pyproj.CRS
+            the pyproj CRS instance
+
+        """
+        # check for strings first to avoid expensive equality checking for CRS objects!
+        if isinstance(crs, str):
+            if crs == "in":
+                crs = self.data_specs.crs
+            elif crs == "out" or crs == "plot":
+                if self.crs_plot == ccrs.PlateCarree():
+                    crs = 4326
+                else:
+                    crs = self.crs_plot
+
+        crs = CRS.from_user_input(crs)
+        return crs
+
+    def transform_plot_to_lonlat(self, x, y):
+        """
+        Transform plot-coordinates to longitude and latitude values.
+
+        Parameters
+        ----------
+        x, y : float or array-like
+            The coordinates values in the coordinate-system of the plot.
+
+        Returns
+        -------
+        lon, lat : The coordinates transformed to longitude and latitude values.
+
+        """
+        return self._transf_plot_to_lonlat.transform(x, y)
+
+    def transform_lonlat_to_plot(self, lon, lat):
+        """
+        Transform longitude and latitude values to plot coordinates.
+
+        Parameters
+        ----------
+        lon, lat : float or array-like
+            The longitude and latitude values to transform.
+
+        Returns
+        -------
+        x, y : The coordinates transformed to the plot-coordinate system.
+
+        """
+        return self._transf_lonlat_to_plot.transform(lon, lat)
+
+    def _init_figure(self, **kwargs):
+        if self.parent.f is None:
+            # do this on any new figure since "%matplotlib inline" tries to re-activate
+            # interactive mode all the time!
+            _handle_backends()
+
+            self._f = plt.figure(**kwargs)
+            # to hide canvas header in jupyter notebooks (default figure label)
+            self._f.canvas.header_visible = False
+
+            _log.debug("EOmaps: New figure created")
+
+            # make sure we keep a "real" reference otherwise overwriting the
+            # variable of the parent Maps-object while keeping the figure open
+            # causes all weakrefs to be garbage-collected!
+            self.parent.f._EOmaps_parent = self.parent._real_self
+        else:
+            if not hasattr(self.parent.f, "_EOmaps_parent"):
+                self.parent.f._EOmaps_parent = self.parent._real_self
+            self.parent._add_child(self)
+
+        if self.parent == self:  # use == instead of "is" since the parent is a proxy!
+
+            # override Figure.savefig with Maps.savefig but keep original
+            # method accessible via Figure._mpl_orig_savefig
+            # (this ensures that using the save-buttons in the gui or pressing
+            # control+s will redirect the save process to the eomaps routine)
+            self._f._mpl_orig_savefig = self._f.savefig
+            self._f.savefig = self.savefig
+
+            # only attach resize- and close-callbacks if we initialize a parent
+            # Maps-object
+            # attach a callback that is executed when the figure is closed
+            self._cid_onclose = self.f.canvas.mpl_connect("close_event", self._on_close)
+            # attach a callback that is executed if the figure canvas is resized
+            self._cid_resize = self.f.canvas.mpl_connect(
+                "resize_event", self._on_resize
+            )
+
+        # if we haven't attached an axpicker so far, do it!
+        if self.parent._layout_editor is None:
+            self.parent._layout_editor = LayoutEditor(self.parent, modifier="alt+l")
+
+        active_backend = plt.get_backend()
+
+        if active_backend == "module://matplotlib_inline.backend_inline":
+            # close the figure to avoid duplicated (empty) plots created
+            # by the inline-backend manager in jupyter notebooks
+            plt.close(self.f)
+
+    def _init_axes(self, ax, plot_crs, **kwargs):
+        if isinstance(ax, plt.Axes):
+            # check if the axis is already used by another maps-object
+            if ax not in (i.ax for i in (self.parent, *self.parent._children)):
+                newax = True
+                ax.set_animated(True)
+                # make sure axes are drawn once to properly set transforms etc.
+                # (otherwise pan/zoom, ax.contains_point etc. will not work)
+                ax.draw(self.f.canvas.get_renderer())
+            else:
+                newax = False
+        else:
+            newax = True
+            # create a new axis
+            if ax is None:
+                gs = GridSpec(
+                    nrows=1, ncols=1, left=0.01, right=0.99, bottom=0.05, top=0.95
+                )
+                gsspec = [gs[:]]
+            elif isinstance(ax, SubplotSpec):
+                gsspec = [ax]
+            elif isinstance(ax, (list, tuple)) and len(ax) == 4:
+                # absolute position
+                l, b, w, h = ax
+
+                gs = GridSpec(
+                    nrows=1, ncols=1, left=l, bottom=b, right=l + w, top=b + h
+                )
+                gsspec = [gs[:]]
+            elif isinstance(ax, int) and len(str(ax)) == 3:
+                gsspec = [ax]
+            elif isinstance(ax, tuple) and len(ax) == 3:
+                gsspec = ax
+            else:
+                raise TypeError("EOmaps: The provided value for 'ax' is invalid.")
+
+            projection = self._get_cartopy_crs(plot_crs)
+
+            ax = self.f.add_subplot(
+                *gsspec,
+                projection=projection,
+                aspect="equal",
+                adjustable="box",
+                label=self._get_ax_label(),
+                animated=True,
+            )
+            # make sure axes are drawn once to properly set transforms etc.
+            # (otherwise pan/zoom, ax.contains_point etc. will not work)
+            ax.draw(self.f.canvas.get_renderer())
+
+        self._ax = ax
+        self._gridspec = ax.get_gridspec()
+
+        # add support for "frameon" kwarg
+        if kwargs.get("frameon", True) is False:
+            self.ax.spines["geo"].set_edgecolor("none")
+
+        if newax:  # only if a new axis has been created
+            self._new_axis_map = True
+
+            # explicitly set initial limits to global to avoid issues if NE-features
+            # are added (and clipped) before actual limits are set
+            # TODO
+            if hasattr(self.ax, "set_global"):
+                self.ax.set_global()
+
+            self._cid_xlim = self.ax.callbacks.connect(
+                "xlim_changed", self._on_xlims_change
+            )
+            self._cid_xlim = self.ax.callbacks.connect(
+                "ylim_changed", self._on_ylims_change
+            )
+        else:
+            self._new_axis_map = False
+
+    def _get_snapshot(self, layer=None):
+        if layer is None:
+            buf = self.f.canvas.print_to_buffer()
+            x = np.frombuffer(buf[0], dtype=np.uint8).reshape(buf[1][1], buf[1][0], 4)
+        else:
+            x = self.BM._get_array(layer)[::-1, ...]
+        return x
+
+    def _get_ax_label(self):
+        return "map"
+
     @staticmethod
     @lru_cache()
     def _get_cartopy_crs(crs):
@@ -1214,6 +1438,52 @@ class MapsBase(metaclass=_MapsMeta):
         # create a pyproj Transformer object and cache it for later use
         return Transformer.from_crs(crs_from, crs_to, always_xy=True)
 
+    def _set_parent(self):
+        """Identify the parent object."""
+        assert self._parent is None, "EOmaps: There is already a parent Maps object!"
+        # check if the figure to which the Maps-object is added already has a parent
+        parent = None
+        if getattr(self._f, "_EOmaps_parent", False):
+            parent = self._proxy(self._f._EOmaps_parent)
+
+        if parent is None:
+            parent = self
+
+        self._parent = self._proxy(parent)
+
+        if parent not in [self, None]:
+            # add the child to the topmost parent-object
+            self.parent._add_child(self)
+
+    @staticmethod
+    def _proxy(obj):
+        # None cannot be weak-referenced!
+        if obj is None:
+            return None
+
+        # create a proxy if the object is not yet a proxy
+        if type(obj) is not weakref.ProxyType:
+            return weakref.proxy(obj)
+        else:
+            return obj
+
+    @property
+    def _real_self(self):
+        # workaround to obtain a non-weak reference for the parent
+        # (e.g. self.parent._real_self is a non-weak ref to parent)
+        # see https://stackoverflow.com/a/49319989/9703451
+        return self
+
+    def _add_child(self, m):
+        self.parent._children.add(m)
+
+        # execute hooks to notify the gui that a new child was added
+        for action in self._after_add_child:
+            try:
+                action()
+            except Exception:
+                _log.exception("EOmaps: Problem executing 'on_add_child' action:")
+
     @property
     def _transf_plot_to_lonlat(self):
         return self._get_transformer(
@@ -1228,37 +1498,42 @@ class MapsBase(metaclass=_MapsMeta):
             self.crs_plot,
         )
 
-    def transform_plot_to_lonlat(self, x, y):
-        """
-        Transform plot-coordinates to longitude and latitude values.
+    def _handle_spines(self):
+        # put cartopy spines on a separate layer
+        for spine in self.ax.spines.values():
+            if spine and spine not in self.BM._bg_artists.get("__SPINES__", []):
+                self.BM.add_bg_artist(spine, layer="__SPINES__")
 
-        Parameters
-        ----------
-        x, y : float or array-like
-            The coordinates values in the coordinate-system of the plot.
+    def _on_resize(self, event):
+        # make sure the background is re-fetched if the canvas has been resized
+        # (required for peeking layers after the canvas has been resized
+        #  and for webagg and nbagg backends to correctly re-draw the layer)
 
-        Returns
-        -------
-        lon, lat : The coordinates transformed to longitude and latitude values.
+        self.BM._refetch_bg = True
+        self.BM._refetch_blank = True
 
-        """
-        return self._transf_plot_to_lonlat.transform(x, y)
+        # update the figure dimensions in case shading is used.
+        # Avoid flushing events during resize
+        # TODO
+        if hasattr(self, "_update_shade_axis_size"):
+            self._update_shade_axis_size(flush=False)
 
-    def transform_lonlat_to_plot(self, lon, lat):
-        """
-        Transform longitude and latitude values to plot coordinates.
+    def _on_close(self, event):
+        # reset attributes that might use up a lot of memory when the figure is closed
+        for m in [self.parent, *self.parent._children]:
+            if hasattr(m.f, "_EOmaps_parent"):
+                m.f._EOmaps_parent = None
 
-        Parameters
-        ----------
-        lon, lat : float or array-like
-            The longitude and latitude values to transform.
+            m.cleanup()
 
-        Returns
-        -------
-        x, y : The coordinates transformed to the plot-coordinate system.
+        # run garbage-collection to immediately free memory
+        gc.collect
 
-        """
-        return self._transf_lonlat_to_plot.transform(lon, lat)
+    def _on_xlims_change(self, *args, **kwargs):
+        self.BM._refetch_bg = True
+
+    def _on_ylims_change(self, *args, **kwargs):
+        self.BM._refetch_bg = True
 
     def on_layer_activation(self, func, layer=None, persistent=False, **kwargs):
         """
@@ -1332,76 +1607,125 @@ class MapsBase(metaclass=_MapsMeta):
 
         self.BM.on_layer(func=cb, layer=layer, persistent=persistent, m=m)
 
-    def set_extent(self, extents, crs=None):
+    # TODO new method for EOmaps v9
+    def on_activation(self, func, persistent=False, **kwargs):
+        def cb(m, layer):
+            func(m=self, **kwargs)
+
+        self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
+
+    @property
+    def on_all_layers(self):
         """
-        Set the extent (x0, x1, y0, y1) of the map in the given coordinate system.
+        Return a MultiCaller that executes action on all layers defined
+        on the map at the moment of execution.
+
+
+        >>> from eomaps import Maps
+        >>> m = Maps()
+        >>> m.l.second.add_title("a second layer")
+        >>> m.all_layers.add_feature.preset.coastline()
+
+        """
+        return sum([*self.l])
+
+    @lru_cache()
+    def _get_nominatim_response(self, q, user_agent=None):
+        import requests
+
+        _log.info(f"Querying {q}")
+        if user_agent is None:
+            version = importlib.metadata.version("eomaps")
+            user_agent = f"EOMaps v{version}"
+
+        headers = {
+            "User-Agent": user_agent,
+        }
+
+        resp = requests.get(
+            rf"https://nominatim.openstreetmap.org/search?q={q}&format=json&addressdetails=1&limit=1",
+            headers=headers,
+        ).json()
+
+        if len(resp) == 0:
+            raise TypeError(f"Unable to resolve the location: {q}")
+
+        return resp[0]
+
+    def set_extent_to_location(
+        self, location, buffer=0, annotate=False, user_agent=None
+    ):
+        """
+        Set the map-extent based on a given location query.
+
+        The bounding-box is hereby resolved via the OpenStreetMap Nominatim service.
+
+        Note
+        ----
+        The OSM Nominatim service has a strict usage policy that explicitly
+        disallows "heavy usage" (e.g.: an absolute maximum of 1 request per second).
+
+        EOMaps caches requests so using a location multiple times in the same
+        session does not cause multiple requests!
+
+        For more details, see:
+            https://operations.osmfoundation.org/policies/nominatim/
+            https://openstreetmap.org/copyright
 
         Parameters
         ----------
-        extents : array-like
-            The extent in the given crs (x0, x1, y0, y1).
-        crs : a crs identifier, optional
-            The coordinate-system in which the extent is evaluated.
+        location : str
+            An arbitrary string used to identify the region of interest.
+            (e.g. a country, district, address etc.)
 
-            - if None, epsg=4326 (e.g. lon/lat projection) is used
+            For example:
+                "Austria", "Vienna"
+        buffer : float
+            Fraction of the found extent added as a buffer.
+            The default is 0.
+        annotate : bool, optional
+            Indicator if an annotation should be added to the center of the identified
+            location or not. The default is False.
+        user_agent: str, optional
+            The user-agent used for the Nominatim request
 
-            The default is None.
+        Examples
+        --------
+        >>> m = Maps()
+        >>> m.set_extent_to_location("Austria")
+        >>> m.add_feature.preset.countries()
 
-        """
-        # just a wrapper to make sure that previously set extents are not
-        # reset when plotting data!
-
-        # ( e.g. once .set_extent is called .plot_map does NOT set the extent!)
-        if crs is not None:
-            crs = self._get_cartopy_crs(crs)
-        else:
-            crs = ccrs.PlateCarree()
-
-        self.ax.set_extent(extents, crs=crs)
-        self._set_extent_on_plot = False
-
-    def get_extent(self, crs=None):
-        """
-        Get the extent (x0, x1, y0, y1) of the map in the given coordinate system.
-
-        Parameters
-        ----------
-        crs : a crs identifier, optional
-            The coordinate-system in which the extent is evaluated.
-
-            - if None, the extent is provided in epsg=4326 (e.g. lon/lat projection)
-
-            The default is None.
-
-        Returns
-        -------
-        extent : The extent in the given crs (x0, x1, y0, y1).
+        >>> m = Maps(Maps.CRS.GOOGLE_MERCATOR)
+        >>> m.set_extent_to_location("Vienna")
+        >>> m.add_wms.OpenStreetMap.add_layer.default()
 
         """
+        r = self._get_nominatim_response(location)
 
-        # fast track if plot-crs is requested
-        if crs == self.crs_plot:
-            x0, x1, y0, y1 = (*self.ax.get_xlim(), *self.ax.get_ylim())
+        # get bbox of found location
+        lon0, lon1, lat0, lat1 = map(float, r["boundingbox"])
 
-            bnds = self._crs_boundary_bounds
-            # clip the map-extent with respect to the boundary bounds
-            # (to avoid returning values outside the crs bounds)
-            try:
-                x0, x1 = np.clip([x0, x1], bnds[0], bnds[2])
-                y0, y1 = np.clip([y0, y1], bnds[1], bnds[3])
-            except Exception:
-                _log.debug(
-                    "EOmaps: Error while trying to clip map extent", exc_info=True
-                )
-        else:
-            if crs is not None:
-                crs = self._get_cartopy_crs(crs)
+        dlon, dlat = lon1 - lon0, lat1 - lat0
+        lon0 -= dlon * buffer
+        lon1 += dlon * buffer
+        lat0 -= dlat * buffer
+        lat1 += dlat * buffer
+
+        # set extent to found bbox
+        self.set_extent((lat0, lat1, lon0, lon1), crs=ccrs.PlateCarree())
+
+        # add annotation
+        if annotate is not False:
+            if isinstance(annotate, str):
+                text = annotate
             else:
-                crs = self._get_cartopy_crs(4326)
+                text = fill(r["display_name"], 20)
 
-            x0, x1, y0, y1 = self.ax.get_extent(crs=crs)
-
-        return x0, x1, y0, y1
+            self.add_annotation(
+                xy=(r["lon"], r["lat"]), xy_crs=4326, text=text, fontsize=8
+            )
+        else:
+            _log.info(f"Centering Map to:\n    {r['display_name']}")
 
     def join_limits(self, *args):
         """
@@ -1413,10 +1737,18 @@ class MapsBase(metaclass=_MapsMeta):
             the axes to join.
         """
         for m in args:
-            if m is not self:
-                self._join_axis_limits(weakref.proxy(m))
+            if m._real_self is not self:
+                self._join_axis_limits(m)
+
+    # a WeakSet holding weak-references to maps that share axes limits
+    # (used to make sure limits are only shared once between Maps)
+    __joined_limits = weakref.WeakSet()
 
     def _join_axis_limits(self, m):
+        if (m._real_self in self.__joined_limits) or (self in m.__joined_limits):
+            # make sure limits are only joined once between maps
+            return
+
         if self.ax.projection != m.ax.projection:
             _log.warning(
                 "EOmaps: joining axis-limits is only possible for "
@@ -1458,6 +1790,8 @@ class MapsBase(metaclass=_MapsMeta):
 
         m.ax.callbacks.connect("xlim_changed", parent_xlims_change)
         m.ax.callbacks.connect("ylim_changed", parent_ylims_change)
+
+        self.__joined_limits.add(m)
 
     def _log_on_event(self, level, msg, event):
         """
@@ -1505,3 +1839,83 @@ class MapsBase(metaclass=_MapsMeta):
             self._log_on_event_cids[event] = self.f.canvas.mpl_connect(
                 event, log_message
             )
+
+    def _get_always_on_top(self):
+        try:
+            if "qt" in plt.get_backend().lower():
+                from qtpy import QtCore
+
+                w = self.f.canvas.window()
+                return bool(w.windowFlags() & QtCore.Qt.WindowStaysOnTopHint)
+        except Exception:
+            _log.debug("Error while trying to get 'always_on_top' flag")
+            return False
+        return False
+
+    def _set_always_on_top(self, q):
+        # keep pyqt window on top
+        try:
+            from qtpy import QtCore
+
+            if q:
+                # only do this if necessary to avoid flickering
+                # see https://stackoverflow.com/a/40007740/9703451
+                if not self._get_always_on_top():
+                    # in case pyqt is used as backend, also keep the figure on top
+                    if "qt" in plt.get_backend().lower():
+                        w = self.f.canvas.window()
+                        ws = w.size()
+                        w.setWindowFlags(
+                            w.windowFlags() | QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        w.resize(ws)
+                        w.show()
+
+                    # handle companion-widget (in case it has been activated)
+                    self._CompanionMixin__set_always_on_top(q)
+
+            else:
+                if self._get_always_on_top():
+                    if "qt" in plt.get_backend().lower():
+                        w = self.f.canvas.window()
+                        ws = w.size()
+                        w.setWindowFlags(
+                            w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint
+                        )
+                        w.resize(ws)
+                        w.show()
+
+                    # handle companion-widget (in case it has been activated)
+                    self._CompanionMixin__set_always_on_top(q)
+
+        except Exception:
+            pass
+
+    @contextmanager
+    def delay_draw(self):
+        """
+        A contextmanager to delay drawing until the context exits.
+
+        This is particularly useful to avoid intermediate draw-events when plotting
+        a lot of features or datasets on the currently visible layer.
+
+
+        Examples
+        --------
+
+        >>> m = Maps()
+        >>> with m.delay_draw():
+        >>>     m.add_feature.preset.coastline()
+        >>>     m.add_feature.preset.ocean()
+        >>>     m.add_feature.preset.land()
+
+        """
+        try:
+            self.BM._disable_draw = True
+            self.BM._disable_update = True
+
+            yield
+        finally:
+            self.BM._disable_draw = False
+            self.BM._disable_update = False
+            self.redraw()
