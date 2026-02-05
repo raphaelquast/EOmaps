@@ -506,8 +506,14 @@ class _MoveClickPickCallbacks(_CallbacksBase):
 
             The default is None which defaults to the used shape for plotting
             if possible and else "ellipses".
-        buffer : float, optional
-            A factor to scale the size of the shape. The default is 1.
+        buffer : float or array of float, optional
+            A factor to scale the size of the shape.
+
+            If a list of buffer values is provided, style-arguments like
+            linewidth, facecolor etc. can also be lists to style each buffer
+            shape individually.
+
+            The default is 1.
         permanent : bool or None
             Indicator if the markers should be temporary (False) or permanent (True).
 
@@ -595,12 +601,10 @@ class _MoveClickPickCallbacks(_CallbacksBase):
             pixelQ = False
 
         # get manually specified radius (e.g. if radius != "estimate")
-        if isinstance(radius, list):
-            radius = [i * buffer for i in radius]
+        if isinstance(radius, (list, int, float)):
+            radius = np.multiply(radius, buffer)
         elif isinstance(radius, tuple):
-            radius = tuple([i * buffer for i in radius])
-        elif isinstance(radius, (int, float)):
-            radius = radius * buffer
+            radius = tuple([np.multiply(i, buffer) for i in radius])
 
         if self.m.shape and self.m.shape.name == "geod_circles":
             if shape != "geod_circles" and pixelQ:
@@ -636,8 +640,13 @@ class _MoveClickPickCallbacks(_CallbacksBase):
         else:
             raise TypeError(f"EOmaps: '{shape}' is not a valid marker-shape")
 
+        n_buffer = len(np.atleast_1d(buffer))
+
         coll = shp.get_coll(
-            np.atleast_1d(pos[0]), np.atleast_1d(pos[1]), pos_crs, **kwargs
+            np.tile(np.atleast_1d(pos[0]), n_buffer),
+            np.tile(np.atleast_1d(pos[1]), n_buffer),
+            pos_crs,
+            **kwargs,
         )
 
         marker = self.m.ax.add_collection(coll, autolim=False)
