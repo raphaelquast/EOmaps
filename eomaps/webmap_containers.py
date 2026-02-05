@@ -208,7 +208,7 @@ class WebMapContainer(object):
 
         WMS._EOmaps_info = type(self).ESA_WorldCover.__doc__
         WMS._EOmaps_source_code = (
-            "m.add_wms.ESA_WorldCover.add_layer." f"<layer>(transparent=True)"
+            "m.add_wms.ESA_WorldCover.add_layer." "<layer>(transparent=True)"
         )
 
         WMS.__doc__ = type(self).ESA_WorldCover.__doc__
@@ -301,7 +301,7 @@ class WebMapContainer(object):
         )
         WMS._EOmaps_info = type(self).GMRT.__doc__
         WMS._EOmaps_source_code = (
-            "m.add_wms.GMRT.add_layer." f"<layer>(transparent=True)"
+            "m.add_wms.GMRT.add_layer." "<layer>(transparent=True)"
         )
         WMS.__doc__ = type(self).GMRT.__doc__
         return WMS
@@ -329,7 +329,7 @@ class WebMapContainer(object):
         )
         WMS._EOmaps_info = type(self).GLAD.__doc__
         WMS._EOmaps_source_code = (
-            "m.add_wms.GLAD.add_layer." f"<layer>(transparent=True)"
+            "m.add_wms.GLAD.add_layer." "<layer>(transparent=True)"
         )
         WMS.__doc__ = type(self).GLAD.__doc__
         return WMS
@@ -373,7 +373,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = type(self).NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.add_layer." f"<layer>(transparent=True)"
+                "m.add_wms.NASA_GIBS.add_layer." "<layer>(transparent=True)"
             )
 
         WMS.__doc__ = type(self).NASA_GIBS.__doc__
@@ -394,7 +394,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.EPSG_4326.add_layer." f"<layer>(transparent=True)"
+                "m.add_wms.NASA_GIBS.EPSG_4326.add_layer." "<layer>(transparent=True)"
             )
             WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
@@ -409,7 +409,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.EPSG_3857.add_layer." f"<layer>(transparent=True)"
+                "m.add_wms.NASA_GIBS.EPSG_3857.add_layer." "<layer>(transparent=True)"
             )
             WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
@@ -424,7 +424,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.EPSG_3413.add_layer." f"<layer>(transparent=True)"
+                "m.add_wms.NASA_GIBS.EPSG_3413.add_layer." "<layer>(transparent=True)"
             )
             WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
@@ -439,7 +439,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.EPSG_3031.add_layer." f"<layer>(transparent=True)"
+                "m.add_wms.NASA_GIBS.EPSG_3031.add_layer." "<layer>(transparent=True)"
             )
             WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
@@ -2076,7 +2076,7 @@ class WebMapContainer(object):
 
         WMS._EOmaps_info = WebMapContainer.S2_cloudless.__doc__
         WMS._EOmaps_source_code = (
-            f"m.add_wms.S2_cloudless.add_layer.<layer>(transparent=True)"
+            "m.add_wms.S2_cloudless.add_layer.<layer>(transparent=True)"
         )
 
         WMS.__doc__ = WebMapContainer.S2_cloudless.__doc__
@@ -2118,7 +2118,7 @@ class WebMapContainer(object):
             url="https://eccharts.ecmwf.int/wms/?token=public",
         )
         WMS._EOmaps_info = WebMapContainer.CAMS.__doc__
-        WMS._EOmaps_source_code = f"m.add_wms.CAMS.add_layer.<layer>(transparent=True)"
+        WMS._EOmaps_source_code = "m.add_wms.CAMS.add_layer.<layer>(transparent=True)"
         WMS.__doc__ = WebMapContainer.CAMS.__doc__
         return WMS
 
