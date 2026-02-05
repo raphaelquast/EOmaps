@@ -17,7 +17,7 @@ class CompanionMixin:
 
     def __init__(self, *args, **kwargs):
         try:
-            from .qtcompanion.signal_container import _SignalContainer
+            from ..qtcompanion.signal_container import _SignalContainer
 
             # initialize the signal container (MUST be done before init of the widget!)
             self._signal_container = _SignalContainer()
