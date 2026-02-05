@@ -1216,7 +1216,7 @@ class ColorBar(ColorBarBase):
 
         if self._m._classified:
             unique_bins = np.unique(
-                np.clip(self._m.classify_specs._bins, self._vmin, self._vmax)
+                np.clip(self._m._classify_specs._bins, self._vmin, self._vmax)
             )
             if len(unique_bins) <= self.max_n_classify_bins_to_label:
                 self.cb.set_ticks(unique_bins)
@@ -1598,7 +1598,7 @@ class ColorBar(ColorBarBase):
         cb._plot_colorbar(extend=extend, **kwargs)
 
         bins = (
-            m.classify_specs._bins
+            m._classify_specs._bins
             if (m._classified and hist_bins == "bins")
             else hist_bins
         )
