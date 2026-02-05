@@ -9,7 +9,7 @@ import logging
 from types import SimpleNamespace
 from functools import partial, wraps
 from contextlib import contextmanager
-from itertools import chain
+from itertools import chain, permutations
 from weakref import proxy
 
 from .callbacks import (
@@ -186,7 +186,7 @@ class _CallbackContainer(object):
                             and not obj._check_toolbar_mode()
                         ):
                             objs.append(obj)
-        return objs
+        return set(objs)
 
     def _clear_temporary_artists(self):
         while len(self._temporary_artists) > 0:
@@ -221,7 +221,7 @@ class _CallbackContainer(object):
             The Maps-objects that should execute the callback.
         """
         for m in args:
-            self._fwd_cbs[id(m)] = m
+            self._fwd_cbs[id(m._real_self)] = m
 
     def share_events(self, *args):
         """
@@ -234,10 +234,16 @@ class _CallbackContainer(object):
         args : eomaps.Maps
             The Maps-objects that should execute the callback.
         """
-        for m1 in (self._m, *args):
-            for m2 in (self._m, *args):
-                if m1 is not m2:
-                    self._getobj(m1)._fwd_cbs[id(m2)] = m2
+
+        ms = []
+        for i in (self._m, *args):
+            if i not in ms:
+                ms.append(i)
+
+        for m1, m2 in permutations(ms, 2):
+            obj = self._getobj(m1)
+            if id(m2._real_self) not in obj._fwd_cbs:
+                obj._fwd_cbs[id(m2._real_self)] = m2
 
         if self._method == "click":
             self._m.cb._click_move.share_events(*args)
