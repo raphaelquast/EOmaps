@@ -375,7 +375,7 @@ class MapsBase(metaclass=_MapsMeta):
     def __init__(
         self,
         crs=None,
-        layer="base",
+        layer=None,
         f=None,
         ax=None,
         **kwargs,
@@ -389,6 +389,9 @@ class MapsBase(metaclass=_MapsMeta):
         self._log_on_event_cids = dict()
 
         # make sure the used layer-name is valid
+        if layer is None:
+            layer = "base"
+
         layer = BlitManager._check_layer_name(layer)
         self._layer = layer
 

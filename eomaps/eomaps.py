@@ -181,7 +181,7 @@ class Maps(
     def __init__(
         self,
         crs=None,
-        layer="base",
+        layer=None,
         f=None,
         ax=None,
         preferred_wms_service="wms",
