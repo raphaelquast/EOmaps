@@ -2203,7 +2203,7 @@ class Shapes(object):
             # if manual levels were specified, use them, otherwise check for
             # classification values
             if "levels" not in kwargs:
-                bins = getattr(self._m.classify_specs, "_bins", None)
+                bins = getattr(self._m._classify_specs, "_bins", None)
                 if bins is not None:
                     # in order to ensure that values above or below vmin/vmax are
                     # colored with the appropriate "under" and "over" colors,
