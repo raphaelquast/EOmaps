@@ -11,6 +11,7 @@ from matplotlib.path import Path
 
 from . import Maps
 from .grid import _intersect, _get_intersect
+from .helpers import _proxy
 
 
 class InsetMaps(Maps):
@@ -45,7 +46,7 @@ class InsetMaps(Maps):
         **kwargs,
     ):
 
-        self._parent_m = self._proxy(parent)
+        self._parent_m = _proxy(parent)
         self._indicators = []
         # inherit the layer from the parent Maps-object if not explicitly
         # provided

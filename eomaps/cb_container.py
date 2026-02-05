@@ -18,7 +18,7 @@ from .callbacks import (
     KeypressCallbacks,
     MoveCallbacks,
 )
-from .helpers import register_modules
+from .helpers import register_modules, _proxy
 
 import matplotlib.pyplot as plt
 from pyproj import Transformer
@@ -798,7 +798,7 @@ class _ClickContainer(_CallbackContainer):
             if getattr(self._m, "tree", None) is None:
                 from .helpers import SearchTree
 
-                self._m.tree = SearchTree(m=self._m._proxy(self._m))
+                self._m.tree = SearchTree(m=_proxy(self._m))
                 self._m.cb.pick._set_artist(self._m.coll)
                 self._m.cb.pick._init_cbs()
                 self._m.cb._methods.add("pick")
@@ -1040,7 +1040,7 @@ class ClickContainer(_ClickContainer):
     get = _get
 
     def _init_cbs(self):
-        if self._m.parent is self._m:
+        if self._m.parent == self._m:
             self._add_click_callback()
 
     def _get_clickdict(self, event):
@@ -1298,7 +1298,7 @@ class MoveContainer(ClickContainer):
     get = _get
 
     def _init_cbs(self):
-        if self._m.parent is self._m:
+        if self._m.parent == self._m:
             self._add_move_callback()
 
     def _reset_cids(self):
@@ -1554,7 +1554,8 @@ class PickContainer(_ClickContainer):
         self._artist.set_picker(self._picker)
 
     def _init_cbs(self):
-        # if self._m.parent is self._m:
+        # Pick callbacks must be added to each map individually (not just the
+        # parent) so they can pick the right dataset!
         self._add_pick_callback()
 
     def _default_picker(self, artist, event):
@@ -1759,6 +1760,8 @@ class PickContainer(_ClickContainer):
                 return
 
             try:
+                print("HERE", self._m == self._m.parent.l.base)
+
                 # make sure pickcb is only executed if we are on the right layer
                 if not self._execute_cb(self._m.layer):
                     return
@@ -1904,7 +1907,7 @@ class KeypressContainer(_CallbackContainer):
         self.get = self._get(self)
 
     def _init_cbs(self):
-        if self._m.parent is self._m:
+        if self._m.parent == self._m:
             self._initialize_callbacks()
 
     def _reset_cids(self):
@@ -1975,7 +1978,7 @@ class KeypressContainer(_CallbackContainer):
             except ReferenceError:
                 pass
 
-        if self._m is self._m.parent:
+        if self._m.parent == self._m:
             self._cid_keypress_event = self._m.f.canvas.mpl_connect(
                 "key_press_event", _onpress
             )

@@ -9,12 +9,14 @@ import logging
 from contextlib import ExitStack, contextmanager
 from functools import lru_cache
 from itertools import chain
-from weakref import WeakSet
+import weakref
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.spines import Spine
 from matplotlib.transforms import Bbox
+
+from .helpers import _proxy
 
 _log = logging.getLogger(__name__)
 
@@ -190,7 +192,7 @@ class BlitManager(LayerParser):
         self._disable_draw = False
         self._disable_update = False
 
-        self._m = m
+        self._m = _proxy(m)
         self._bg_layer = self._m.layer
 
         self._artists = dict()
@@ -250,7 +252,7 @@ class BlitManager(LayerParser):
 
         # a weak set containing artists that should NOT be identified as
         # unmanaged artists
-        self._ignored_unmanaged_artists = WeakSet()
+        self._ignored_unmanaged_artists = weakref.WeakSet()
 
     def _get_renderer(self):
         # don't return the renderer if the figure is saved.

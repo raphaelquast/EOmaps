@@ -13,6 +13,7 @@ from importlib import import_module
 from textwrap import indent, dedent
 from functools import wraps, lru_cache
 import warnings
+import weakref
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,6 +27,18 @@ from packaging import version
 mpl_version = version.parse(importlib.metadata.version("matplotlib"))
 
 _log = logging.getLogger(__name__)
+
+
+def _proxy(obj):
+    # None cannot be weak-referenced!
+    if obj is None:
+        return None
+
+    # create a proxy if the object is not yet a proxy
+    if type(obj) is not weakref.ProxyType:
+        return weakref.proxy(obj)
+    else:
+        return obj
 
 
 def _parse_log_level(level):

@@ -13,6 +13,8 @@ import numpy as np
 
 from matplotlib.collections import LineCollection
 
+from .helpers import _proxy
+
 _log = logging.getLogger(__name__)
 
 
@@ -63,7 +65,7 @@ class GridLines:
     def __init__(
         self, m, d=None, auto_n=10, layer=None, bounds=None, n=100, dynamic=False
     ):
-        self.m = m._proxy(m)
+        self.m = _proxy(m)
 
         self._d = d
         self._auto_n = auto_n
