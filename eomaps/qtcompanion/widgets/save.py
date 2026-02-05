@@ -247,7 +247,7 @@ class SaveFileWidget(QtWidgets.QFrame):
         # set current widget export parameters as copy-to-clipboard args
         self.m._connect_signal("clipboardKwargsChanged", self.set_export_props)
 
-        # set export props to current state of Maps._clipboard_kwargs
+        # set export props to current state of the _clipboard_kwargs
         self.set_export_props()
 
     @Slot()
@@ -321,7 +321,7 @@ class SaveFileWidget(QtWidgets.QFrame):
     def set_export_props(self, *args, **kwargs):
         # callback that is triggered on Maps.set_clipboard_kwargs
 
-        clipboard_kwargs = self.m.__class__._clipboard_kwargs
+        clipboard_kwargs = self.m._get_clipboard_kwargs()
 
         filetype = clipboard_kwargs.get("format", "png")
         i = self.filetype_dropdown.findText(filetype)
