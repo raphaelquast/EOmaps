@@ -658,7 +658,6 @@ Dynamic updates of figures
 Here's an example to show how it works:
 
 
-
 .. grid:: 1 1 1 2
 
     .. grid-item::
@@ -710,9 +709,9 @@ MapsGrid objects
 
 .. note::
 
-    While :py:class:`MapsGrid` objects provide some convenience, starting with EOmaps v6.x,
-    the preferred way of combining multiple maps and/or matplotlib axes in a figure
-    is by using one of the options presented in the previous sections!
+    Starting with EOmaps v9.0 MapsGrid objects support the full range of functionalities
+    offered by single Maps objects.
+
 
 A :py:class:`MapsGrid` creates a grid of :py:class:`Maps` objects (and/or ordinary ``matplotlib`` axes),
 and provides convenience-functions to perform actions on all maps of the figure.
@@ -722,102 +721,27 @@ and provides convenience-functions to perform actions on all maps of the figure.
 
     from eomaps import MapsGrid
     mg = MapsGrid(r=2, c=2, crs=4326)
-    # you can then access the individual Maps-objects via:
+    # you can then access the individual Maps-objects via the ``m_<i>_<j>`` properties
+    # (useful for auto-completion)
     mg.m_0_0.add_feature.preset.ocean()
-    mg.m_0_1.add_feature.preset.land()
-    mg.m_1_0.add_feature.preset.urban_areas()
-    mg.m_1_1.add_feature.preset.rivers_lake_centerlines()
 
-    m_0_0_ocean = mg.m_0_0.new_layer("ocean")
-    m_0_0_ocean.add_feature.preset.ocean()
+    # or via 1d or 2d indexing
+    mg[0, 1].add_feature.preset.land()
+    mg[1, 0].add_feature.preset.urban_areas()
+    mg[3].add_feature.preset.rivers_lake_centerlines()
 
     # functions executed on MapsGrid objects will be executed on all Maps-objects:
     mg.add_feature.preset.coastline()
     mg.add_compass()
+    mg.add_gridlines(10, c="lightblue")
 
-    # to perform more complex actions on all Maps-objects, simply loop over the MapsGrid object
-    for m in mg:
-        m.add_gridlines(10, c="lightblue")
+    mg.l.ocean.add_feature.preset.ocean()
 
     # set the margins of the plot-grid
     mg.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
 
 
 Make sure to checkout the :ref:`layout_editor` which greatly simplifies the arrangement of multiple axes within a figure!
-
-Custom grids and mixed axes
-+++++++++++++++++++++++++++
-
-Fully customized grid-definitions can be specified by providing ``m_inits`` and/or ``ax_inits`` dictionaries
-of the following structure:
-
-- The keys of the dictionary are used to identify the objects
-- The values of the dictionary are used to identify the position of the associated axes
-- The position can be either an integer ``N``, a tuple of integers or slices ``(row, col)``
-- Axes that span over multiple rows or columns, can be specified via ``slice(start, stop)``
-
-.. code-block:: python
-
-    dict(
-        name1 = N  # position the axis at the Nth grid cell (counting first)
-        name2 = (row, col), # position the axis at the (row, col) grid-cell
-        name3 = (row, slice(col_start, col_end)) # span the axis over multiple columns
-        name4 = (slice(row_start, row_end), col) # span the axis over multiple rows
-        )
-
-- ``m_inits`` is used to initialize :py:class:`Maps` objects
-- ``ax_inits`` is used to initialize ordinary ``matplotlib`` axes
-
-The individual :py:class:`Maps` objects and ``matplotlib-Axes`` are then accessible via:
-
-.. code-block:: python
-    :name: test_mapsgrid_custom
-
-    from eomaps import MapsGrid
-    mg = MapsGrid(2, 3,
-                m_inits=dict(ocean=(0, 0), land=(0, 2)),
-                ax_inits=dict(someplot=(1, slice(0, 3)))
-                )
-    # Maps object with the name "left"
-    mg.m_ocean.add_feature.preset.ocean()
-    # the Maps object with the name "right"
-    mg.m_land.add_feature.preset.land()
-
-    # the ordinary matplotlib-axis with the name "someplot"
-    mg.ax_someplot.plot([1,2,3], marker="o")
-    mg.subplots_adjust(left=0.1, right=0.9, bottom=0.2, top=0.9)
-
-❗ NOTE: if ``m_inits`` and/or ``ax_inits`` are provided, ONLY the explicitly defined objects are initialized!
-
-
-- The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality.
-  All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the ``GridSpec`` object.
-
-- To specify unique ``crs`` for each :py:class:`Maps` object, provide a dictionary of ``crs`` specifications.
-
-.. code-block:: python
-    :name: test_mapsgrid_custom_02
-
-    from eomaps import MapsGrid
-    # initialize a grid with 2 Maps objects and 1 ordinary matplotlib axes
-    mg = MapsGrid(2, 2,
-                m_inits=dict(top_row=(0, slice(0, 2)),
-                            bottom_left=(1, 0)),
-                crs=dict(top_row=4326,
-                        bottom_left=3857),
-                ax_inits=dict(bottom_right=(1, 1)),
-                width_ratios=(1, 2),
-                height_ratios=(2, 1))
-
-    # a map extending over the entire top-row of the grid (in epsg=4326)
-    mg.m_top_row.add_feature.preset.coastline()
-
-    # a map in the bottom left corner of the grid (in epsg=3857)
-    mg.m_bottom_left.add_feature.preset.ocean()
-
-    # an ordinary matplotlib axes in the bottom right corner of the grid
-    mg.ax_bottom_right.plot([1, 2, 3], marker="o")
-    mg.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
 
 .. currentmodule:: eomaps.mapsgrid
@@ -826,16 +750,6 @@ The individual :py:class:`Maps` objects and ``matplotlib-Axes`` are then accessi
     :nosignatures:
 
     MapsGrid
-    MapsGrid.join_limits
-    MapsGrid.share_click_events
-    MapsGrid.share_pick_events
-    MapsGrid.set_data
-    MapsGrid.set_classify_specs
-    MapsGrid.add_wms
-    MapsGrid.add_feature
-    MapsGrid.add_annotation
-    MapsGrid.add_marker
-    MapsGrid.add_gdf
 
 
 Syntax and Autocompletion

@@ -688,52 +688,13 @@ class TestBasicPlotting(unittest.TestCase):
         mg.add_annotation(ID=520)
         mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
         mg.add_colorbar()
+        mg.cb.click.attach.annotate()
+
         self.assertTrue(mg.m_0_0 is mg[0, 0])
         self.assertTrue(mg.m_0_1 is mg[0, 1])
         self.assertTrue(mg.m_1_0 is mg[1, 0])
         self.assertTrue(mg.m_1_1 is mg[1, 1])
 
-        plt.close("all")
-
-    def test_MapsGrid2(self):
-        mg = MapsGrid(
-            2,
-            2,
-            m_inits={"a": (0, slice(0, 2)), 2: (1, 0)},
-            crs={"a": 4326, 2: 3857},
-            ax_inits=dict(c=(1, 1)),
-        )
-
-        mg.set_data(data=self.data, x="x", y="y", crs=3857)
-        mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
-
-        for m in mg:
-            m.plot_map()
-
-        mg.add_annotation(ID=520)
-        mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
-
-        self.assertTrue(mg.m_a is mg["a"])
-        self.assertTrue(mg.m_2 is mg[2])
-        self.assertTrue(mg.ax_c is mg["c"])
-
-        plt.close(mg.f)
-
-        with self.assertRaises(AssertionError):
-            MapsGrid(
-                2,
-                2,
-                m_inits={"2": (0, slice(0, 2)), 2: (1, 0)},
-                ax_inits=dict(c=(1, 1)),
-            )
-
-        with self.assertRaises(AssertionError):
-            MapsGrid(
-                2,
-                2,
-                m_inits={1: (0, slice(0, 2)), 2: (1, 0)},
-                ax_inits={"2": (1, 1), 2: 2},
-            )
         plt.close("all")
 
     def test_compass(self):
@@ -1136,7 +1097,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.add_feature.preset.coastline(lw=0.5)
             m.add_colorbar()
 
-        mgrid.share_click_events()
+        mgrid.cb.click.share_events(*mgrid)
 
         m.subplots_adjust(left=0.05, top=0.95, bottom=0.05, right=0.95)
         plt.close("all")
