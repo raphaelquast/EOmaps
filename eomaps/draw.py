@@ -704,7 +704,7 @@ class ShapeDrawer:
                     np.array([pts[0][0]]),
                     np.array([pts[0][1]]),
                     "out",
-                    [r, r],
+                    r,
                     "out",
                     100,
                 )
@@ -738,7 +738,7 @@ class ShapeDrawer:
 
             r = np.sqrt(sum((pts[1] - pts[0]) ** 2))
             pts = Shapes._Ellipses(self._m)._get_points(
-                np.array([pts[0][0]]), np.array([pts[0][1]]), "out", [r, r], "out", 100
+                np.array([pts[0][0]]), np.array([pts[0][1]]), "out", r, "out", 100
             )
 
             with autoscale_turned_off(self._m.ax):
