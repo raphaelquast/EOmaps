@@ -3,536 +3,186 @@
 # This file is part of EOmaps and is released under the BSD 3-clause license.
 # See LICENSE in the root of the repository for full licensing details.
 
-"""Mapsgrid class definition (helper for initialization of regular Maps-grids)."""
+"""MapsGrid class definition (helper to work with regular grids of maps)."""
 
-from functools import wraps, lru_cache
+from itertools import chain
 
 import numpy as np
+
 from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 
-from .shapes import Shapes
 from .eomaps import Maps
-
-from .ne_features import NaturalEarthFeatures
-
-try:
-    from .webmap_containers import WebMapContainer
-except ImportError:
-    WebMapContainer = None
+from ._maps_base import MultiCaller
 
 
-class MapsGrid:
+class MapsGrid(MultiCaller):
     """
     Initialize a grid of Maps objects
 
+    Any action performed on the MapsGrid accessor will be executed on ALL
+    Maps of the grid!
+
+    You can access individual Maps-objects via the m_<row>_<col> properties:
+
+    >>> mgrid.m_0_0     # access first map of first row
+
+    or via indexing/slicing:
+
+    >>> mgrid[0,0]      # access first map of first row
+    >>> mgrid[0]        # access first map of flattened grid
+    >>> mgrid[[0, 1]]   # get accessor to run actions on first and second map
+    >>> mgrid[:4]       # get accessor to run actions on first 4 maps
+
+    You can also iterate over the MapsGrid:
+
+    >>> for m in mg:
+    >>>     ... # loop over all maps of the grid
+
+
     Parameters
     ----------
-    r : int, optional
+    nrows : int, optional
         The number of rows. The default is 2.
-    c : int, optional
+    ncols : int, optional
         The number of columns. The default is 2.
-    crs : int or a cartopy-projection, optional
+    crs : int or a cartopy-projection or a list, optional
         The projection that will be assigned to all Maps objects.
         (you can still change the projection of individual Maps objects later!)
-        See the doc of "Maps" for details.
+        See the doc of "Maps" for details. If a list is provided, it is used
+        to assign individual crs to each Maps-object of the grid.
         The default is 4326.
-    m_inits : dict, optional
-        A dictionary that is used to customize the initialization the Maps-objects.
-
-        The keys of the dictionaries are used as names for the Maps-objects,
-        (accessible via `mgrid.m_<name>` or `mgrid[m_<name>]`) and the values are used to
-        identify the position of the axes in the grid.
-
-        Possible values are:
-        - a tuple of (row, col)
-        - an integer representing (row + col)
-
-        Note: If either `m_inits` or `ax_inits` is provided, ONLY objects with the
-        specified properties are initialized!
-
-        The default is None in which case a unique Maps-object will be created
-        for each grid-cell (accessible via `mgrid.m_<row>_<col>`)
-    ax_inits : dict, optional
-        Completely similar to `m_inits` but instead of `Maps` objects, ordinary
-        matplotlib axes will be initialized. They are accessible via `mg.ax_<name>`.
-
-        Note: If you iterate over the MapsGrid object, ONLY the initialized Maps
-        objects will be returned!
     figsize : (float, float)
         The width and height of the figure.
     layer : int or str
         The default layer to assign to all Maps-objects of the grid.
-        The default is 0.
-    f : matplotlib.Figure or None
-        The matplotlib figure to use. If None, a new figure will be created.
-        The default is None.
+        The default is "base"
     kwargs
         Additional keyword-arguments passed to the `matplotlib.gridspec.GridSpec()`
         function that is used to initialize the grid.
 
     Attributes
     ----------
-    m_<identifier> : eomaps.Maps objects
-        The individual Maps-objects can be accessed via `mgrid.m_<identifier>`
-        The identifiers are hereby `<row>_<col>` or the keys of the `m_inits`
-        dictionary (if provided)
-    ax_<identifier> : matplotlib.axes
-        The individual (ordinary) matplotlib axes can be accessed via
-        `mgrid.ax_<identifier>`. The identifiers are hereby the keys of the
-        `ax_inits` dictionary (if provided).
-        Note: if `ax_inits` is not specified, NO ordinary axes will be created!
+    m_<row>_<col> : eomaps.Maps objects
+        The individual Maps-objects can be accessed via
+        `mgrid.m_0_0`  -> the first Maps object of the first row
 
-
-    Methods
-    -------
-    join_limits :
-        join the axis-limits of maps that share the same projection
-    share_click_events :
-        share click-callback events between the Maps-objects
-    share_pick_events :
-        share pick-callback events between the Maps-objects
-    create_axes :
-        create a new (ordinary) matplotlib axes
-    add_<...> :
-        call the underlying `add_<...>` method on all Maps-objects of the grid
-    set_<...> :
-        set the corresponding property on all Maps-objects of the grid
-    subplots_adjust :
-        Dynamically adjust the layout of the subplots, e.g:
-
-        >>> mg.subplots_adjust(left=0.1, right=0.9,
-        >>>                    top=0.8, bottom=0.1,
-        >>>                    wspace=0.05, hspace=0.25)
 
     Examples
     --------
     To initialize a 2 by 2 grid with a large map on top, a small map
     on the bottom-left and an ordinary matplotlib plot on the bottom-right, use:
 
-    >>> m_inits = dict(top = (0, slice(0, 2)),
-    >>>                bottom_left=(1, 0))
-    >>> ax_inits = dict(bottom_right=(1, 1))
 
-    >>> mg = MapsGrid(2, 2, m_inits=m_inits, ax_inits=ax_inits)
+    >>> mg = MapsGrid(2, 2, crs=4326)
+    >>> mg.add_feature.preset.coastline()
+    >>> mg.set_data(data=[1,2,3], x=[1,2,3], y=[1,2,3])
     >>> mg.m_top.plot_map()
-    >>> mg.m_bottom_left.plot_map()
-    >>> mg.ax_bottom_right.plot([1,2,3])
 
     Returns
     -------
     eomaps.MapsGrid
         Accessor to the Maps objects "m_{row}_{column}".
 
-    Notes
-    -----
-
-    - To perform actions on all Maps-objects of the grid, simply iterate over
-      the MapsGrid object!
     """
 
-    def __init__(
-        self,
-        r=2,
-        c=2,
-        crs=None,
-        m_inits=None,
-        ax_inits=None,
-        figsize=None,
-        layer="base",
-        f=None,
-        **kwargs,
-    ):
-
-        self._Maps = []
-        self._names = dict()
-
-        if WebMapContainer is not None:
-            self._wms_container = WebMapContainer(self)
-
-        gskwargs = dict(bottom=0.01, top=0.99, left=0.01, right=0.99)
-        gskwargs.update(kwargs)
-        self.gridspec = GridSpec(nrows=r, ncols=c, **gskwargs)
-
-        if m_inits is None and ax_inits is None:
-            if isinstance(crs, list):
-                crs = np.array(crs).reshape((r, c))
-            else:
-                crs = np.broadcast_to(crs, (r, c))
-
-            self._custom_init = False
-            for i in range(r):
-                for j in range(c):
-                    crsij = crs[i, j]
-                    if isinstance(crsij, np.generic):
-                        crsij = crsij.item()
-
-                    if i == 0 and j == 0:
-                        # use crs[i, j].item() to convert to native python-types
-                        # (instead of numpy-dtypes)  ... check numpy.ndarray.item
-                        mij = Maps(
-                            crs=crsij,
-                            ax=self.gridspec[0, 0],
-                            figsize=figsize,
-                            layer=layer,
-                            f=f,
-                        )
-                        mij.ax.set_label("mg_map_0_0")
-                        self.parent = mij
-                    else:
-                        mij = Maps(
-                            crs=crsij,
-                            f=self.parent.f,
-                            ax=self.gridspec[i, j],
-                            layer=layer,
-                        )
-                        mij.ax.set_label(f"mg_map_{i}_{j}")
-                    self._Maps.append(mij)
-                    name = f"{i}_{j}"
-                    self._names.setdefault("Maps", []).append(name)
-                    setattr(self, "m_" + name, mij)
-        else:
-            self._custom_init = True
-            if m_inits is not None:
-                if not isinstance(crs, dict):
-                    if isinstance(crs, np.generic):
-                        crs = crs.item()
-
-                    crs = {key: crs for key in m_inits}
-
-                assert self._test_unique_str_keys(
-                    m_inits
-                ), "EOmaps: there are duplicated keys in m_inits!"
-
-                for i, [key, val] in enumerate(m_inits.items()):
-                    if ax_inits is not None:
-                        q = set(m_inits).intersection(set(ax_inits))
-                        assert (
-                            len(q) == 0
-                        ), f"You cannot provide duplicate keys! Check: {q}"
-
-                    if i == 0:
-                        mi = Maps(
-                            crs=crs[key],
-                            ax=self.gridspec[val],
-                            figsize=figsize,
-                            layer=layer,
-                            f=f,
-                        )
-                        mi.ax.set_label(f"mg_map_{key}")
-                        self.parent = mi
-                    else:
-                        mi = Maps(
-                            crs=crs[key],
-                            ax=self.gridspec[val],
-                            layer=layer,
-                            f=self.parent.f,
-                        )
-                        mi.ax.set_label(f"mg_map_{key}")
-
-                    name = str(key)
-                    self._names.setdefault("Maps", []).append(name)
-
-                    self._Maps.append(mi)
-                    setattr(self, f"m_{name}", mi)
-
-            if ax_inits is not None:
-                assert self._test_unique_str_keys(
-                    ax_inits
-                ), "EOmaps: there are duplicated keys in ax_inits!"
-                for key, val in ax_inits.items():
-                    self.create_axes(val, name=key)
-
-    def new_layer(self, layer=None):
-        if layer is None:
-            layer = self.parent.layer
-
-        mg = MapsGrid(m_inits=dict())  # initialize an empty MapsGrid
-        mg.gridspec = self.gridspec
-
-        for name, m in zip(self._names.get("Maps", []), self._Maps):
-            newm = m.new_layer(layer)
-            mg._Maps.append(newm)
-            mg._names["Maps"].append(name)
-            setattr(mg, "m_" + name, newm)
-
-            if m is self.parent:
-                mg.parent = newm
-
-        for name in self._names.get("Axes", []):
-            ax = getattr(self, f"ax_{name}")
-            mg._names["Axes"].append(name)
-            setattr(mg, f"ax_{name}", ax)
-
-        return mg
-
-    def cleanup(self):
-        for m in self:
-            m.cleanup()
-
-    @staticmethod
-    def _test_unique_str_keys(x):
-        # check if all keys are unique (as strings)
-        seen = set()
-        return not any(str(i) in seen or seen.add(str(i)) for i in x)
-
-    def __iter__(self):
-        return iter(self._Maps)
-
-    def __getitem__(self, key):
-        try:
-            if self._custom_init is False:
-                if isinstance(key, str):
-                    r, c = map(int, key.split("_"))
-                elif isinstance(key, (list, tuple)):
-                    r, c = key
-                else:
-                    raise IndexError(f"{key} is not a valid indexer for MapsGrid")
-
-                return getattr(self, f"m_{r}_{c}")
-            else:
-                if str(key) in self._names.get("Maps", []):
-                    return getattr(self, "m_" + str(key))
-                elif str(key) in self._names.get("Axes", []):
-                    return getattr(self, "ax_" + str(key))
-                else:
-                    raise IndexError(f"{key} is not a valid indexer for MapsGrid")
-        except:
-            raise IndexError(f"{key} is not a valid indexer for MapsGrid")
-
-    @property
-    def _preferred_wms_service(self):
-        return self.parent._preferred_wms_service
-
-    def create_axes(self, ax_init, name=None):
-        """
-        Create (and return) an ordinary matplotlib axes.
-
-        Note: If you intend to use both ordinary axes and Maps-objects, it is
-        recommended to use explicit "m_inits" and "ax_inits" dicts in the
-        initialization of the MapsGrid to avoid the creation of overlapping axes!
-
-        Parameters
-        ----------
-        ax_init : set
-            The GridSpec specifications for the axis.
-            use `ax_inits = (<row>, <col>)` to get an axis in a given grid-cell
-            use `slice(<start>, <stop>)` for `<row>` or `<col>` to get an axis
-            that spans over multiple rows/columns.
-
-        Returns
-        -------
-        ax : matplotlib.axist
-            The matplotlib axis instance
-
-        Examples
-        --------
-
-        >>> ax_inits = dict(top = (0, slice(0, 2)),
-        >>>                 bottom_left=(1, 0))
-
-        >>> mg = MapsGrid(2, 2, ax_inits=ax_inits)
-        >>> mg.m_top.plot_map()
-        >>> mg.m_bottom_left.plot_map()
-
-        >>> mg.create_axes((1, 1), name="bottom_right")
-        >>> mg.ax_bottom_right.plot([1,2,3], [1,2,3])
-
-        """
-
-        if name is None:
-            # get all existing axes
-            axes = [key for key in self.__dict__ if key.startswith("ax_")]
-            name = str(len(axes))
-        else:
-            assert (
-                name.isidentifier()
-            ), f"the provided name {name} is not a valid identifier"
-
-        ax = self.f.add_subplot(self.gridspec[ax_init], label=f"mg_ax_{name}")
-
-        self._names.setdefault("Axes", []).append(name)
-        setattr(self, f"ax_{name}", ax)
-        return ax
-
-    _doc_prefix = (
-        "This will execute the corresponding action on ALL Maps "
-        + "objects of the MapsGrid!\n"
+    __parent_only_attrs = (
+        "f",
+        "parent",
+        "savefig",
+        "redraw",
+        "snapshot",
+        "show",
+        "show_layer",
+        "edit_layout",
+        "get_layout",
+        "apply_layout",
+        "subplots_adjust",
+        "BM",
+        "CRS",
+        "fetch_layers",
+        "new_inset_map",
+        "new_map",
+        "new_subplot",
+        "util",
     )
 
-    @property
-    def children(self):
-        return [i for i in self if i is not self.parent]
+    def __init__(self, nrows=2, ncols=2, crs=None, figsize=None, layer=None, **kwargs):
+        self.__nrows = nrows
+        self.__ncols = ncols
 
-    @property
-    def f(self):
-        return self.parent.f
-
-    @wraps(Maps.plot_map)
-    def plot_map(self, **kwargs):
-        for m in self:
-            m.plot_map(**kwargs)
-
-    plot_map.__doc__ = _doc_prefix + plot_map.__doc__
-
-    @property
-    @lru_cache()
-    @wraps(Shapes)
-    def set_shape(self):
-        s = Shapes(self)
-        s.__doc__ = self._doc_prefix + s.__doc__
-
-        return s
-
-    @wraps(Maps.set_data)
-    def set_data(self, *args, **kwargs):
-        for m in self:
-            m.set_data(*args, **kwargs)
-
-    set_data.__doc__ = _doc_prefix + set_data.__doc__
-
-    @wraps(Maps.set_classify_specs)
-    def set_classify_specs(self, scheme=None, **kwargs):
-        for m in self:
-            m.set_classify_specs(scheme=scheme, **kwargs)
-
-    set_classify_specs.__doc__ = _doc_prefix + set_classify_specs.__doc__
-
-    @wraps(Maps.add_annotation)
-    def add_annotation(self, *args, **kwargs):
-        for m in self:
-            m.add_annotation(*args, **kwargs)
-
-    add_annotation.__doc__ = _doc_prefix + add_annotation.__doc__
-
-    @wraps(Maps.add_marker)
-    def add_marker(self, *args, **kwargs):
-        for m in self:
-            m.add_marker(*args, **kwargs)
-
-    add_marker.__doc__ = _doc_prefix + add_marker.__doc__
-
-    if hasattr(Maps, "add_wms"):
-
-        @property
-        @wraps(Maps.add_wms)
-        def add_wms(self):
-            return self._wms_container
-
-    @property
-    @wraps(Maps.add_feature)
-    def add_feature(self):
-        x = NaturalEarthFeatures(self)
-        return x
-
-    @wraps(Maps.add_gdf)
-    def add_gdf(self, *args, **kwargs):
-        for m in self:
-            m.add_gdf(*args, **kwargs)
-
-    add_gdf.__doc__ = _doc_prefix + add_gdf.__doc__
-
-    @wraps(Maps.add_line)
-    def add_line(self, *args, **kwargs):
-        for m in self:
-            m.add_line(*args, **kwargs)
-
-    add_line.__doc__ = _doc_prefix + add_line.__doc__
-
-    @wraps(Maps.add_scalebar)
-    def add_scalebar(self, *args, **kwargs):
-        for m in self:
-            m.add_scalebar(*args, **kwargs)
-
-    add_scalebar.__doc__ = _doc_prefix + add_scalebar.__doc__
-
-    @wraps(Maps.add_compass)
-    def add_compass(self, *args, **kwargs):
-        for m in self:
-            m.add_compass(*args, **kwargs)
-
-    add_compass.__doc__ = _doc_prefix + add_compass.__doc__
-
-    @wraps(Maps.add_colorbar)
-    def add_colorbar(self, *args, **kwargs):
-        for m in self:
-            m.add_colorbar(*args, **kwargs)
-
-    add_colorbar.__doc__ = _doc_prefix + add_colorbar.__doc__
-
-    @wraps(Maps.add_logo)
-    def add_logo(self, *args, **kwargs):
-        for m in self:
-            m.add_logo(*args, **kwargs)
-
-    add_colorbar.__doc__ = _doc_prefix + add_logo.__doc__
-
-    def share_click_events(self):
-        """
-        Share click events between all Maps objects of the grid
-        """
-        self.parent.cb.click.share_events(*self.children)
-
-    def share_move_events(self):
-        """
-        Share move events between all Maps objects of the grid
-        """
-        self.parent.cb.move.share_events(*self.children)
-
-    def share_pick_events(self, name="default"):
-        """
-        Share pick events between all Maps objects of the grid
-        """
-        if name == "default":
-            self.parent.cb.pick.share_events(*self.children)
+        if crs is None:
+            crs = [Maps.CRS.PlateCarree()] * nrows * ncols
         else:
-            self.parent.cb.pick[name].share_events(*self.children)
+            if isinstance(crs, list):
+                crs = [Maps._get_cartopy_crs(i) for i in np.ravel(crs)]
+            else:
+                crs = [Maps._get_cartopy_crs(crs)] * nrows * ncols
 
-    def join_limits(self):
-        """
-        Join axis limits between all Maps objects of the grid
-        (only possible if all maps share the same crs!)
-        """
-        self.parent.join_limits(*self.children)
+        f = plt.figure(figsize=figsize)
+        aspect = f.get_figheight() / f.get_figwidth()
 
-    @wraps(Maps.redraw)
-    def redraw(self, *args):
-        self.parent.redraw(*args)
+        d = 0.02
+        gs = GridSpec(
+            nrows,
+            ncols,
+            bottom=d * aspect,
+            top=1 - d * aspect,
+            left=d,
+            right=1 - d,
+            hspace=d * aspect,
+            wspace=d,
+        )
 
-    @wraps(plt.savefig)
-    def savefig(self, *args, **kwargs):
+        mg = [
+            Maps(f=f, ax=list(gs)[0], crs=crs[0], layer=layer, **kwargs),
+            *(
+                Maps(f=f, ax=g, crs=c, layer=layer, **kwargs)
+                for g, c in zip(list(gs)[1:], crs[1:])
+            ),
+        ]
 
-        # clear all cached background layers before saving to make sure they
-        # are re-drawn with the correct dpi-settings
-        self.parent.BM._refetch_bg = True
+        return MultiCaller.__init__(self, elements=mg)
 
-        self.parent.savefig(*args, **kwargs)
+    def __dir__(self):
+        return [i for i in dir(Maps) if not i.startswith("_")]
+
+    def __getitem__(self, idx):
+        if isinstance(idx, int):
+            # implement 1d indexing, e.g. mg[1]
+            return self._elements[idx]
+        elif isinstance(idx, tuple) and len(idx) == 2:
+            # implement 2d indexing, e.g. mg[1,2]
+            idx = np.ravel_multi_index(idx, (self.__nrows, self.__ncols)).item()
+            return self._elements[idx]
+        elif isinstance(idx, slice):
+            # imlement slicing, e.g.:  mg[1:-2]
+            start, stop, step = idx.indices(len(self._elements))
+            return sum([self.__getitem__(i) for i in range(start, stop, step)])
+        elif isinstance(idx, list):
+            # imlement multi-seletion, e.g.:  mg[[1,2,5]]
+            return sum([self.__getitem__(i) for i in idx])
+
+    def __getattribute__(self, name):
+        if name in dir(MapsGrid):
+            return object.__getattribute__(self, name)
+
+        if name.startswith("m_"):
+            i, *j = map(int, name.removeprefix("m_").split("_"))
+            if j:
+                idx = (i, j[0])
+            else:
+                idx = i
+            return self.__getitem__(idx)
+
+        if name in object.__getattribute__(self, "_MapsGrid__parent_only_attrs"):
+            return object.__getattribute__(self.__getitem__(0), name)
+        else:
+            return super().__getattribute__(name)
 
     @property
-    @wraps(Maps.util)
-    def util(self):
-        return self.parent.util
-
-    @wraps(Maps.subplots_adjust)
-    def subplots_adjust(self, **kwargs):
-        return self.parent.subplots_adjust(**kwargs)
-
-    @wraps(Maps.get_layout)
-    def get_layout(self, *args, **kwargs):
-        return self.parent.get_layout(*args, **kwargs)
-
-    @wraps(Maps.apply_layout)
-    def apply_layout(self, *args, **kwargs):
-        return self.parent.apply_layout(*args, **kwargs)
-
-    @wraps(Maps.edit_layout)
-    def edit_layout(self, *args, **kwargs):
-        return self.parent.edit_layout(*args, **kwargs)
-
-    @wraps(Maps.show)
-    def show(self, *args, **kwargs):
-        return self.parent.show(*args, **kwargs)
-
-    @wraps(Maps.snapshot)
-    def snapshot(self, *args, **kwargs):
-        return self.parent.snapshot(*args, **kwargs)
+    def on_all_layers(self):
+        """
+        Accessor to run actions on **all layers** of **all maps** of the grid.
+        """
+        return sum(chain(*self.l))
