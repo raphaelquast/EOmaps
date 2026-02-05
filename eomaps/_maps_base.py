@@ -24,7 +24,7 @@ from cartopy import crs as ccrs
 from pyproj import CRS, Transformer
 import numpy as np
 
-from .helpers import _parse_log_level
+from .helpers import _parse_log_level, _proxy
 from .layout_editor import LayoutEditor
 from ._blit_manager import BlitManager
 from .projections import Equi7Grid_projection  # import also supercharges cartopy.ccrs
@@ -371,22 +371,12 @@ class LayerNamespace:
         return self._layers.get(name, self._m.new_layer(name))
 
 
-class MapsBase(metaclass=_MapsMeta):
-    def __init__(
-        self,
-        crs=None,
-        layer=None,
-        f=None,
-        ax=None,
-        **kwargs,
-    ):
-
-        self._BM = None
-        self._layout_editor = None
-        self._parent = None
-
-        self._log_on_event_messages = dict()
-        self._log_on_event_cids = dict()
+class MapsLayerBase:
+    def __init__(self, layer=None, parent=None, *args, **kwargs):
+        if parent is None:
+            self._parent = self
+        else:
+            self._parent = _proxy(parent)
 
         # make sure the used layer-name is valid
         if layer is None:
@@ -394,6 +384,43 @@ class MapsBase(metaclass=_MapsMeta):
 
         layer = BlitManager._check_layer_name(layer)
         self._layer = layer
+
+        super().__init__(*args, **kwargs)
+
+    @property
+    def layer(self):
+        """The layer-name associated with this Maps-object."""
+        return self._layer
+
+    @property
+    def parent(self):
+        """
+        The parent-object to which this Maps-object is connected to.
+        """
+        return self._parent
+
+    # TODO new method for EOmaps v9
+    def on_activation(self, func, persistent=False, **kwargs):
+        def cb(m, layer):
+            func(m=self, **kwargs)
+
+        self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
+
+
+class MapsBase(metaclass=_MapsMeta):
+    def __init__(
+        self,
+        crs=None,
+        f=None,
+        ax=None,
+        **kwargs,
+    ):
+
+        self._BM = None
+        self._layout_editor = None
+
+        self._log_on_event_messages = dict()
+        self._log_on_event_cids = dict()
 
         if isinstance(ax, plt.Axes) and hasattr(ax, "figure"):
             if isinstance(ax.figure, plt.Figure):
@@ -409,14 +436,6 @@ class MapsBase(metaclass=_MapsMeta):
         self._ax = None
         self._children = set()  # weakref.WeakSet()
         self._after_add_child = list()
-
-        # check if the self represents a new-layer or an object on an existing layer
-        if any(
-            i.layer == layer for i in (self.parent, *self.parent._children) if i != self
-        ):
-            self._is_sublayer = True
-        else:
-            self._is_sublayer = False
 
         if isinstance(ax, plt.Axes):
             # set the plot_crs only if no explicit axes is provided
@@ -504,7 +523,7 @@ class MapsBase(metaclass=_MapsMeta):
             return object.__getattribute__(self, key)
 
     def __enter__(self):
-        assert not self._is_sublayer, (
+        assert isinstance(self, MapsBase), (
             "EOmaps: using a Maps-object as a context-manager is only possible "
             "if you create a NEW layer (not a Maps-object on an existing layer)!"
         )
@@ -529,11 +548,6 @@ class MapsBase(metaclass=_MapsMeta):
         return self._ax
 
     @property
-    def layer(self):
-        """The layer-name associated with this Maps-object."""
-        return self._layer
-
-    @property
     def l(self):
         """The LayerNamespace accessor to create/access layers on the map."""
         # TODO always return the namespace of the most "parent" layer!
@@ -542,10 +556,9 @@ class MapsBase(metaclass=_MapsMeta):
     @property
     def BM(self):
         """The Blit-Manager used to dynamically update the plots."""
-        m = weakref.proxy(self)
         if self.parent._BM is None:
-            self.parent._BM = BlitManager(m)
-            self.parent._BM._bg_layer = m.parent.layer
+            self.parent._BM = BlitManager(self)
+            self.parent._BM._bg_layer = self.parent.layer
         return self.parent._BM
 
     @property
@@ -561,18 +574,6 @@ class MapsBase(metaclass=_MapsMeta):
         if not hasattr(self, "_all"):
             self._all = self.new_layer("all")
         return self._all
-
-    @property
-    def parent(self):
-        """
-        The parent-object to which this Maps-object is connected to.
-
-        If None, `self` is returned!
-        """
-        if self._parent is None:
-            self._set_parent()
-
-        return self._parent
 
     def redraw(self, *args):
         """
@@ -1164,7 +1165,7 @@ class MapsBase(metaclass=_MapsMeta):
 
         try:
             # disconnect callback on xlim-change (only relevant for parent)
-            if not self._is_sublayer:
+            if not isinstance(self, MapsBase):
                 try:
                     if hasattr(self, "_cid_xlim"):
                         self.ax.callbacks.disconnect(self._cid_xlim)
@@ -1176,7 +1177,7 @@ class MapsBase(metaclass=_MapsMeta):
                     )
 
             # cleanup all artists and cached background-layers from the blit-manager
-            if not self._is_sublayer:
+            if not isinstance(self, MapsBase):
                 self.BM._cleanup_layer(self.layer)
 
             # remove the child from the parent Maps object
@@ -1441,35 +1442,6 @@ class MapsBase(metaclass=_MapsMeta):
         # create a pyproj Transformer object and cache it for later use
         return Transformer.from_crs(crs_from, crs_to, always_xy=True)
 
-    def _set_parent(self):
-        """Identify the parent object."""
-        assert self._parent is None, "EOmaps: There is already a parent Maps object!"
-        # check if the figure to which the Maps-object is added already has a parent
-        parent = None
-        if getattr(self._f, "_EOmaps_parent", False):
-            parent = self._proxy(self._f._EOmaps_parent)
-
-        if parent is None:
-            parent = self
-
-        self._parent = self._proxy(parent)
-
-        if parent not in [self, None]:
-            # add the child to the topmost parent-object
-            self.parent._add_child(self)
-
-    @staticmethod
-    def _proxy(obj):
-        # None cannot be weak-referenced!
-        if obj is None:
-            return None
-
-        # create a proxy if the object is not yet a proxy
-        if type(obj) is not weakref.ProxyType:
-            return weakref.proxy(obj)
-        else:
-            return obj
-
     @property
     def _real_self(self):
         # workaround to obtain a non-weak reference for the parent
@@ -1609,13 +1581,6 @@ class MapsBase(metaclass=_MapsMeta):
             func(m=m, **kwargs)
 
         self.BM.on_layer(func=cb, layer=layer, persistent=persistent, m=m)
-
-    # TODO new method for EOmaps v9
-    def on_activation(self, func, persistent=False, **kwargs):
-        def cb(m, layer):
-            func(m=self, **kwargs)
-
-        self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
 
     @property
     def on_all_layers(self):
