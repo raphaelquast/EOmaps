@@ -658,8 +658,7 @@ class Shapes(object):
 
             """
             size = lon.size
-
-            if isinstance(radius, (int, float)):
+            if isinstance(radius, (int, float, np.number)):
                 radius = np.full((size, n), radius)
             else:
                 if radius.size != lon.size:
@@ -792,7 +791,7 @@ class Shapes(object):
             # transform from crs to the radius_crs
             t_radius_plot = self._m._get_transformer(radius_crs, self._m.crs_plot)
 
-            if isinstance(radius, (int, float, np.number)):
+            if isinstance(radius, (int, float, np.number, list, np.ndarray)):
                 rx, ry = radius, radius
             else:
                 rx, ry = radius
