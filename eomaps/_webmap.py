@@ -7,7 +7,7 @@ import logging
 
 import requests
 from functools import lru_cache, partial
-from warnings import warn, filterwarnings, catch_warnings
+from warnings import filterwarnings, catch_warnings
 from types import SimpleNamespace
 from contextlib import contextmanager
 from urllib3.exceptions import InsecureRequestWarning
