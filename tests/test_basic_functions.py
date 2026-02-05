@@ -250,7 +250,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
         m.set_data(x="x", y="y", crs=3857)
         m.set_shape.rectangles()
-        m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
+        m.set_classify.Percentiles(pct=[0.1, 0.2])
 
         m.plot_map(alpha=0.4)
 
@@ -262,7 +262,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.set_data(x="x", y="y", crs=3857)
         m.set_shape.rectangles(radius=1, radius_crs="out")
 
-        m.set_classify_specs(scheme="Quantiles", k=5)
+        m.set_classify.Quantiles(k=5)
 
         m.plot_map()
 
@@ -469,7 +469,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
         m.set_data(x="x", y="y", crs=3857)
 
-        m.set_classify_specs(scheme="Quantiles", k=5)
+        m.set_classify.Quantiles(k=5)
 
         m2 = m.copy()
 
@@ -477,7 +477,7 @@ class TestBasicPlotting(unittest.TestCase):
             m2.data_specs[["x", "y", "parameter", "crs"]]
             == {"x": None, "y": None, "parameter": None, "crs": 4326}
         )
-        self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
+        self.assertTrue([*m._classify_specs] == [*m2._classify_specs])
         self.assertTrue(m2.data == None)
 
         m3 = m.copy(data_specs=True)
@@ -486,7 +486,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.data_specs[["x", "y", "parameter", "crs"]]
             == m3.data_specs[["x", "y", "parameter", "crs"]]
         )
-        self.assertTrue([*m.classify_specs] == [*m3.classify_specs])
+        self.assertTrue([*m._classify_specs] == [*m3._classify_specs])
         self.assertFalse(m3.data is m.data)
         self.assertTrue(m3.data.equals(m.data))
 
@@ -498,7 +498,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.data = self.data
         m.set_data(x="x", y="y", crs=3857)
         m.set_shape.rectangles()
-        m.set_classify_specs(scheme="Quantiles", k=5)
+        m.set_classify.Quantiles(k=5)
         m.plot_map()
 
         # plot on the same axes
@@ -681,7 +681,7 @@ class TestBasicPlotting(unittest.TestCase):
         mg.set_data(
             data=self.data, x="x", y="y", crs=3857, encoding=dict(scale_factor=1e-7)
         )
-        mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
+        mg.set_classify.EqualInterval(k=4)
         mg.set_shape.rectangles()
         mg.plot_map()
 

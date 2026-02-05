@@ -30,7 +30,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
     m = Maps(crs=Maps.CRS.InterruptedGoodeHomolosine(), ax=(2, 2, (1, 3)), figsize=(8, 5))
     m.add_feature.preset.coastline()
     m.set_data(data, lon, lat, parameter=name)
-    m.set_classify_specs(Maps.CLASSIFIERS.NaturalBreaks, k=5)
+    m.set_classify.NaturalBreaks(k=5)
     m.plot_map()
 
     # create 2 ordinary matplotlib axes to show the selected data
