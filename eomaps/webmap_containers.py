@@ -23,12 +23,16 @@ def _register_imports():
     global RestApiServices
     global _XyzTileService
     global _XyzTileServiceNonEarth
+    global refetch_wms_on_size_change
+    global _cx_refetch_wms_on_size_change
 
     from ._webmap import (
         _WebServiceCollection,
         RestApiServices,
         _XyzTileService,
         _XyzTileServiceNonEarth,
+        refetch_wms_on_size_change,
+        _cx_refetch_wms_on_size_change,
     )
 
 
@@ -62,6 +66,8 @@ class WebMapContainer(object):
         _register_imports()
 
         self._m = m
+        self.refetch_wms_on_size_change = refetch_wms_on_size_change
+        self._cx_refetch_wms_on_size_change = _cx_refetch_wms_on_size_change
 
     class _ISRIC:
         """
