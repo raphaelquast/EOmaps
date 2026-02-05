@@ -29,7 +29,7 @@ except ImportError as ex:
     WebMapContainer = None
 
 
-class AddFeatureMixin:
+class AddMixin:
     add_feature = NaturalEarthFeatures
 
     if WebMapContainer is not None:

@@ -26,7 +26,7 @@ import matplotlib as mpl
 from cartopy import crs as ccrs
 
 from ._maps_base import MapsBase
-from .mixins.add_features import AddFeatureMixin
+from .mixins.add_mixin import AddMixin
 from .mixins.gpd_mixin import GeopandasMixin
 from .mixins.clipboard_mixin import ClipboardMixin
 from .mixins.companion_mixin import CompanionMixin
@@ -46,7 +46,7 @@ __version__ = importlib.metadata.version("eomaps")
 
 class Maps(
     MapsBase,
-    AddFeatureMixin,
+    AddMixin,
     GeopandasMixin,
     ClipboardMixin,
     CompanionMixin,
