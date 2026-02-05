@@ -33,16 +33,21 @@ class AddMixin:
     add_feature = NaturalEarthFeatures
 
     if WebMapContainer is not None:
+        _preferred_wms_service = "wms"
         add_wms = WebMapContainer
 
     def __init__(self, *args, **kwargs):
         if WebMapContainer is not None:
             self.add_wms = self.add_wms(weakref.proxy(self))
+            self._wms_legend = dict()
 
         self.add_feature = self.add_feature(weakref.proxy(self))
 
         if self.parent == self:
             self._grid = GridFactory(self)
+
+        # a set to hold references to the compass objects
+        self._compass = set()
 
         super().__init__(*args, **kwargs)
 
