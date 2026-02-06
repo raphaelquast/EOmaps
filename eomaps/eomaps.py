@@ -378,15 +378,19 @@ class Maps(MapsBase):
         >>>     m.add_feature.preset.land()
 
         """
+        import uuid
+
+        uuid = str(uuid.uuid4())
         try:
-            self.BM._disable_draw = True
-            self.BM._disable_update = True
+            self.BM._disable_draw.add(uuid)
+            self.BM._disable_update.add(uuid)
 
             yield
         finally:
-            self.BM._disable_draw = False
-            self.BM._disable_update = False
-            self.redraw()
+            self.BM._disable_draw.remove(uuid)
+            self.BM._disable_update.remove(uuid)
+            if not (self.BM._disable_draw or self.BM._disable_update):
+                self.redraw()
 
     @property
     def coll(self):
