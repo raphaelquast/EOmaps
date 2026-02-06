@@ -15,6 +15,7 @@ from contextlib import ExitStack
 import copy
 
 import matplotlib.pyplot as plt
+import matplotlib.path as mpath
 from cartopy import crs as ccrs
 import numpy as np
 
