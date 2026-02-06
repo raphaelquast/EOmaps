@@ -346,7 +346,7 @@ class BlitManager(LayerParser):
                 for l in sublayers:
                     # individual callables executed if a specific layer is activated
                     # persistent callbacks
-                    for f in reversed(self._on_layer_activation[True].get(layer, [])):
+                    for f in self._on_layer_activation[True].get(layer, []):
                         f(layer=l)
 
             for l in sublayers:
