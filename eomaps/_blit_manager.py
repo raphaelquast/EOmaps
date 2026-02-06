@@ -187,8 +187,8 @@ class BlitManager(LayerParser):
             List of the artists to manage
 
         """
-        self._disable_draw = False
-        self._disable_update = False
+        self._disable_draw = set()
+        self._disable_update = set()
 
         self._m = m
         self._bg_layer = self._m.layer
@@ -251,6 +251,19 @@ class BlitManager(LayerParser):
         # a weak set containing artists that should NOT be identified as
         # unmanaged artists
         self._ignored_unmanaged_artists = WeakSet()
+
+        self._m.f.canvas._eomaps_draw_idle_orig = self._m.f.canvas.draw_idle
+
+        def getdrawidle(BM):
+            def draw_idle(self, *args, **kwargs):
+                if BM._disable_draw:
+                    return
+
+                self._eomaps_draw_idle_orig()
+
+            return draw_idle
+
+        self._m.f.canvas.draw_idle = getdrawidle(self).__get__(self._m.f.canvas)
 
     def _get_renderer(self):
         # don't return the renderer if the figure is saved.

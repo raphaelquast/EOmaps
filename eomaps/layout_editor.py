@@ -75,6 +75,7 @@ class LayoutEditor:
                 "0 - 9:  Snap-grid spacing\n"
                 "SHIFT:  Multi-select\n"
                 "P:      Print to console\n"
+                "R:      Re-draw backgrounds\n"
                 "ESCAPE (or ALT + L): Exit\n"
                 "\n"
                 "ARROW-KEYS:   Move\n"
@@ -120,11 +121,14 @@ class LayoutEditor:
             self.m.cb.execute_callbacks(not val)
 
         if self._modifier_pressed:
-            self.m.BM._disable_draw["layout_editor"] = True
-            self.m.BM._disable_update["layout_editor"] = True
+            for disable_set in ("_disable_draw", "_disable_update"):
+                getattr(self.m.BM, disable_set).add("layout_editor")
         else:
-            self.m.BM._disable_draw.pop("layout_editor", None)
-            self.m.BM._disable_update.pop("layout_editor", None)
+            for disable_set in ("_disable_draw", "_disable_update"):
+                try:
+                    getattr(self.m.BM, disable_set).remove("layout_editor")
+                except KeyError:
+                    _log.debug(f"'layout_editor' key not found in {disable_set}")
 
     @property
     def ms(self):
@@ -485,7 +489,6 @@ class LayoutEditor:
                 bbox = ax.bbox
                 x0, y0, w, h = map(int, (bbox.x0, bbox.y0, bbox.width, bbox.height))
 
-                # bbox = ax.bbox
                 x0, y0 = np.floor([bbox.x0, bbox.y0]).astype(int)
 
                 argb = curr_argb.copy()
