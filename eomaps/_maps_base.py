@@ -284,6 +284,64 @@ class MultiCaller:
         return MultiCaller([*self._elements, value])
 
 
+class LazyCaller:
+    def __init__(self, m, attr, name):
+        self._m = m
+        self._attr = attr
+        self._name = "Maps"
+
+    def __dir__(self):
+        # in case attributes ready for lazy-evaluation are explicitly defined,
+        # return them, else return all public attributes
+        return getattr(
+            self._attr,
+            "_lazy_attrs",
+            [i for i in dir(self._attr) if not i.startswith("_")],
+        )
+
+    @property
+    def __doc__(self):
+        return f"LazyCaller object for {self._m}"
+
+    def __getattr__(self, name):
+        attr = object.__getattribute__(self, "_attr")
+        if name.startswith("_"):
+            return object.__getattribute__(attr, name)
+
+        return LazyCaller(
+            self._m, object.__getattribute__(attr, name), f"{self._name}.{name}"
+        )
+
+    def __call__(self, *args, persistent=False, **kwargs):
+        if self._m is self._attr:
+            lazy_method = args[0]
+
+            @wraps(lazy_method)
+            def _lazy_method(m, layer):
+                lazy_method(m, *args[1:], **kwargs)
+
+            _log.info(
+                f"method submitted for activation of '{self._m.layer}' layer: {lazy_method.__name__}"
+            )
+
+        else:
+
+            @wraps(self._attr.__call__)
+            def _lazy_method(m, layer):
+                self._attr.__call__(*args, **kwargs)
+
+            _log.info(
+                f"method submitted for activation of '{self._m.layer}' layer: {self._name}(...)"
+            )
+
+        self._m.BM.on_layer(
+            func=_lazy_method,
+            layer=self._m.layer,
+            persistent=persistent,
+            m=self._m,
+        )
+
+
 class LayerNamespace:
     """
     Accessor to create and access layers on the map.
@@ -371,6 +429,49 @@ class LayerNamespace:
         return self._layers.get(name, self._m.new_layer(name))
 
 
+class LazyLayerNamespace(LayerNamespace):
+    """
+    LazyLayerNamespace - create/access layers and submit lazy actions!
+
+    Any action run on the LazyLayerNamespace will only become effective
+    if the associated layer becomes visible!
+
+    `m.ll.my_layer` will return a LazyCaller instance for the :py:class:`Maps`
+    object on the layer named`"my_layer"`.
+
+    - If no :py:class:`Maps` object exists in the LayerNamespace, it will be created.
+    - Otherwise, the existing :py:class:`Maps` object is used
+        - To create additional :py:class`Maps` objects on the same layer,
+          you can use double-underscores in the name, e.g. "my_layer__a"
+
+    Examples
+    --------
+
+    Create a :py:class:`Maps` object on the `"overlay"` layer and lazily
+    populate the layer with the "ocean" and "land" features.
+
+    >>> m = Maps()
+    >>> m.ll.overlay.add_feature.preset.ocean()
+    >>> m.ll.overlay.add_feature.preset.land()
+
+    """
+
+    def __init__(self, parent_namespace):
+        self._parent_namespace = parent_namespace
+        self._m = self._parent_namespace._m
+
+    @property
+    def _elements(self):
+        return self._parent_namespace._elements
+
+    def __dir__(self):
+        return dir(self._parent_namespace)
+
+    def __getattr__(self, name):
+        m = getattr(self._parent_namespace, name)
+        return LazyCaller(m, m, "Maps")
+
+
 class MapsLayerBase:
     def __init__(self, layer=None, parent=None, *args, **kwargs):
         if parent is None:
@@ -398,13 +499,6 @@ class MapsLayerBase:
         The parent-object to which this Maps-object is connected to.
         """
         return self._parent
-
-    # TODO new method for EOmaps v9
-    def on_activation(self, func, persistent=False, **kwargs):
-        def cb(m, layer):
-            func(m=self, **kwargs)
-
-        self.BM.on_layer(func=cb, layer=self.layer, persistent=persistent, m=self)
 
 
 class MapsBase(metaclass=_MapsMeta):
@@ -494,6 +588,7 @@ class MapsBase(metaclass=_MapsMeta):
             usem = self
 
         self._l = LayerNamespace(usem)
+        self._ll = LazyLayerNamespace(self._l)
 
         super().__init__()
 
@@ -551,6 +646,11 @@ class MapsBase(metaclass=_MapsMeta):
     def l(self):
         """LayerNamespace accessor to create/access layers on the map."""
         return self._l
+
+    @property
+    def ll(self):
+        """LazyLayerNamespace accessor to lazily create/access layers on the map."""
+        return self._ll
 
     @property
     def BM(self):

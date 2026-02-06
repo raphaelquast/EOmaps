@@ -184,6 +184,21 @@ class Maps(
                 "key_press_event", self._on_keypress
             )
 
+    @property
+    def _lazy_attrs(self):
+        from itertools import chain
+
+        return sorted(
+            set(
+                chain(
+                    *[
+                        getattr(self, f"_{i.__name__}__lazy_attrs", [])
+                        for i in self.__class__.mro()
+                    ]
+                )
+            )
+        )
+
     def new_map(
         self,
         ax=None,

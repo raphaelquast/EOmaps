@@ -73,6 +73,19 @@ class DataMixin:
         self._crs_boundary_bounds = self.crs_plot.boundary.bounds
 
     @property
+    def __lazy_attrs(self):
+        # list of attributes that support lazy-evaluation
+        exclude = [
+            "coll",
+            "shape",
+            "colorbar",
+            "data",
+            "data_specs",
+            "set_shade_dpi",
+        ]
+        return [i for i in dir(DataMixin) if not (i.startswith("_") or i in exclude)]
+
+    @property
     def coll(self):
         """The collection representing the dataset plotted by m.plot_map()."""
         return self._coll

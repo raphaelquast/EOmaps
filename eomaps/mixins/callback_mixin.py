@@ -14,3 +14,8 @@ class CallbackMixin:
 
         if not hasattr(self.parent, "_execute_callbacks"):
             self.parent._execute_callbacks = True
+
+    @property
+    def __lazy_attrs(self):
+        # list of attributes that support lazy-evaluation
+        return ["cb"]
