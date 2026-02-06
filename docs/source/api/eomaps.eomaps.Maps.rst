@@ -21,6 +21,8 @@ Properties
 
     Maps.f
     Maps.ax
+    Maps.l
+    Maps.ll
     Maps.layer
     Maps.crs_plot
 

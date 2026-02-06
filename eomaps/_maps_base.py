@@ -344,7 +344,7 @@ class LazyCaller:
 
 class LayerNamespace:
     """
-    Accessor to create and access layers on the map.
+    Accessor to create, access and populate layers on the map.
 
     `m.l.my_layer` will return a :py:class:`Maps` object on the layer
     named`"my_layer"`.
@@ -431,7 +431,7 @@ class LayerNamespace:
 
 class LazyLayerNamespace(LayerNamespace):
     """
-    LazyLayerNamespace - create/access layers and submit lazy actions!
+    Accessor to create, access and **lazily** populate layers on the map.
 
     Any action run on the LazyLayerNamespace will only become effective
     if the associated layer becomes visible!
@@ -643,11 +643,13 @@ class MapsBase(metaclass=_MapsMeta):
         return self._ax
 
     @property
+    @wraps(LayerNamespace)
     def l(self):
         """LayerNamespace accessor to create/access layers on the map."""
         return self._l
 
     @property
+    @wraps(LazyLayerNamespace)
     def ll(self):
         """LazyLayerNamespace accessor to lazily create/access layers on the map."""
         return self._ll
