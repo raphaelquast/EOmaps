@@ -57,7 +57,9 @@ class Maps(
 
     See Also
     --------
-    Maps.l : :py:class:`~eomaps._maps_base.LayerAccessor` to create/access layers on the map
+    Maps.l : :py:class:`~eomaps._maps_base.LayerNamespace` to create/access layers on the map
+
+    Maps.ll : :py:class:`~eomaps._maps_base.LazyLayerNamespace` to lazily populate layers on the map
 
     Maps.new_layer : Create a new layer for the map.
 
