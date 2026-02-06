@@ -538,24 +538,23 @@ class MapsBase(metaclass=_MapsMeta):
 
     @property
     def f(self):
-        """The matplotlib Figure associated with this Maps-object."""
+        """Matplotlib Figure associated with this Maps-object."""
         # always return the figure of the parent object
         return self._f
 
     @property
     def ax(self):
-        """The matplotlib (cartopy) GeoAxes associated with this Maps-object."""
+        """Cartopy GeoAxes associated with this Maps-object."""
         return self._ax
 
     @property
     def l(self):
-        """The LayerNamespace accessor to create/access layers on the map."""
-        # TODO always return the namespace of the most "parent" layer!
+        """LayerNamespace accessor to create/access layers on the map."""
         return self._l
 
     @property
     def BM(self):
-        """The Blit-Manager used to dynamically update the plots."""
+        """Blit-Manager used to dynamically update the plots."""
         if self.parent._BM is None:
             self.parent._BM = BlitManager(self)
             self.parent._BM._bg_layer = self.parent.layer
