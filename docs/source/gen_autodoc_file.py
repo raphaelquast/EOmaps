@@ -77,7 +77,6 @@ def make_feature_toctree_file():
         "add_wms",
         "BM",
         "data_specs",
-        "classify_specs",
     ):
         members.extend(get_members(Maps, key, False))
     for key in ("add_feature", "cb"):

@@ -101,7 +101,6 @@ def setup(app):
     Maps.BM.__name__ = "BM"
 
     Maps.data_specs.__name__ = "data_specs"
-    Maps.classify_specs.__name__ = "classify_specs"
 
 
 # -- Project information

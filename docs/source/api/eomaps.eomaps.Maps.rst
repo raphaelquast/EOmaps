@@ -31,7 +31,6 @@ Properties
 
     Maps.data
     Maps.data_specs
-    Maps.classify_specs
     Maps.colorbar
 
 
@@ -144,7 +143,6 @@ Data visualization
     Maps.set_data
     Maps.set_shape
     Maps.set_classify
-    Maps.set_classify_specs
 
 .. autosummary::
     :toctree: ../generated
