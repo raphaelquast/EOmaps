@@ -156,11 +156,11 @@ class MapsGrid(MultiCaller):
             idx = np.ravel_multi_index(idx, (self.__nrows, self.__ncols)).item()
             return self._elements[idx]
         elif isinstance(idx, slice):
-            # imlement slicing, e.g.:  mg[1:-2]
+            # implement slicing, e.g.:  mg[1:-2]
             start, stop, step = idx.indices(len(self._elements))
             return sum([self.__getitem__(i) for i in range(start, stop, step)])
         elif isinstance(idx, list):
-            # imlement multi-seletion, e.g.:  mg[[1,2,5]]
+            # implement multi-seletion, e.g.:  mg[[1,2,5]]
             return sum([self.__getitem__(i) for i in idx])
 
     def __getattribute__(self, name):
