@@ -506,6 +506,12 @@ class BlitManager(LayerParser):
         if m is None:
             m = self._m
 
+        # in case the layer is currently visible, directly execute the callback
+        if layer in m.BM._get_active_layers_alphas[0]:
+            func(m, layer)
+            if persistent is False:
+                return
+
         def cb(*args, **kwargs):
             func(m=m, *args, **kwargs)
 
