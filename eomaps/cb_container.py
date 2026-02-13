@@ -2197,7 +2197,7 @@ class CallbackContainer:
     keypress = KeypressContainer
 
     def __init__(self, m):
-        self._m = m
+        self._m = proxy(m)
 
         self._methods = {
             "click",

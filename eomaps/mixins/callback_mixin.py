@@ -1,5 +1,3 @@
-import weakref
-
 from ..cb_container import CallbackContainer
 
 
@@ -9,7 +7,7 @@ class CallbackMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # initialize accessor for callbacks
-        self.cb = CallbackContainer(weakref.proxy(self))
+        self.cb = CallbackContainer(self)
         self.cb._init_cbs()
 
         if not hasattr(self.parent, "_execute_callbacks"):
