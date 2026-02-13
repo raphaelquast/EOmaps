@@ -97,8 +97,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
         )
 
         # make all artists temporary (e.g. remove them on next pick)
-        # "m2.coll" represents the collection created by "m2.plot_map()"
-        for a in [art0, art01, art1, art11, m2.coll, m3.coll]:
+        for a in [art0, art01, art1, art11]:
             m.cb.pick.add_temporary_artist(a)
 
 
