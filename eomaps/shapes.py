@@ -671,7 +671,11 @@ class Shapes(object):
                 lons=np.broadcast_to(lon[:, None], (size, n)),
                 lats=np.broadcast_to(lat[:, None], (size, n)),
                 az=np.linspace(
-                    [start_angle] * size, [360 - start_angle] * size, n, axis=1
+                    [start_angle] * size,
+                    [360 - start_angle] * size,
+                    n,
+                    axis=1,
+                    endpoint=False,
                 ),
                 dist=radius,
                 radians=False,
