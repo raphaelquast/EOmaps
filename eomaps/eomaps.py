@@ -861,7 +861,6 @@ class Maps(
         return copy_cls
 
     def redraw(self, *args):
-        self._data_manager.last_extent = None
         super().redraw(*args)
 
     @wraps(MapsBase.snapshot)

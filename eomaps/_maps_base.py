@@ -676,12 +676,18 @@ class MapsBase(metaclass=_MapsMeta):
             self._all = self.new_layer("all")
         return self._all
 
-    def redraw(self, *args):
+    def redraw(self, *args, force_data_redraw=False):
         """
         Force a re-draw of cached background layers.
 
         - Use this at the very end of your code to trigger a final re-draw
           to make sure artists not managed by EOmaps are properly drawn!
+
+        Parameters
+        ----------
+        forece_data_redraw : bool
+            Force a re-draw of already plotted datasets.
+            The default is False.
 
         Note
         ----
@@ -690,7 +696,7 @@ class MapsBase(metaclass=_MapsMeta):
 
         To dynamically re-draw an artist whenever you interact with the map, use:
 
-        >>> m.BM.add_artist(artist)
+        >>> m.add_artist(artist)
 
         To make an artist temporary (e.g. remove it on the next event), use
         one of :
@@ -712,10 +718,15 @@ class MapsBase(metaclass=_MapsMeta):
             # in case no argument is provided, force a complete re-draw of
             # all layers (and datasets) of the map
             self.BM._refetch_bg = True
+            if force_data_redraw and getattr(self, "_data_manager", None) is not None:
+                self._data_manager.last_extent = None
+
         else:
             # only re-fetch the required layers
-            for l in args:
-                self.BM._refetch_layer(l)
+            for layer in args:
+                self.BM._refetch_layer(layer)
+                if force_data_redraw and getattr(self.l[layer], "_data_manager", None) is not None:
+                    self.l[layer]._data_manager.last_extent = None
 
         self.f.canvas.draw_idle()
 
