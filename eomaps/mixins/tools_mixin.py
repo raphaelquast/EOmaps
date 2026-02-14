@@ -16,6 +16,7 @@ class ToolsMixin:
             self.__edit_annotations = AnnotationEditor(self)
 
         self.draw = ShapeDrawer(weakref.proxy(self))
+        self.util = self.parent._ToolsMixin__util
 
         super().__init__(*args, **kwargs)
 
@@ -27,8 +28,3 @@ class ToolsMixin:
     def edit_annotations(self, b=True, **kwargs):
         # self.parent._edit_annotations(b, **kwargs)
         return self._edit_annotations(b, **kwargs)
-
-    @property
-    @wraps(Utilities.__init__)
-    def util(self, b=True, **kwargs):
-        return self.parent._ToolsMixin__util
