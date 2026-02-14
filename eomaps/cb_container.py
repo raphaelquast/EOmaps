@@ -1759,8 +1759,6 @@ class PickContainer(_ClickContainer):
                 return
 
             try:
-                print("HERE", self._m == self._m.parent.l.base)
-
                 # make sure pickcb is only executed if we are on the right layer
                 if not self._execute_cb(self._m.layer):
                     return
