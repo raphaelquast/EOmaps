@@ -134,12 +134,12 @@ class MapsGrid(MultiCaller):
             wspace=d,
         )
 
-        parent = Maps(f=f, ax=list(gs)[0], crs=crs[0], layer=layer, **kwargs)
+        m_parent = Maps(f=f, ax=list(gs)[0], crs=crs[0], layer=layer, **kwargs)
 
         mg = [
-            parent,
+            m_parent,
             *(
-                parent.new_map(ax=g, crs=c, layer=layer, **kwargs)
+                Maps(f=f, ax=g, crs=c, layer=layer, parent=m_parent, **kwargs)
                 for g, c in zip(list(gs)[1:], crs[1:])
             ),
         ]
