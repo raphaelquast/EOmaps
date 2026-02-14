@@ -256,6 +256,66 @@ class ChildAccessor:
         return list(self._get_maps(layer))
 
 
+class Hooks:
+    def __init__(self):
+        self._hooks = dict()
+
+    def add_permanent(self, hook, method, unique=True):
+        self._add(hook, method, True, unique)
+
+    def remove_permanent(self, hook, method):
+        self._remove(hook, method, True)
+
+    def add_single_shot(self, hook, method, unique=True):
+        self._add(hook, method, False, unique)
+
+    def remove_single_shot(self, hook, method):
+        self._remove(hook, method, False)
+
+    def run(self, hook, **kwargs):
+        if hook not in self._hooks:
+            return
+
+        # run single-shot actions
+        while len(self._hooks[hook].get(False, [])) > 0:
+            try:
+                action = self._hooks[hook][False].pop(0)
+                action(**kwargs)
+            except Exception as ex:
+                _log.error(
+                    f"EOmaps: Issue during single-shot hook '{hook}': {ex}",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+
+        # run permanent actions
+        for action in self._hooks[hook].get(True, []):
+            try:
+                action(**kwargs)
+            except Exception as ex:
+                _log.error(
+                    f"EOmaps: Issue during permanent hook '{hook}': {ex}",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+
+    def _add(self, hook, method, permanent=False, unique=True):
+        callbacks = self._hooks.setdefault(hook, {}).setdefault(permanent, [])
+        if not unique or method not in callbacks:
+            callbacks.append(method)
+
+    def _remove(self, method, hook, permanent=False, silent=True):
+        callbacks = self._hooks.get(hook, {}).get(permanent, [])
+        if method in callbacks:
+            try:
+                callbacks.remove(method)
+            except Exception as ex:
+                _log.debug(
+                    f"EOmaps: unable to remove method {method} from '{hook}' hooks: {ex}",
+                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                )
+        else:
+            _log.warning(f"EOmaps: method {method} not found in hook '{hook}'")
+
+
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
 class BlitManager(LayerParser):
     """Manager used to schedule draw events, cache backgrounds, etc."""
@@ -297,10 +357,6 @@ class BlitManager(LayerParser):
         # grab the background on every draw
         self._cid_draw = self.canvas.mpl_connect("draw_event", self._on_draw_cb)
 
-        self._after_update_actions = []
-        self._after_restore_actions = []
-        self._after_restore_actions_perm = []
-
         self._artists_to_clear = dict()
 
         self._hidden_artists = set()
@@ -321,16 +377,6 @@ class BlitManager(LayerParser):
         self._mpl_backend_force_full = False
         self._mpl_backend_blit_fix = False
 
-        # True = persistent, False = execute only once
-        self._on_layer_change = {True: list(), False: list()}
-        self._on_layer_activation = {True: dict(), False: dict()}
-
-        self._on_add_bg_artist = list()
-        self._on_remove_bg_artist = list()
-
-        self._before_fetch_bg_actions = list()
-        self._before_update_actions = list()
-
         self._refetch_blank = True
         self._blank_bg = None
 
@@ -341,6 +387,10 @@ class BlitManager(LayerParser):
         # a weak set containing artists that should NOT be identified as
         # unmanaged artists
         self._ignored_unmanaged_artists = weakref.WeakSet()
+
+        self._hooks = Hooks()
+
+        self._on_layer_activation = {True: dict(), False: dict()}
 
     @property
     def _artists(self):
@@ -560,6 +610,9 @@ class BlitManager(LayerParser):
             if persistent is False:
                 return
 
+        from functools import wraps
+
+        @wraps(func)
         def cb(layer):
             func(layer, **kwargs)
 
@@ -571,7 +624,10 @@ class BlitManager(LayerParser):
             _log.debug(logmsg)
 
         if layer is None:
-            self._on_layer_change[persistent].append(cb)
+            if persistent:
+                self._hooks.add_permanent("layer_change", cb)
+            else:
+                self._hooks.add_single_shot("layer_change", cb)
         else:
             # treat inset-map layers like normal layers
             if layer.startswith("**inset_"):
@@ -653,8 +709,7 @@ class BlitManager(LayerParser):
         if bg_layer is None:
             bg_layer = self.bg_layer
 
-        for action in self._before_update_actions:
-            action()
+        self._hooks.run("before_update")
 
         if clear:
             self._clear_temp_artists(clear)
@@ -669,13 +724,7 @@ class BlitManager(LayerParser):
 
         cv.restore_region(self._get_background(show_layer))
 
-        # execute after restore actions (e.g. peek layer callbacks)
-        while len(self._after_restore_actions) > 0:
-            action = self._after_restore_actions.pop(0)
-            action()
-
-        for action in self._after_restore_actions_perm:
-            action()
+        self._hooks.run("after_restore")
 
         # draw all of the animated artists
         self._draw_animated(layers=layers, artists=artists)
@@ -697,10 +746,7 @@ class BlitManager(LayerParser):
                 # update the GUI state
                 cv.blit(self.figure.bbox)
 
-        # execute all actions registered to be called after blitting
-        while len(self._after_update_actions) > 0:
-            action = self._after_update_actions.pop(0)
-            action()
+        self._hooks.run("after_update")
 
         # let the GUI event loop process anything it has to do
         # don't do this! it is causing infinite loops
@@ -991,28 +1037,13 @@ class BlitManager(LayerParser):
             return
 
         # do not execute layer-change callbacks on private layer activation!
-        if layer.startswith("__"):
+        if layer.startswith("**"):
             return
 
         with self._cx_on_layer_change_running():
             # only execute persistent layer-change callbacks if the layer changed!
             if new:
-                # general callbacks executed on any layer change
-                # persistent callbacks
-                for f in reversed(self._on_layer_change[True]):
-                    f(layer)
-
-            # single-shot callbacks
-            # (execute also if the layer is already active)
-            while len(self._on_layer_change[False]) > 0:
-                try:
-                    f = self._on_layer_change[False].pop(0)
-                    f(layer)
-                except Exception as ex:
-                    _log.error(
-                        f"EOmaps: Issue during layer-change action: {ex}",
-                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                    )
+                self._hooks.run("layer_change", layer=layer)
 
             sublayers, _ = self._parse_multi_layer_str(layer)
             if new:
@@ -1079,8 +1110,7 @@ class BlitManager(LayerParser):
 
             # execute actions before fetching new artists
             # (e.g. update data based on extent etc.)
-            for action in self._before_fetch_bg_actions:
-                action(layer=layer, bbox=bbox)
+            self._hooks.run("before_fetch_bg", layer=layer, bbox=bbox)
 
             # get all relevant artists to plot and remember zorders
             # self.get_bg_artists() already returns artists sorted by zorder!

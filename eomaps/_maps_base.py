@@ -618,6 +618,7 @@ class MapsBase(metaclass=_MapsMeta):
             self.BM._managed_axes.add(artist)
 
         self._artists.add(artist)
+        self.BM._hooks.run("add_artist")
 
     def add_bg_artist(self, artist, draw=True):
         artist.set_animated(True)
@@ -629,11 +630,14 @@ class MapsBase(metaclass=_MapsMeta):
             self.BM._managed_axes.add(artist)
 
         self._bg_artists.add(artist)
+        self.BM._hooks.run("add_bg_artist")
+
         if draw:
             self.redraw(self.layer)
 
     def _remove_artist(self, artist):
         self._artists.remove(artist)
+        self.BM._hooks.run("remove_artist")
 
     def remove_artist(self, artist):
         self._remove_artist(artist)
@@ -641,6 +645,7 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _remove_bg_artist(self, artist):
         self._bg_artists.remove(artist)
+        self.BM._hooks.run("remove_bg_artist")
 
     def remove_bg_artist(self, artist, draw=True):
         self._remove_bg_artist(artist)

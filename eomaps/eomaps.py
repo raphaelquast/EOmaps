@@ -756,7 +756,7 @@ class Maps(
             # properties are fetched from the axes!
             if not getattr(self.ax, "_EOmaps_rounded_spine_attached", False):
 
-                def cb(*args, **kwargs):
+                def update_round_map_frame_corners(*args, **kwargs):
                     if self.ax._EOmaps_rounded_spine_frac == 0:
                         return
 
@@ -796,7 +796,10 @@ class Maps(
                     path = mpath.Path(np.column_stack((xs, ys)))
                     self.ax.set_boundary(path, transform=self.crs_plot)
 
-                self.BM._before_fetch_bg_actions.append(cb)
+                self._m.BM._hooks.add_permanent(
+                    "before_fetch_bg", update_round_map_frame_corners
+                )
+
                 self.ax._EOmaps_rounded_spine_attached = True
 
         self.ax.spines["geo"].update(kwargs)

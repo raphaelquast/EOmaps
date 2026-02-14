@@ -173,8 +173,7 @@ class Compass:
             self._canvas.mpl_connect("scroll_event", self._on_scroll),
         ]
 
-        if self._update_offset not in self._m.BM._before_fetch_bg_actions:
-            self._m.BM._before_fetch_bg_actions.append(self._update_offset)
+        self._m.BM._hooks.add_permanent("before_fetch_bg", self._update_offset)
 
         self._m.BM.update()
 
@@ -425,8 +424,7 @@ class Compass:
         for cid in self._cids:
             self._canvas.mpl_disconnect(cid)
 
-        if self._update_offset in self._m.BM._before_fetch_bg_actions:
-            self._m.BM._before_fetch_bg_actions.append(self._update_offset)
+        self._m.BM._hooks.remove_permanent("before_fetch_bg", self._update_offset)
 
         try:
             c1 = self._c1

@@ -1363,7 +1363,7 @@ class ScaleBar:
 
         # update scalebar props whenever new backgrounds are fetched
         # (e.g. to take care of updates on pan/zoom/resize)
-        self._m.BM._before_fetch_bg_actions.append(self._update)
+        self._m.BM._hooks.add_permanent("before_fetch_bg", self._update)
 
         if pickable is True:
             self._make_pickable()
@@ -1649,8 +1649,7 @@ class ScaleBar:
             self._m.BM.remove_artist(a)
 
         # remove trigger to update scalebar properties on fetch_bg
-        if self._update in self._m.BM._before_fetch_bg_actions:
-            self._m.BM._before_fetch_bg_actions.remove(self._update)
+        self._m.BM._hooks.remove_permanent("before_fetch_bg", self._update)
 
         self._renderer = None
 

@@ -576,7 +576,7 @@ class GridLabels:
             self._kwargs.setdefault("clip_box", self._g.m.ax.bbox)
 
         if not self._g._dynamic:
-            self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
+            self._g._m.BM._hooks.add_permanent("before_fetch_bg", self._redraw)
 
     def _set_exclude(self, exclude):
         # a list of tick values to exclude
@@ -631,8 +631,7 @@ class GridLabels:
 
     def remove(self):
         """Remove the grid-labels from the map."""
-        if self._redraw in self._g.m.BM._before_fetch_bg_actions:
-            self._g.m.BM._before_fetch_bg_actions.remove(self._redraw)
+        self._g._m.BM._hooks.remove_permanent("before_fetch_bg", self._redraw)
 
         self._remove()
 
@@ -943,7 +942,7 @@ class GridFactory:
     def __init__(self, m):
         self.m = m
         self._gridlines = []
-        self.m.BM._before_fetch_bg_actions.append(self._update_autogrid)
+        self.m.BM._hooks.add_permanent("before_fetch_bg", self._update_autogrid)
 
     def add_grid(
         self,

@@ -29,6 +29,8 @@ class DataManager:
 
         self._extent_margin_factor = 0.1
 
+        self._callbacks_attached = False
+
     def set_margin_factors(self, radius_margin_factor, extent_margin_factor):
         """
         Set the margin factors that are applied to the plot extent
@@ -105,6 +107,9 @@ class DataManager:
         dynamic=False,
         only_pick=False,
     ):
+
+        self._dynamic = dynamic
+
         # cleanup existing callbacks before attaching new ones
         self.cleanup_callbacks()
 
@@ -149,21 +154,22 @@ class DataManager:
             # attach a hook that updates the collection whenever a new
             # background is fetched
             # ("shade" shapes take care about updating the data themselves!)
-            self.attach_callbacks(dynamic=dynamic)
+            self.attach_callbacks()
 
-    def attach_callbacks(self, dynamic):
-        if dynamic is True:
-            if self.on_fetch_bg not in self.m.BM._before_update_actions:
-                self.m.BM._before_update_actions.append(self.on_fetch_bg)
+    def attach_callbacks(self):
+        self._callbacks_attached = True
+        if self._dynamic is True:
+            self.m.BM._hooks.add_permanent("before_update", self.on_fetch_bg)
         else:
-            if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
-                self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+            self.m.BM._hooks.add_permanent("before_fetch_bg", self.on_fetch_bg)
 
     def cleanup_callbacks(self):
-        if self.on_fetch_bg in self.m.BM._before_fetch_bg_actions:
-            self.m.BM._before_fetch_bg_actions.remove(self.on_fetch_bg)
-        if self.on_fetch_bg in self.m.BM._before_update_actions:
-            self.m.BM._before_update_actions.remove(self.on_fetch_bg)
+        if not self._callbacks_attached:
+            return
+        if self._dynamic is True:
+            self.m.BM._hooks.remove_permanent("before_update", self.on_fetch_bg)
+        else:
+            self.m.BM._hooks.remove_permanent("before_fetch_bg", self.on_fetch_bg)
 
     def _identify_pandas(self, data=None, x=None, y=None, parameter=None):
         (pd,) = register_modules("pandas", raise_exception=False)

@@ -921,10 +921,6 @@ class LayerTabBar(QtWidgets.QTabBar):
             if layer in d:
                 del d[layer]
 
-        for permanent, d in self.m.BM._on_layer_change.items():
-            if layer in d:
-                del d[layer]
-
         self.populate()
 
     def color_active_tab(self, m=None, layer=None, adjust_order=True):
@@ -1141,8 +1137,9 @@ class ArtistEditorTabs(LayerArtistTabs):
         self.m.BM.on_layer(self.populate_on_layer, persistent=True)
 
         self.currentChanged.connect(self.populate_layer)
-        self.m.BM._on_add_bg_artist.append(self.populate)
-        self.m.BM._on_remove_bg_artist.append(self.populate)
+
+        self.m.BM._hooks.add_permanent("add_bg_artist", self.populate)
+        self.m.BM._hooks.add_permanent("remove_bg_artist", self.populate)
 
         self.m._on_show_companion_widget.append(self.populate)
         self.m._on_show_companion_widget.append(self.populate_layer)
