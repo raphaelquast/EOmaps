@@ -219,6 +219,7 @@ class _Feature:
         from . import MapsGrid  # do this here to avoid circular imports!
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+
             if layer is None:
                 uselayer = m.layer
             else:
@@ -261,7 +262,7 @@ class _Feature:
                 """
             art._EOmaps_source_code = source_code
 
-            m.BM.add_bg_artist(art, layer=uselayer)
+            m.l[uselayer].add_bg_artist(art)
 
     def _set_scale(self, scale):
         if scale == "auto":

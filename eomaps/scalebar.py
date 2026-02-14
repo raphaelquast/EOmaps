@@ -1221,7 +1221,7 @@ class ScaleBar:
             patch.set_clip_on(False)
             self._artists[f"text_{i}"] = self._m.ax.add_artist(patch)
             self._texts[f"text_{i}"] = txt
-            self._m.BM.add_artist(self._artists[f"text_{i}"], layer=self._layer)
+            self._m.l[self._layer].add_artist(self._artists[f"text_{i}"])
 
     def _redraw_minitxt(self):
         # re-draw the text patches in case the number of texts changed
@@ -1232,10 +1232,12 @@ class ScaleBar:
 
         for key in list(self._artists):
             if key.startswith("text_"):
-                self._artists[key].remove()
-                self._m.BM.remove_artist(self._artists[key])
-                del self._artists[key]
-
+                try:
+                    self._m.l[self._layer].remove_artist(self._artists[key])
+                except KeyError:
+                    _log.debug(
+                        f"Scalebar Text Artist {self._artists[key]} tagged for removal not found"
+                    )
         pts = self._get_pts(self._lon, self._lat, self._azim)
         d = self._get_d()
         self._set_minitxt(d, pts)
@@ -1338,7 +1340,7 @@ class ScaleBar:
         line_verts = self._get_line_verts(pts, lon, lat, self._azim, d)
         lc = LineCollection(line_verts, **self._line_props)
         self._artists["patch_lines"] = self._m.ax.add_artist(lc)
-        self._m.BM.add_artist(self._artists["patch_lines"], layer=self._layer)
+        self._m.l[self._layer].add_artist(self._artists["patch_lines"])
 
         # -------------- add the scalebar
         coll = LineCollection(pts)
@@ -1356,8 +1358,8 @@ class ScaleBar:
         self._artists["scale"].set_zorder(1)
         self._artists["patch"].set_zorder(0)
 
-        self._m.BM.add_artist(self._artists["scale"], layer=self._layer)
-        self._m.BM.add_artist(self._artists["patch"], layer=self._layer)
+        self._m.l[self._layer].add_artist(self._artists["scale"])
+        self._m.l[self._layer].add_artist(self._artists["patch"])
 
         # update scalebar props whenever new backgrounds are fetched
         # (e.g. to take care of updates on pan/zoom/resize)
@@ -1645,7 +1647,6 @@ class ScaleBar:
         self._unpick()
         for a in self._artists.values():
             self._m.BM.remove_artist(a)
-            a.remove()
 
         # remove trigger to update scalebar properties on fetch_bg
         if self._update in self._m.BM._before_fetch_bg_actions:

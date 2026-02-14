@@ -283,7 +283,7 @@ class LayerSelector(SelectorButtons):
         self.figure = self._m.f  # make sure the figure is set for the artist
         self.set_animated(True)
 
-        self._m.BM.add_artist(self.leg, layer="all")
+        self._m.all.add_artist(self.leg)
 
         # keep a reference to the buttons to make sure they stay interactive
         if name is None:
@@ -341,8 +341,7 @@ class LayerSelector(SelectorButtons):
         Remove the widget from the map
         """
 
-        self._m.BM.remove_artist(self.leg)
-        self.leg.remove()
+        self._m.all.remove_artist(self.leg)
 
         del self._m.util._selectors[self._init_args["name"]]
         self._m.BM.update()
@@ -515,7 +514,7 @@ class LayerSlider(Slider):
         self.track.set_height(h)
         self.track.set_y(self.track.get_y() + h / 2)
 
-        self._m.BM.add_artist(ax_slider, layer="all")
+        self._m.all.add_artist(ax_slider)
 
         self.on_changed(self._on_changed)
 
@@ -575,10 +574,8 @@ class LayerSlider(Slider):
         """
         Remove the widget from the map
         """
-
-        self._m.BM.remove_artist(self.ax)
         self.disconnect_events()
-        self.ax.remove()
+        self._m.BM.remove_artist(self.ax)
 
         del self._m.util._sliders[self._init_args["name"]]
 
@@ -603,9 +600,7 @@ class Utilities:
         self._sliders = dict()
 
         # register a function to update all associated widgets on a layer-chance
-        self._m.BM.on_layer(
-            lambda m, layer: self._update_widgets(layer), persistent=True
-        )
+        self._m.BM.on_layer(lambda layer: self._update_widgets(layer), persistent=True)
 
     def _update_widgets(self, l=None):
         if l is None:

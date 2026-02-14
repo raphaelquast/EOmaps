@@ -39,8 +39,6 @@ class DataMixin:
         **kwargs,
     ):
 
-        super().__init__(*args, **kwargs)
-
         self._inherit_classification = None
 
         self._colorbars = []
@@ -71,6 +69,7 @@ class DataMixin:
 
         # evaluate and cache crs boundary bounds (for extent clipping)
         self._crs_boundary_bounds = self.crs_plot.boundary.bounds
+        super().__init__(*args, **kwargs)
 
     @property
     def __lazy_attrs(self):
@@ -695,7 +694,7 @@ class DataMixin:
 
         self._colorbars.append(colorbar)
         self.BM._refetch_layer(self.layer)
-        self.BM._refetch_layer("__SPINES__")
+        self.BM._refetch_layer("**SPINES**")
 
         return colorbar
 
@@ -1019,14 +1018,16 @@ class DataMixin:
             **kwargs,
         )
 
-        coll.set_label("Dataset " f"({self.shape.name}  |  {zdata.shape})")
+        coll.set_label(
+            f" Dataset ({self.shape.name}  |  {zdata.shape})" f" on layer {self.layer}"
+        )
 
         self._coll = coll
 
         if dynamic is True:
-            self.BM.add_artist(coll, layer=layer)
+            self.l[layer].add_artist(coll)
         else:
-            self.BM.add_bg_artist(coll, layer=layer)
+            self.l[layer].add_bg_artist(coll)
 
         if dynamic is True:
             self.BM.update(clear=False)
@@ -1037,7 +1038,7 @@ class DataMixin:
         # the shape is considered assigned if an explicit shape is set
         # or if the data has been plotted with the default shape
 
-        q = self._shape is None or (
+        q = getattr(self, "_shape", None) is None or (
             getattr(self._shape, "_is_default", False) and not self._data_plotted
         )
 
@@ -1418,7 +1419,7 @@ class DataMixin:
         return
         # set the axis-size that is used to determine the number of pixels used
         # when using "shade" shapes for ALL maps objects of a figure
-        for m in (self.parent, *self.parent._children):
+        for m in self.BM._children:
             if m.coll is not None and m.shape.name.startswith("shade_"):
                 w, h = m._get_shade_axis_size(dpi=dpi, flush=flush)
                 m.coll.plot_width = w

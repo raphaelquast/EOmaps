@@ -41,9 +41,9 @@ class Maps(
     GeopandasMixin,
     ClipboardMixin,
     CallbackMixin,
-    CompanionMixin,
     ToolsMixin,
     DataMixin,
+    CompanionMixin,
 ):
     """
     The base-class for generating plots with EOmaps.
@@ -300,10 +300,10 @@ class Maps(
             m2.ax.set_label("inset_map")
 
             spine = m2.ax.spines["geo"]
-            if spine in self.BM._bg_artists.get("___SPINES__", []):
-                self.BM.remove_bg_artist(spine, layer="___SPINES__")
-            if spine not in self.BM._bg_artists.get("__inset___SPINES__", []):
-                self.BM.add_bg_artist(spine, layer="__inset___SPINES__")
+            if spine in self.BM._bg_artists["**SPINES**"]:
+                self.BM._bg_artists._free_artists["**SPINES**"].remove(spine)
+            if spine not in self.BM._bg_artists["**inset_**SPINES**"]:
+                self.BM._bg_artists.add("**inset_**SPINES**", spine)
 
         return m2
 
@@ -389,20 +389,14 @@ class Maps(
                     "EOmaps: Unable to create a layer with an empty layer-name!"
                 )
 
-        layer_name, *postfix = layer.split("__", 1)
-        if postfix:
-            _log.debug(
-                f"EOmaps: New sublayer {postfix[0]} on layer '{layer_name}' created."
-            )
-        else:
-            _log.debug(f"EOmaps: New layer '{layer_name}' created.")
+        _log.debug(f"EOmaps: New layer '{layer}' created.")
 
         m = self.copy(
             data_specs=False,
             classify_specs=False,
             shape=False,
             ax=self.ax,
-            layer=layer_name,
+            layer=layer,
             parent=self.parent,
         )
 
@@ -418,12 +412,10 @@ class Maps(
         m._set_extent_on_plot = self._set_extent_on_plot
 
         # re-initialize all sliders and buttons to include the new layer
-        self.util._reinit_widgets()
+        self.parent.util._reinit_widgets()
 
         # share the companion-widget with the parent
         m._companion_widget = self._companion_widget
-
-        self.l._ingest_layer(m, name=layer)
 
         return m
 
@@ -606,7 +598,8 @@ class Maps(
         from .inset_maps import InsetMaps
 
         m2 = InsetMaps(
-            parent=self,
+            parent_m=self,
+            parent=self.parent,
             crs=inset_crs,
             layer=layer,
             xy=xy,
@@ -644,7 +637,7 @@ class Maps(
     )
     def new_subplot(self, *args, layer=None, **kwargs):
         ax = self.f.add_subplot(*args, **kwargs)
-        self.BM.add_artist(ax, layer=layer)
+        self.l[layer].add_artist(ax)
         return ax
 
     def set_frame(self, rounded=0, gdf=None, countries=None, **kwargs):
@@ -895,7 +888,7 @@ class Maps(
 
             self._hide_all_companion_widget_indicators()
 
-            for m in (self, *self._children):
+            for m in self.BM._children:
                 # handle colorbars
                 for cb in m._colorbars:
                     for a in (cb.ax_cb, cb.ax_cb_plot):

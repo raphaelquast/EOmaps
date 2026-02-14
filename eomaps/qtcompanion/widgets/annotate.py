@@ -514,7 +514,6 @@ class AddAnnotationWidget(QtWidgets.QWidget):
         ann = self.selected_annotation
         if ann:
             self.m.BM.remove_artist(ann)
-            ann.remove()
             self.m.BM.update()
         else:
             self.window().statusBar().showMessage("There is no annotation to remove!")

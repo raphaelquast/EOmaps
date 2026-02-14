@@ -368,15 +368,19 @@ class GridLines:
             # don't trigger draw since this would result in a recursion!
             # (_redraw is called on each fetch-bg event)
             if self._dynamic:
-                self.m.BM.add_artist(self._coll, layer=self.layer)
+                self.m.l[self.layer].add_artist(self._coll)
             else:
-                self.m.BM.add_bg_artist(self._coll, layer=self.layer, draw=False)
+                self.m.l[self.layer].add_bg_artist(self._coll, draw=False)
 
     def _redraw(self):
         self._get_lines.cache_clear()
         try:
             self._remove()
         except Exception as ex:
+            _log.debug(
+                f"Encountered exception {ex} while trying to remove gridlines",
+                exc_info=True,
+            )
             # catch exceptions to avoid issues with dynamic re-drawing of
             # invisible grids
             pass
@@ -393,14 +397,9 @@ class GridLines:
         # don't trigger draw since this would result in a recursion!
         # (_redraw is called on each fetch-bg event)
         if self._dynamic:
-            self.m.BM.remove_artist(self._coll, layer=self.layer)
+            self.m.l[self.layer].remove_artist(self._coll)
         else:
-            self.m.BM.remove_bg_artist(self._coll, layer=self.layer, draw=False)
-
-        try:
-            self._coll.remove()
-        except ValueError:
-            pass
+            self.m.l[self.layer].remove_bg_artist(self._coll, draw=False)
 
         self._coll = None
 
@@ -621,15 +620,11 @@ class GridLabels:
         while len(self._texts) > 0:
             try:
                 t = self._texts.pop(-1)
-                try:
-                    t.remove()
-                except ValueError:
-                    pass
 
                 if self._g._dynamic:
                     self._g.m.BM.remove_artist(t)
                 else:
-                    self._g.m.BM.remove_bg_artist(t, draw=False)
+                    self._g.m.l[self._g.layer].remove_bg_artist(t, draw=False)
             except Exception:
                 _log.exception("EOmaps: Problem while trying to remove a grid-label:")
                 pass
@@ -916,9 +911,9 @@ class GridLabels:
                     t.set_label("__EOmaps_exclude")
 
                     if self._g._dynamic:
-                        m.BM.add_artist(t, layer=self._g.layer)
+                        m.l[self._g.layer].add_artist(t)
                     else:
-                        m.BM.add_bg_artist(t, layer=self._g.layer, draw=False)
+                        m.l[self._g.layer].add_bg_artist(t, draw=False)
                     self._texts.append(t)
 
     def add_labels(self):

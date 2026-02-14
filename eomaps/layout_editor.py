@@ -127,7 +127,7 @@ class LayoutEditor:
 
     @property
     def ms(self):
-        return [self.m.parent, *self.m.parent._children]
+        return list(self.m.BM._children)
 
     @property
     def maxes(self):
@@ -614,7 +614,7 @@ class LayoutEditor:
         elif ax in self.maxes:
             return True
         else:
-            for layer in (*self.m.BM._get_active_layers_alphas[0], "__SPINES__", "all"):
+            for layer in (*self.m.BM._get_active_layers_alphas[0], "**SPINES**", "all"):
                 # logos are put on the spines-layer to appear on top of spines!
                 if ax in self.m.BM.get_bg_artists(layer):
                     return True
@@ -624,6 +624,8 @@ class LayoutEditor:
         return False
 
     def _make_draggable(self, filepath=None):
+        self.m._hide_all_companion_widget_indicators()
+
         # Uncheck active pan/zoom actions of the matplotlib toolbar.
         # use a try-except block to avoid issues with ipympl in jupyter notebooks
         # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
@@ -735,6 +737,7 @@ class LayoutEditor:
             self._info_text = self.add_info_text()
 
         self._color_axes()
+
         self._attach_callbacks()
 
         self.m._emit_signal("layoutEditorActivated")
@@ -812,6 +815,7 @@ class LayoutEditor:
 
         # remove snap-grid (if it's still visible)
         self._remove_snap_grid()
+        self.m._show_all_companion_widget_indicators()
 
         self.m._emit_signal("layoutEditorDeactivated")
 

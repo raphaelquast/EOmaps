@@ -103,7 +103,7 @@ The data displayed in the above gif is taken from:
         framealpha=1,
     )
     # add the legend as artist to keep it on top
-    m.BM.add_artist(leg)
+    m.add_artist(leg)
 
     # --------- add some fancy (static) indicators for selected pixels
     mark_id = 6060

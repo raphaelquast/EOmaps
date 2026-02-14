@@ -705,7 +705,7 @@ class ColorBar(ColorBarBase):
         else:
             # check if self is actually just another layer of an existing Maps object
             # that already has a colorbar assigned
-            for m in [self._m.parent, *self._m.parent._children]:
+            for m in self._m.BM._children:
                 if m is not self._m and m.ax is self._m.ax:
                     if m.colorbar is not None:
                         if m.colorbar._parent_cb is None:
@@ -725,20 +725,18 @@ class ColorBar(ColorBarBase):
             except Exception:
                 _log.debug("Problem while removing dynamic-colorbar callback")
 
-            self._m.BM.remove_artist(self.ax_cb, self.layer)
-            self._m.BM.remove_artist(self.ax_cb_plot, self.layer)
+            self._m.l[self.layer].remove_artist(self.ax_cb)
+            self._m.l[self.layer].remove_artist(self.ax_cb_plot)
 
         else:
-            self._m.BM.remove_bg_artist(self.ax_cb, self.layer, draw=False)
-            self._m.BM.remove_bg_artist(self.ax_cb_plot, self.layer, draw=False)
+            self._m.l[self.layer].remove_bg_artist(self.ax_cb, draw=False)
+            self._m.l[self.layer].remove_bg_artist(self.ax_cb_plot, draw=False)
 
         if self.ax_cb in self._ax._eomaps_cb_axes:
             self._ax._eomaps_cb_axes.remove(self.ax_cb)
         if self.ax_cb_plot in self._ax._eomaps_cb_axes:
             self._ax._eomaps_cb_axes.remove(self.ax_cb_plot)
 
-        self.ax_cb.remove()
-        self.ax_cb_plot.remove()
         self._ax.remove()
 
     def _set_map(self, m):
@@ -755,17 +753,15 @@ class ColorBar(ColorBarBase):
         self._cmap = self._m.coll.cmap
 
     def _add_axes_to_layer(self, dynamic):
-        BM = self._m.BM
-
         # add all axes as artists
         self.ax_cb.set_navigate(False)
 
         for a in (self.ax_cb, self.ax_cb_plot):
             if a is not None:
                 if dynamic is True:
-                    BM.add_artist(a, layer=self._layer)
+                    self._m.l[self._layer].add_artist(a)
                 else:
-                    BM.add_bg_artist(a, layer=self._layer)
+                    self._m.l[self._layer].add_bg_artist(a)
 
         # we need to re-draw all layers since the axis size has changed!
         self._m.redraw()

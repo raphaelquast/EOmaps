@@ -428,13 +428,13 @@ class _MoveClickPickCallbacks(_CallbacksBase):
             if permanent is False:
                 # make the annotation temporary
                 self._temporary_artists.append(annotation)
-                self.m.BM.add_artist(annotation, layer=layer)
+                self.m.l[layer].add_artist(annotation)
             else:
 
                 if isinstance(permanent, str) and permanent == "fixed":
-                    self.m.BM.add_bg_artist(annotation, layer=layer)
+                    self.m.l[layer].add_bg_artist(annotation)
                 else:
-                    self.m.BM.add_artist(annotation, layer=layer)
+                    self.m.l[layer].add_artist(annotation)
 
                     if not hasattr(self, "permanent_annotations"):
                         self.permanent_annotations = []
@@ -663,11 +663,11 @@ class _MoveClickPickCallbacks(_CallbacksBase):
         if permanent is False:
             # make the annotation temporary
             self._temporary_artists.append(marker)
-            self.m.BM.add_artist(marker, layer=layer)
+            self.m.l[layer].add_artist(marker)
         elif permanent is None:
-            self.m.BM.add_bg_artist(marker, layer=layer)
+            self.m.l[layer].add_bg_artist(marker)
         elif permanent is True:
-            self.m.BM.add_artist(marker, layer=layer)
+            self.m.l[layer].add_artist(marker)
 
             if not hasattr(self, "permanent_markers"):
                 self.permanent_markers = [marker]
@@ -959,7 +959,6 @@ class _ClickCallbacks(_CallbacksBase):
             while len(self.permanent_annotations) > 0:
                 ann = self.permanent_annotations.pop(0)
                 self.m.BM.remove_artist(ann)
-                ann.remove()
 
     def clear_markers(self, **kwargs):
         """Remove all temporary and permanent annotations from the plot."""
@@ -967,7 +966,6 @@ class _ClickCallbacks(_CallbacksBase):
             while len(self.permanent_markers) > 0:
                 marker = self.permanent_markers.pop(0)
                 self.m.BM.remove_artist(marker)
-                marker.remove()
             del self.permanent_markers
 
     def get_values(self, **kwargs):

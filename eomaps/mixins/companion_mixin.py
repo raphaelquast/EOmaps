@@ -16,6 +16,9 @@ class CompanionMixin:
     _companion_widget_n_layer_tabs = 50
 
     def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
         try:
             from ..qtcompanion.signal_container import _SignalContainer
 
@@ -29,8 +32,6 @@ class CompanionMixin:
         self._companion_widget = None
         # a list of actions that are executed whenever the widget is shown
         self._on_show_companion_widget = []
-
-        super().__init__(*args, **kwargs)
 
     @staticmethod
     def _if_companion_exists(f):
@@ -56,9 +57,17 @@ class CompanionMixin:
 
     def _hide_all_companion_widget_indicators(self):
         # hide companion-widget indicator
-        for m in (self.parent, *self.parent._children):
+        for m in self.BM._children:
             # hide companion-widget indicator
             m._indicate_companion_map(False)
+
+    def _show_all_companion_widget_indicators(self):
+        # hide companion-widget indicator
+        for m in self.BM._children:
+            if (w := getattr(m, "_companion_widget", None)) is not None:
+                if w.isVisible():
+                    # hide companion-widget indicator
+                    m._indicate_companion_map(True)
 
     @_if_companion_exists
     def __set_always_on_top(self, q):
@@ -84,9 +93,8 @@ class CompanionMixin:
     @_if_companion_exists
     def _indicate_companion_map(self, visible):
         if hasattr(self, "_companion_map_indicator"):
-            self.BM.remove_artist(self._companion_map_indicator)
             try:
-                self._companion_map_indicator.remove()
+                self.all.remove_artist(self._companion_map_indicator)
             except ValueError:
                 # ignore errors resulting from the fact that the artist
                 # has already been removed!
@@ -94,7 +102,7 @@ class CompanionMixin:
             del self._companion_map_indicator
 
         # don't draw an indicator if only one map is present in the figure
-        if all(m.ax == self.ax for m in (self.parent, *self.parent._children)):
+        if all(m.ax == self.ax for m in self.BM._children):
             return
 
         if visible:
@@ -104,14 +112,14 @@ class CompanionMixin:
             )
 
             self.ax.add_artist(self._companion_map_indicator)
-            self.BM.add_artist(self._companion_map_indicator, layer="all")
+            self.all.add_artist(self._companion_map_indicator)
 
         self.BM.update()
 
     def _identify_maps_object(self, xy):
         clicked_map = None
         if xy is not None:
-            for m in (self.parent, *self.parent._children):
+            for m in self.BM._children:
                 if not m._new_axis_map:
                     # only search for Maps-object that initialized new axes
                     continue
@@ -147,7 +155,7 @@ class CompanionMixin:
             return
 
         # hide all other companion-widgets
-        for m in (self.parent, *self.parent._children):
+        for m in self.BM._children:
             if m == clicked_map:
                 continue
             if m._companion_widget is not None and m._companion_widget.isVisible():

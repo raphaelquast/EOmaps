@@ -626,7 +626,7 @@ class DataManager:
         # remove previous mask artist
         if self._masked_points_artist is not None:
             try:
-                self.m.BM.remove_bg_artist(self._masked_points_artist)
+                self.m.l[self.layer].remove_bg_artist(self._masked_points_artist)
                 self._masked_points_artist.remove()
                 self._masked_points_artist = None
             except Exception:
@@ -658,7 +658,7 @@ class DataManager:
             **kwargs,
         )
 
-        self.m.BM.add_bg_artist(self._masked_points_artist, layer=self.layer)
+        self.m.l[self.layer].add_bg_artist(self._masked_points_artist)
 
     def redraw_required(self, layer):
         """
@@ -669,6 +669,7 @@ class DataManager:
         layer : str
             The layer for which the background is fetched.
         """
+
         if not self.m._data_plotted:
             return
 
@@ -707,13 +708,10 @@ class DataManager:
         if self.m.coll is not None:
             try:
                 if getattr(self.m, "_coll_dynamic", False):
-                    self.m.BM.remove_artist(self.m._coll)
+                    self.m.l[self.layer].remove_artist(self.m._coll)
                 else:
-                    self.m.BM.remove_bg_artist(self.m._coll)
+                    self.m.l[self.layer].remove_bg_artist(self.m._coll)
 
-                # if the collection is still attached to the axes, remove it
-                if self.m.coll.axes is not None:
-                    self.m.coll.remove()
                 self.m._coll = None
             except Exception:
                 _log.exception("EOmaps: Error while trying to remove collection.")
@@ -906,7 +904,11 @@ class DataManager:
             coll = self._get_coll(props, **self.m._coll_kwargs)
             coll.set_clim(self.m._vmin, self.m._vmax)
 
-            coll.set_label("Dataset " f"({self.m.shape.name}  |  {self.z_data.shape})")
+            coll.set_label(
+                "Dataset "
+                f"({self.m.shape.name}  |  {self.z_data.shape})"
+                f" on layer {self.layer}"
+            )
 
             if self.m.shape.name not in ["scatter_points", "contour", "hexbin"]:
                 # avoid use "autolim=True" since it can cause problems in
@@ -916,9 +918,9 @@ class DataManager:
                 self.m.ax.add_collection(coll, autolim=False)
 
             if self.m._coll_dynamic:
-                self.m.BM.add_artist(coll, layer=self.layer)
+                self.m.l[self.layer].add_artist(coll)
             else:
-                self.m.BM.add_bg_artist(coll, layer=self.layer)
+                self.m.l[self.layer].add_bg_artist(coll)
 
             self.m._coll = coll
 

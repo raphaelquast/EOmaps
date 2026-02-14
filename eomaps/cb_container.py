@@ -152,7 +152,7 @@ class _CallbackContainer(object):
 
             # make sure that "all" layer callbacks are executed before other callbacks
             ms, malls = [], []
-            for m in reversed((*self._m.parent._children, self._m.parent)):
+            for m in self._m.BM._children:
                 if m.layer == "all":
                     malls.append(m)
                 else:
@@ -323,13 +323,12 @@ class _CallbackContainer(object):
         for artist in artists:
             # in case the artist has already been added as normal or background
             # artist, remove it first!
-            if artist in chain(*self._m.BM._bg_artists.values()):
-                self._m.BM.remove_bg_artist(artist)
+            if artist in self._m.l[layer]._bg_artists:
+                # use private method since we only want to switch from
+                # being a bg-artist to being a dynamic artist
+                self._m.l[layer]._remove_bg_artist(artist)
 
-            if artist in chain(*self._m.BM._artists.values()):
-                self._m.BM.remove_artist(artist)
-
-            self._m.BM.add_artist(artist, layer=layer)
+            self._m.l[layer].add_artist(artist)
             self._temporary_artists.append(artist)
 
     def _execute_cb(self, layer):

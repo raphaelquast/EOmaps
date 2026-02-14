@@ -34,6 +34,10 @@ _log = logging.getLogger(__name__)
 def _add_pending_webmap(m, layer, name):
     # indicate that there is a pending webmap in the companion-widget editor
     m.BM._pending_webmaps.setdefault(layer, []).append(name)
+    # TODO make sure the layer is immediately created so the widget
+    # (and the LayerNamespace) know that it is pending
+    if layer not in m._get_layers():
+        m.new_layer(layer)
 
 
 class _WebMapLayer:
@@ -172,7 +176,7 @@ class _WebMapLayer:
             if not self._m.BM._layer_visible(self._layer):
                 legax.set_visible(False)
 
-            self._m.BM.add_artist(legax, layer=self._layer)
+            self._m.l[self._layer].add_artist(legax)
 
             def cb_move(event):
                 if not self._legend_picked:
@@ -220,7 +224,6 @@ class _WebMapLayer:
 
                 if event.key in ["delete", "backspace"]:
                     self._m.BM.remove_artist(legax, self._layer)
-                    legax.remove()
 
                 self._m.BM.update()
 
@@ -400,7 +403,7 @@ class _WMTSLayer(_WebMapLayer):
             if self._layer == "all" or m.BM._layer_visible(self._layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
-                    self._m,
+                    m=self._m,
                     layer=self._layer,
                     wms_kwargs=kwargs,
                     zorder=zorder,
@@ -439,7 +442,7 @@ class _WMTSLayer(_WebMapLayer):
             ax.add_image(img)
         return img
 
-    def _do_add_layer(self, m, layer, **kwargs):
+    def _do_add_layer(self, layer, m, **kwargs):
         # actually add the layer to the map.
         _log.info(f"EOmaps: Adding wmts-layer: {self.name}")
 
@@ -456,7 +459,7 @@ class _WMTSLayer(_WebMapLayer):
         if hasattr(self, "_EOmaps_source_code"):
             art._EOmaps_source_code = self._EOmaps_source_code
 
-        m.BM.add_bg_artist(art, layer=layer)
+        m.l[layer].add_bg_artist(art)
 
 
 class _WMSLayer(_WebMapLayer):
@@ -585,7 +588,7 @@ class _WMSLayer(_WebMapLayer):
 
         return img
 
-    def _do_add_layer(self, m, layer, **kwargs):
+    def _do_add_layer(self, layer, m, **kwargs):
         # actually add the layer to the map.
         _log.info(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -600,7 +603,7 @@ class _WMSLayer(_WebMapLayer):
         if hasattr(self, "_EOmaps_source_code"):
             art._EOmaps_source_code = self._EOmaps_source_code
 
-        m.BM.add_bg_artist(art, layer=layer)
+        m.l[layer].add_bg_artist(art)
 
 
 class _WebServiceCollection:
@@ -1229,7 +1232,7 @@ class _XyzTileService:
 
             if self._layer in ["all", self._m.BM.bg_layer]:
                 # add the layer immediately if the layer is already active
-                self._do_add_layer(self._m, layer=self._layer, **kwargs)
+                self._do_add_layer(layer=self._layer, m=self._m, **kwargs)
             else:
                 # delay adding the layer until it is effectively activated
                 _add_pending_webmap(self._m, self._layer, self.name)
@@ -1240,7 +1243,7 @@ class _XyzTileService:
                     m=self._m,
                 )
 
-    def _do_add_layer(self, m, layer, **kwargs):
+    def _do_add_layer(self, layer, m, **kwargs):
         # actually add the layer to the map.
         _log.info(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -1271,7 +1274,7 @@ class _XyzTileService:
         if hasattr(self, "_EOmaps_source_code"):
             self._artist._EOmaps_source_code = self._EOmaps_source_code
 
-        m.BM.add_bg_artist(self._artist, layer=layer)
+        m.l[layer].add_bg_artist(self._artist)
 
 
 class _XyzTileServiceNonEarth(_XyzTileService):

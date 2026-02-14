@@ -156,7 +156,8 @@ class AddMixin:
             Additional kwargs are passed to plt.imshow
         """
         if layer is None:
-            layer = "__SPINES__"
+            # TODO ensure that logos are plotted on top of spines!
+            layer = self.layer
 
         if filepath is None:
             filepath = Path(__file__).parent.parent / "logo.png"
@@ -193,7 +194,7 @@ class AddMixin:
 
         _ = figax.imshow(im, **kwargs)
 
-        self.BM.add_bg_artist(figax, layer=layer)
+        self.l[layer].add_bg_artist(figax)
 
         if fix_position:
             fixed_pos = (
@@ -418,7 +419,7 @@ class AddMixin:
             raise TypeError(f"EOmaps: '{connect}' is not a valid connection-method!")
 
         art.set_label(f"Line ({connect})")
-        self.BM.add_bg_artist(art, layer=layer)
+        self.l[layer].add_bg_artist(art)
 
         if mark_points:
             zorder = kwargs.get("zorder", 10)
@@ -435,7 +436,7 @@ class AddMixin:
                 (art2,) = self.ax.plot(xplot, yplot, mark_points, zorder=zorder, lw=0)
 
             art2.set_label(f"Line Marker ({connect})")
-            self.BM.add_bg_artist(art2, layer=layer)
+            self.l[layer].add_bg_artist(art2)
 
         return out_d_int, out_d_tot
 
@@ -479,12 +480,13 @@ class AddMixin:
         kwargs.setdefault("animated", True)
         kwargs.setdefault("horizontalalignment", "center")
         kwargs.setdefault("verticalalignment", "center")
+        kwargs.setdefault("transform", self.ax.transAxes)
 
         a = self.f.text(*args, **kwargs)
 
         if layer is None:
             layer = self.layer
-        self.BM.add_artist(a, layer=layer)
+        self.l[layer].add_artist(a)
         self.BM.update()
 
         return a
@@ -517,7 +519,7 @@ class AddMixin:
         p = Polygon(verts, **kwargs)
 
         artist = self.ax.add_patch(p)
-        self.BM.add_bg_artist(artist)
+        self.add_bg_artist(artist)
 
     def add_marker(
         self,
@@ -842,7 +844,7 @@ class AddMixin:
 
         art.set_label("Background patch")
 
-        self.BM.add_bg_artist(art, layer=layer)
+        self.l[layer].add_bg_artist(art)
         return art
 
     # for backwards compatibility

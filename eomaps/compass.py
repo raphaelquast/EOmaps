@@ -157,7 +157,7 @@ class Compass:
 
         self._artist = self._get_artist(pos)
         self._m.ax.add_artist(self._artist)
-        self._m.BM.add_artist(self._artist, layer=self.layer)
+        self._m.l[self.layer].add_artist(self._artist)
 
         self._set_position(pos)
 
@@ -457,7 +457,6 @@ class Compass:
         """
         self._disconnect()
         self._m.BM.remove_artist(self._artist)
-        self._artist.remove()
         self._m.BM.update()
 
     def set_patch(self, facecolor=None, edgecolor=None, linewidth=None):

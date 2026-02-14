@@ -285,10 +285,10 @@ class MultiCaller:
 
 
 class LazyCaller:
-    def __init__(self, m, attr, name):
+    def __init__(self, m, attr, name="Maps"):
         self._m = m
         self._attr = attr
-        self._name = "Maps"
+        self._name = name
 
     def __dir__(self):
         # in case attributes ready for lazy-evaluation are explicitly defined,
@@ -305,8 +305,12 @@ class LazyCaller:
 
     def __getattr__(self, name):
         attr = object.__getattribute__(self, "_attr")
-        if name.startswith("_"):
-            return object.__getattribute__(attr, name)
+        get_attr = object.__getattribute__(attr, name)
+
+        if name.startswith("_") or isinstance(
+            get_attr, (list, set, tuple, dict, int, float, np.number, np.ndarray)
+        ):
+            return get_attr
 
         return LazyCaller(
             self._m, object.__getattribute__(attr, name), f"{self._name}.{name}"
@@ -317,28 +321,33 @@ class LazyCaller:
             lazy_method = args[0]
 
             @wraps(lazy_method)
-            def _lazy_method(m, layer):
-                lazy_method(m, *args[1:], **kwargs)
+            def _lazy_method(layer):
+                lazy_method(self._m, *args[1:], **kwargs)
 
             _log.info(
                 f"method submitted for activation of '{self._m.layer}' layer: {lazy_method.__name__}"
+            )
+            self._m.BM._pending_methods.setdefault(self._m.layer, []).append(
+                lazy_method.__name__
             )
 
         else:
 
             @wraps(self._attr.__call__)
-            def _lazy_method(m, layer):
+            def _lazy_method(layer):
                 self._attr.__call__(*args, **kwargs)
 
             _log.info(
                 f"method submitted for activation of '{self._m.layer}' layer: {self._name}(...)"
+            )
+            self._m.BM._pending_methods.setdefault(self._m.layer, []).append(
+                f"{self._name}(...)"
             )
 
         self._m.BM.on_layer(
             func=_lazy_method,
             layer=self._m.layer,
             persistent=persistent,
-            m=self._m,
         )
 
 
@@ -370,7 +379,7 @@ class LayerNamespace:
         self._m = m
         self._layers = {}
 
-        self._ingest_layer(self._m)
+        # self._ingest_layer(self._m)
 
     def _ingest_layer(self, m, name=None):
         # don't include the all-layer
@@ -381,19 +390,18 @@ class LayerNamespace:
         if name is None:
             name = m.layer
 
-        if name in self._layers:
-            i = 0
-            while name in self._layers:
-                name = f"{m.layer}__{i}"
-                i += 1
-
-            print(
-                f"The layer name '{m.layer}' already exists!\n"
-                f"It has been re-named to {name} in the LayerNamespace!"
-            )
-
         self._layers[name] = m
         super().__setattr__(name, m)
+
+    def _remove_layer(self, layer):
+        self._layers.pop(layer)
+        delattr(self, layer)
+
+    def _get_layer_names(self):
+        return (i.split("__", 1)[0] for i in self._layers)
+
+    def __dir__(self):
+        return list(self._layers)
 
     def __iter__(self):
         return iter(self._layers.values())
@@ -409,7 +417,11 @@ class LayerNamespace:
 
     def __repr__(self):
         return fill(
-            'LayerNamespace("' + '", "'.join(i for i in sorted(self._layers)) + '")'
+            'LayerNamespace("'
+            + '", "'.join(i for i in sorted(self._layers)[:5])
+            + '"'
+            + (" ..." if len(self._layers) > 5 else "")
+            + ")"
         )
 
     def __setattr__(self, name, value):
@@ -461,8 +473,8 @@ class LazyLayerNamespace(LayerNamespace):
         self._m = self._parent_namespace._m
 
     @property
-    def _elements(self):
-        return self._parent_namespace._elements
+    def _layers(self):
+        return self._parent_namespace._layers
 
     def __dir__(self):
         return dir(self._parent_namespace)
@@ -510,7 +522,9 @@ class MapsBase(metaclass=_MapsMeta):
         **kwargs,
     ):
 
-        self._BM = None
+        self._artists = weakref.WeakSet()
+        self._bg_artists = weakref.WeakSet()
+
         self._layout_editor = None
 
         self._log_on_event_messages = dict()
@@ -549,19 +563,35 @@ class MapsBase(metaclass=_MapsMeta):
             self._crs_plot = crs
 
         self._init_figure(**kwargs)
-
-        # Make sure the figure-background patch is on an explicit layer
-        # This is used to avoid having the background patch on each fetched
-        # background while maintaining the capability of restoring it
-        if self.f.patch not in self.BM._bg_artists.get("__BG__", []):
-            self.f.patch.set_zorder(-2)
-            self.BM.add_bg_artist(self.f.patch, layer="__BG__")
-
         self._init_axes(ax=ax, plot_crs=crs, **kwargs)
 
-        if self.ax.patch not in self.BM._bg_artists.get("__BG__", []):
-            self.ax.patch.set_zorder(-1)
-            self.BM.add_bg_artist(self.ax.patch, layer="__BG__")
+        if self.layer in self._l._layers:
+            name = self.layer.split("__", 1)[0]
+            i = 0
+            while name in self._l._layers:
+                name = f"{self.layer}__{i}"
+                i += 1
+
+            print(
+                f"The layer name '{self.layer}' already exists!\n"
+                f"It has been re-named to {name} in the LayerNamespace!"
+            )
+            self._layer = name
+
+        self._l._ingest_layer(self)
+        self._add_child(self)
+
+        if self.parent == self:
+            # Make sure the figure-background patch is on an explicit layer
+            # This is used to avoid having the background patch on each fetched
+            # background while maintaining the capability of restoring it
+            if self.f.patch not in self.BM._bg_artists["**BG**"]:
+                self.f.patch.set_zorder(-2)
+                self.BM._bg_artists.add("**BG**", self.f.patch)
+
+            if self.ax.patch not in self.BM._bg_artists["**BG**"]:
+                self.ax.patch.set_zorder(-1)
+                self.BM._bg_artists.add("**BG**", self.ax.patch)
 
         # Treat cartopy geo-spines separately in the blit-manager
         # to avoid issues with overlapping spines that are drawn on each layer
@@ -576,21 +606,48 @@ class MapsBase(metaclass=_MapsMeta):
         if self.parent == self and self.__class__._always_on_top:
             self._set_always_on_top(True)
 
-        # TODO find a better way to ensure that the LayerNamespace
-        # is always used from the "first maps-object of the chosen axes"
-        try:
-            usem = next(
-                x
-                for x in (self.parent, *self.parent._children)
-                if x.ax == self.ax and x.layer == self.layer
-            )
-        except StopIteration:
-            usem = self
-
-        self._l = LayerNamespace(usem)
-        self._ll = LazyLayerNamespace(self._l)
-
         super().__init__()
+
+    def add_artist(self, artist):
+        artist.set_animated(True)
+
+        # TODO is there a better way to handle axes?
+        # NOTE: this is required to avoid consecutive re-draws of axes-artists
+        # such as backgrounds, spines etc. during fast executed callbacks (e.g. move)!
+        if isinstance(artist, plt.Axes):
+            self.BM._managed_axes.add(artist)
+
+        self._artists.add(artist)
+
+    def add_bg_artist(self, artist, draw=True):
+        artist.set_animated(True)
+
+        # TODO is there a better way to handle axes?
+        # NOTE: this is required to avoid consecutive re-draws of axes-artists
+        # such as backgrounds, spines etc. during fast executed callbacks (e.g. move)!
+        if isinstance(artist, plt.Axes):
+            self.BM._managed_axes.add(artist)
+
+        self._bg_artists.add(artist)
+        if draw:
+            self.redraw(self.layer)
+
+    def _remove_artist(self, artist):
+        self._artists.remove(artist)
+
+    def remove_artist(self, artist):
+        self._remove_artist(artist)
+        artist.remove()
+
+    def _remove_bg_artist(self, artist):
+        self._bg_artists.remove(artist)
+
+    def remove_bg_artist(self, artist, draw=True):
+        self._remove_bg_artist(artist)
+        artist.remove()
+
+        if draw:
+            self.redraw(self.layer)
 
     def __add__(self, value):
         return MultiCaller([self, value])
@@ -657,10 +714,7 @@ class MapsBase(metaclass=_MapsMeta):
     @property
     def BM(self):
         """Blit-Manager used to dynamically update the plots."""
-        if self.parent._BM is None:
-            self.parent._BM = BlitManager(self)
-            self.parent._BM._bg_layer = self.parent.layer
-        return self.parent._BM
+        return self._BM
 
     @property
     def all(self):
@@ -672,9 +726,7 @@ class MapsBase(metaclass=_MapsMeta):
         >>> m.all.cb.click.attach.annotate()
 
         """
-        if not hasattr(self, "_all"):
-            self._all = self.new_layer("all")
-        return self._all
+        return self.l["all"]
 
     def redraw(self, *args, force_data_redraw=False):
         """
@@ -725,7 +777,10 @@ class MapsBase(metaclass=_MapsMeta):
             # only re-fetch the required layers
             for layer in args:
                 self.BM._refetch_layer(layer)
-                if force_data_redraw and getattr(self.l[layer], "_data_manager", None) is not None:
+                if (
+                    force_data_redraw
+                    and getattr(self.l[layer], "_data_manager", None) is not None
+                ):
                     self.l[layer]._data_manager.last_extent = None
 
         self.f.canvas.draw_idle()
@@ -780,20 +835,23 @@ class MapsBase(metaclass=_MapsMeta):
             name = str(name)
 
         # check if all layers exist
-        existing_layers = self._get_layers()
+        existing_layers = self._get_layers(exclude_private=False)
         layers_to_show, _ = self.BM._parse_multi_layer_str(name)
 
         # don't check private layer-names
         layers_to_show = [i for i in layers_to_show if not i.startswith("_")]
         missing_layers = set(layers_to_show).difference(set(existing_layers))
         if len(missing_layers) > 0:
-            lstr = " - " + "\n - ".join(map(str, existing_layers))
+            public_layers = self._get_layers(exclude_private=True)
 
-            _log.error(
-                f"EOmaps: The layers {missing_layers} do not exist...\n"
-                + f"Use one of: \n{lstr}"
+            lstr = " - " + "\n - ".join(map(str, public_layers))
+
+            _log.warning(
+                'EOmaps: The layers: "'
+                + '","'.join(sorted(missing_layers))
+                + '" do not (yet?) exist!\n'
+                + f"Currently available layers are: \n{lstr}"
             )
-            return
 
         # invoke the bg_layer setter of the blit-manager
         self.BM.bg_layer = name
@@ -961,22 +1019,8 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _get_layers(self, exclude=None, exclude_private=True):
         # return a list of all (empty and non-empty) layer-names
-        layers = set((m.layer for m in (self.parent, *self.parent._children)))
-        # add layers that are not yet activated (but have an activation
-        # method defined...)
-        layers = layers.union(set(self.BM._on_layer_activation[True]))
-        layers = layers.union(set(self.BM._on_layer_activation[False]))
-
-        # add all (possibly still invisible) layers with artists defined
-        # (ONLY do this for unique layers... skip multi-layers )
-        layers = layers.union(
-            chain(
-                *(
-                    self.BM._parse_multi_layer_str(i)[0]
-                    for i in (*self.BM._bg_artists, *self.BM._artists)
-                )
-            )
-        )
+        layers = set(self.l._get_layer_names())
+        layers = set(chain(*(m.l._get_layer_names() for m in self.BM._children)))
 
         # exclude private layers
         if exclude_private:
@@ -986,8 +1030,11 @@ class MapsBase(metaclass=_MapsMeta):
                     return text[len(prefix) :]
                 return text
 
-            layers = {remove_prefix(i, "__inset_") for i in layers}
-            layers = {i for i in layers if not i.startswith("__")}
+            layers = {remove_prefix(i, "**inset_") for i in layers}
+            layers = {i for i in layers if not i.startswith("**")}
+        else:
+            layers.add("**BG**")
+            layers.add("**SPINES**")
 
         if exclude:
             for i in exclude:
@@ -1049,7 +1096,7 @@ class MapsBase(metaclass=_MapsMeta):
                 stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
 
                 if len(layer) == 0:
-                    layer = None
+                    layer = [self.layer]
 
                 if layer is not None:
                     layer = self.BM._get_combined_layer_name(*layer)
@@ -1131,7 +1178,7 @@ class MapsBase(metaclass=_MapsMeta):
     def subplots_adjust(self, **kwargs):
         """Adjust the margins of subplots."""
         with self.delay_draw():
-            for m in (self.parent, *self.parent._children):
+            for m in self.BM._children:
                 try:
                     m.ax.get_gridspec().update(**kwargs)
                 except AttributeError:
@@ -1181,15 +1228,15 @@ class MapsBase(metaclass=_MapsMeta):
             savelayers, alphas = self.BM._parse_multi_layer_str(showlayer_name)
 
             # make sure inset-maps are drawn on top of normal maps
-            savelayers.sort(key=lambda x: x.startswith("__inset_"))
+            savelayers.sort(key=lambda x: x.startswith("**inset_"))
 
             zorder = 0
             for layer, alpha in zip(savelayers, alphas):
                 # get all (sorted) artists of a layer
-                if layer.startswith("__inset"):
-                    artists = self.BM.get_bg_artists(["__inset_all", layer])
+                if layer.startswith("**inset"):
+                    artists = self.BM.get_bg_artists(["**inset_all", layer])
                 else:
-                    if layer.startswith("__"):
+                    if layer.startswith("**"):
                         artists = self.BM.get_bg_artists([layer])
                     else:
                         artists = self.BM.get_bg_artists(["all", layer])
@@ -1208,9 +1255,9 @@ class MapsBase(metaclass=_MapsMeta):
 
                         stack.enter_context(a._cm_set(alpha=current_alpha))
 
-            if any(l.startswith("__inset") for l in savelayers):
-                if "__inset_all" not in savelayers:
-                    savelayers.append("__inset_all")
+            if any(l.startswith("**inset") for l in savelayers):
+                if "**inset_all" not in savelayers:
+                    savelayers.append("**inset_all")
                     alphas.append(1)
             if "all" not in savelayers:
                 savelayers.append("all")
@@ -1226,14 +1273,21 @@ class MapsBase(metaclass=_MapsMeta):
                     stack.enter_context(a._cm_set(zorder=zorder, animated=False))
 
             # hide all artists on non-visible layers
-            for key, val in chain(
-                self.BM._bg_artists.items(), self.BM._artists.items()
-            ):
-                if key not in savelayers:
-                    for a in val:
+            # for key, val in chain(
+            #     self.BM._bg_artists.items(), self.BM._artists.items()
+            # ):
+            #     if key not in savelayers:
+            #         for a in val:
+            #             stack.enter_context(a._cm_set(visible=False, animated=True))
+
+            for m in self.BM._children:
+                # hide all artists on non-visible layers
+
+                # TODO use proper layer parsing not hard-coding!
+                if m.layer.split("__", 1)[0] not in savelayers:
+                    for a in (*m._artists, *m._bg_artists):
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
-            for m in (self.parent, *self.parent._children):
                 # re-enable normal axis draw cycle by making axes non-animated.
                 # This is needed for backward-compatibility, since saving a figure
                 # ignores the animated attribute for axis-children but not for the axis
@@ -1288,13 +1342,24 @@ class MapsBase(metaclass=_MapsMeta):
                         exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                     )
 
-            # cleanup all artists and cached background-layers from the blit-manager
-            if not isinstance(self, MapsBase):
-                self.BM._cleanup_layer(self.layer)
+            # cleanup all artists
+            for a in (*self._artists, *self._bg_artists):
+                try:
+                    a.remove()
+                except Exception:
+                    _log.error(
+                        f"EOmaps-cleanup: Problem while trying to remove artist: {a}",
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    )
+            self._artists.clear()
+            self._bg_artists.clear()
+
+            # remove the child from the LayerNamespace
+            self.l._remove_layer(self.layer)
 
             # remove the child from the parent Maps object
-            if self in self.parent._children:
-                self.parent._children.remove(self)
+            if self in self.BM._children:
+                self.BM._children.remove(self)
         except Exception:
             _log.error(
                 "EOmaps: Cleanup problem!",
@@ -1385,14 +1450,20 @@ class MapsBase(metaclass=_MapsMeta):
             # make sure we keep a "real" reference otherwise overwriting the
             # variable of the parent Maps-object while keeping the figure open
             # causes all weakrefs to be garbage-collected!
-            self.parent.f._EOmaps_parent = self.parent._real_self
+            self._f._EOmaps_parent = self
         else:
             if not hasattr(self.parent.f, "_EOmaps_parent"):
+                # e.g. in case a explicit figure is provided
                 self.parent.f._EOmaps_parent = self.parent._real_self
-            self.parent._add_child(self)
+
+        if getattr(self.parent, "_BM", None) is not None:
+            self._BM = self.parent._BM
+        else:
+            _log.debug("New BlitManager initialized")
+            self._BM = BlitManager(self.f)
+            self._BM._bg_layer = self.layer
 
         if self.parent == self:  # use == instead of "is" since the parent is a proxy!
-
             # override Figure.savefig with Maps.savefig but keep original
             # method accessible via Figure._mpl_orig_savefig
             # (this ensures that using the save-buttons in the gui or pressing
@@ -1423,7 +1494,7 @@ class MapsBase(metaclass=_MapsMeta):
     def _init_axes(self, ax, plot_crs, **kwargs):
         if isinstance(ax, plt.Axes):
             # check if the axis is already used by another maps-object
-            if ax not in (i.ax for i in (self.parent, *self.parent._children)):
+            if ax not in (i.ax for i in self.BM._children):
                 newax = True
                 ax.set_animated(True)
                 # make sure axes are drawn once to properly set transforms etc.
@@ -1480,6 +1551,9 @@ class MapsBase(metaclass=_MapsMeta):
         if newax:  # only if a new axis has been created
             self._new_axis_map = True
 
+            self._l = LayerNamespace(self)
+            self._ll = LazyLayerNamespace(self._l)
+
             # explicitly set initial limits to global to avoid issues if NE-features
             # are added (and clipped) before actual limits are set
             # TODO
@@ -1494,6 +1568,11 @@ class MapsBase(metaclass=_MapsMeta):
             )
         else:
             self._new_axis_map = False
+
+            # use the namespace from the parent map
+            self._l, self._ll = next(
+                ((m._l, m._ll) for m in self.BM._children if m.ax is ax)
+            )
 
     def _get_snapshot(self, layer=None):
         if layer is None:
@@ -1562,7 +1641,7 @@ class MapsBase(metaclass=_MapsMeta):
         return self
 
     def _add_child(self, m):
-        self.parent._children.add(m)
+        self.BM._children.add(m)
 
         # execute hooks to notify the gui that a new child was added
         for action in self._after_add_child:
@@ -1588,8 +1667,8 @@ class MapsBase(metaclass=_MapsMeta):
     def _handle_spines(self):
         # put cartopy spines on a separate layer
         for spine in self.ax.spines.values():
-            if spine and spine not in self.BM._bg_artists.get("__SPINES__", []):
-                self.BM.add_bg_artist(spine, layer="__SPINES__")
+            if spine and spine not in self.BM._bg_artists["**SPINES**"]:
+                self.BM._bg_artists.add("**SPINES**", spine)
 
     def _on_resize(self, event):
         # make sure the background is re-fetched if the canvas has been resized
@@ -1607,7 +1686,7 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
-        for m in [self.parent, *self.parent._children]:
+        for m in list(self.BM._children):
             if hasattr(m.f, "_EOmaps_parent"):
                 m.f._EOmaps_parent = None
 
@@ -1689,10 +1768,10 @@ class MapsBase(metaclass=_MapsMeta):
             layer = str(layer)
             m = self.new_layer(layer)
 
-        def cb(m, layer):
+        def cb(layer):
             func(m=m, **kwargs)
 
-        self.BM.on_layer(func=cb, layer=layer, persistent=persistent, m=m)
+        self.BM.on_layer(func=cb, layer=layer, persistent=persistent)
 
     @property
     def on_all_layers(self):
@@ -1972,7 +2051,7 @@ class MapsBase(metaclass=_MapsMeta):
             pass
 
     @contextmanager
-    def delay_draw(self):
+    def delay_draw(self, redraw=True):
         """
         A contextmanager to delay drawing until the context exits.
 
@@ -1998,4 +2077,5 @@ class MapsBase(metaclass=_MapsMeta):
         finally:
             self.BM._disable_draw = False
             self.BM._disable_update = False
-            self.redraw()
+            if redraw:
+                self.redraw()

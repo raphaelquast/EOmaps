@@ -315,7 +315,7 @@ class _EditorBase:
             fontfamily="monospace",
         )
 
-        self.m.BM.add_artist(self._info_artist, layer="all")
+        self.m.all.add_artist(self._info_artist)
 
         self._info_cids.add(
             self.m.f.canvas.mpl_connect("button_press_event", self._on_press)
@@ -339,14 +339,6 @@ class _EditorBase:
 
         if getattr(self, "_info_artist", None) is not None:
             self.m.BM.remove_artist(self._info_artist, "all")
-            try:
-                self._info_artist.remove()
-            except Exception:
-                _log.error(
-                    "There was a problem while trying to remove the "
-                    "Editor info text artist."
-                )
-
             self._info_artist = None
             self.m.BM.update()
 
@@ -728,6 +720,5 @@ class AnnotationEditor(_EditorBase):
             global _eomaps_picked_ann
             if _eomaps_picked_ann:
                 self.m.BM.remove_artist(_eomaps_picked_ann)
-                _eomaps_picked_ann.remove()
                 _eomaps_picked_ann = None
                 self.m.BM.update()

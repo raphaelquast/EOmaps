@@ -324,7 +324,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         layers.extend(("all", "inset_all"))
 
         pickm = list()
-        for m in (self.m.parent, *self.m.parent._children):
+        for m in self.m.BM._children:
             if m.coll is not None and m.ax == self.m.ax and m.layer in layers:
                 pickm.append(m)
 
@@ -334,7 +334,7 @@ class ClickCallbacks(QtWidgets.QFrame):
     def clear_annotations_and_markers(self):
         # clear all annotations and markers from this axis
         # (irrespective of the visible layer!)
-        for m in (self.m.parent, *self.m.parent._children):
+        for m in self.m.BM._children:
             if m.ax == self.m.ax:
                 m.cb.click._attach.clear_annotations(m.cb.click.attach)
                 m.cb.click._attach.clear_markers(m.cb.click.attach)

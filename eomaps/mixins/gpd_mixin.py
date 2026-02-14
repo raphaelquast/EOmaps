@@ -313,9 +313,9 @@ class GeopandasMixin:
             for art, prefix in zip(artists, prefixes):
                 art.set_label(f"EOmaps GeoDataframe ({prefix.lstrip('_')}, {len(gdf)})")
                 if permanent is True:
-                    self.BM.add_bg_artist(art, layer=layer)
+                    self.l[layer].add_bg_artist(art)
                 else:
-                    self.BM.add_artist(art, layer=layer)
+                    self.l[layer].add_artist(art)
         return artists
 
     def _handle_gdf(

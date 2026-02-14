@@ -162,13 +162,15 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
 
                 return
             try:
-                f = getattr(getattr(self.m.add_feature, featuretype), feature)
-                if featuretype == "preset":
-                    f(layer=layer, **f.kwargs)
-                else:
-                    f(layer=layer, **self.props)
+                # f = getattr(getattr(self.m.add_feature, featuretype), feature)
+                f = getattr(getattr(self.m.ll[layer].add_feature, featuretype), feature)
 
-                self.m.f.canvas.draw_idle()
+                if featuretype == "preset":
+                    f(**f.kwargs)
+                else:
+                    f(**self.props)
+
+                # self.m.f.canvas.draw_idle()
                 self.FeatureAdded.emit(str(layer))
             except Exception:
                 _log.error(
@@ -1176,6 +1178,7 @@ class ArtistEditorTabs(LayerArtistTabs):
             if len(layer) > 0:
                 self.m.new_layer(layer)
 
+        self.repopulate_and_activate_current()
         inp.deleteLater()
 
     def repopulate_and_activate_current(self, *args, **kwargs):
@@ -1477,9 +1480,9 @@ class ArtistEditorTabs(LayerArtistTabs):
             layer = self.tabText(self.currentIndex())
 
         # make sure we fetch artists of inset-maps from the layer with
-        # the "__inset_" prefix
-        if isinstance(self.m, InsetMaps) and not layer.startswith("__inset_"):
-            layer = "__inset_" + layer
+        # the "**inset_" prefix
+        if isinstance(self.m, InsetMaps) and not layer.startswith("**inset_"):
+            layer = "**inset_" + layer
         widget = self.currentWidget()
 
         if widget is None:
@@ -1489,15 +1492,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         edit_layout = QtWidgets.QGridLayout()
         edit_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
-        # make sure that we don't create an empty entry !
-        # TODO the None check is to address possible race-conditions
-        # with Maps objects that have no axes defined.
-        if layer in self.m.BM._bg_artists and self.m.ax is not None:
-            artists = [
-                a for a in self.m.BM.get_bg_artists(layer) if a.axes is self.m.ax
-            ]
-        else:
-            artists = []
+        artists = self.m.BM.get_bg_artists(layer)
 
         for i, a in enumerate(artists):
             for art, pos in self._get_artist_layout(a, layer):
@@ -1555,7 +1550,18 @@ class ArtistEditorTabs(LayerArtistTabs):
         layout.addLayout(layer_actions_layout)
 
         for text in self.m.BM._pending_webmaps.get(layer, []):
-            layout.addWidget(QtWidgets.QLabel(f"<b>PENDING WebMap</b>: {text}"))
+            layout.addWidget(
+                QtWidgets.QLabel(
+                    f"<b style='color: chocolate'>PENDING WebMap:</b> &nbsp;&nbsp;{text}"
+                )
+            )
+
+        for text in self.m.BM._pending_methods.get(layer, []):
+            layout.addWidget(
+                QtWidgets.QLabel(
+                    f"<b style='color: chocolate'>PENDING Method:</b> &nbsp;&nbsp;<code>{text}</code>"
+                )
+            )
 
         layout.addWidget(scroll)
         layout.addStretch(1)
@@ -1701,6 +1707,9 @@ class ArtistEditor(QtWidgets.QWidget):
         self.m = m
 
         self.artist_tabs = ArtistEditorTabs(m=self.m)
+        self.m._connect_signal(
+            "lazyLayerActivated", self.artist_tabs.repopulate_and_activate_current
+        )
 
         self.artist_tabs.tabBar().setStyleSheet(
             """

@@ -270,7 +270,7 @@ class _CollectionAccessor:
     >>>
     >>> labels = m3_1.ax.clabel(m.coll.contour_set)
     >>> for i in labels:
-    >>>     m.BM.add_bg_artist(i, layer=m.layer)
+    >>>     m.add_bg_artist(i)
 
     """
 

@@ -30,3 +30,6 @@ class _SignalContainer(QObject):
     # -------- layout editor
     layoutEditorActivated = Signal()
     layoutEditorDeactivated = Signal()
+
+    # -------- layer handling
+    lazyLayerActivated = Signal()

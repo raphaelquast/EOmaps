@@ -116,6 +116,10 @@ class ShapeDrawer:
         else:
             return d
 
+    @_active_drawer.setter
+    def _active_drawer(self, val):
+        self._m.parent._active_drawer = val
+
     @property
     def layer(self):
         # always draw on the active layer if no explicit layer is specified
@@ -130,10 +134,6 @@ class ShapeDrawer:
         # (and make sure to cache it)
         layer = self._m.BM._get_showlayer_name(self._m.BM._bg_layer)
         return self._m.BM._get_background(layer, cache=True)
-
-    @_active_drawer.setter
-    def _active_drawer(self, val):
-        self._m.parent._active_drawer = val
 
     def new_drawer(self, layer=None, dynamic=True):
         """
@@ -192,6 +192,9 @@ class ShapeDrawer:
         while len(active_drawer._cids) > 0:
             active_drawer._m.f.canvas.mpl_disconnect(active_drawer._cids.pop())
 
+        if self.redraw in self._m.BM._after_restore_actions_perm:
+            self._m.BM._after_restore_actions_perm.remove(self.redraw)
+
         # Cleanup.
         if plt.fignum_exists(active_drawer._m.f.number):
             self._line = None
@@ -241,11 +244,16 @@ class ShapeDrawer:
 
         ID = list(self._artists)[-1]
         a = self._artists.pop(ID)
-        if self._dynamic:
-            self._m.BM.remove_artist(a)
+
+        remove_method = "remove_artist" if self._dynamic else "remove_bg_artist"
+
+        if self._layer:
+            # remove the artist from the known layer
+            getattr(self._m.l[self._layer], remove_method)(a)
         else:
-            self._m.BM.remove_bg_artist(a)
-        a.remove()
+            # search for the artist on all layers and remove it
+            # (required for drawers that draw on the "active" layer)
+            getattr(self._m.BM, remove_method, a)
 
         if self._can_save:
             self.gdf = self.gdf.drop(ID)
@@ -258,7 +266,10 @@ class ShapeDrawer:
     def _init_draw_line(self):
         if self._line is None:
             props = dict(
-                transform=self._m.ax.transData, clip_box=self._m.ax.bbox, clip_on=True
+                transform=self._m.ax.transData,
+                clip_box=self._m.ax.bbox,
+                clip_on=True,
+                animated=True,
             )
 
             # the line to use for indicating polygon-shape during draw
@@ -287,19 +298,9 @@ class ShapeDrawer:
             if i is not None
         )
 
-    def redraw(self, blit=True, *args):
+    def redraw(self, blit=False, *args):
         """Trigger re-drawing shapes."""
-        # NOTE: If a drawer is active, this function is also called on any ordinary
-        # draw-event (e.g. zoom/pan/resize) to keep the indicators visible.
-        # see "m.BM._on_draw_cb()"
-
-        artists = self._indicator_artists
-
-        if self._dynamic:
-            # draw all previously drawn shapes as well
-            artists = (*artists, *self._artists.values())
-
-        self._m.BM.blit_artists(artists, bg=self._background, blit=blit)
+        self._m.BM.blit_artists(self._indicator_artists, bg=None, blit=blit)
 
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
     # matplotlib's original ginput function is here:
@@ -451,7 +452,7 @@ class ShapeDrawer:
             if len(self._clicks) == n and n > 0:
                 self._finish_drawing(cb=cb)
 
-            self.redraw()
+            self._m.BM.update()
 
         eventnames = [
             "button_press_event",
@@ -463,6 +464,9 @@ class ShapeDrawer:
 
         for event in eventnames:
             self._cids.append(canvas.mpl_connect(event, handler))
+
+        if self.redraw not in self._m.BM._after_restore_actions_perm:
+            self._m.BM._after_restore_actions_perm.append(self.redraw)
 
     # draw only a single point and draw a second point on escape
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
@@ -600,7 +604,7 @@ class ShapeDrawer:
                     if show_clicks:
                         self._line.set_data(*zip(*self._clicks))
 
-            self.redraw()
+            self._m.BM.update()
 
         eventnames = [
             "button_press_event",
@@ -612,6 +616,8 @@ class ShapeDrawer:
 
         for event in eventnames:
             self._cids.append(canvas.mpl_connect(event, handler))
+        if self.redraw not in self._m.BM._after_restore_actions_perm:
+            self._m.BM._after_restore_actions_perm.append(self.redraw)
 
     def polygon(self, smooth=False, draw_on_drag=True, **kwargs):
         """
@@ -653,9 +659,9 @@ class ShapeDrawer:
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
                 if self._dynamic:
-                    self._m.BM.add_artist(ph, layer=self.layer)
+                    self._m.l[self.layer].add_artist(ph)
                 else:
-                    self._m.BM.add_bg_artist(ph, layer=self.layer)
+                    self._m.l[self.layer].add_bg_artist(ph)
                     self._m.BM._on_draw_cb(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
@@ -745,9 +751,9 @@ class ShapeDrawer:
                 (ph,) = self._m.ax.fill(pts[0][0], pts[1][0], **kwargs)
 
                 if self._dynamic:
-                    self._m.BM.add_artist(ph, layer=self.layer)
+                    self._m.l[self.layer].add_artist(ph)
                 else:
-                    self._m.BM.add_bg_artist(ph, layer=self.layer)
+                    self._m.l[self.layer].add_bg_artist(ph)
                     self._m.BM._on_draw_cb(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
@@ -830,9 +836,9 @@ class ShapeDrawer:
                 (ph,) = self._m.ax.fill(pts[:, 0], pts[:, 1], **kwargs)
 
                 if self._dynamic:
-                    self._m.BM.add_artist(ph, layer=self.layer)
+                    self._m.l[self.layer].add_artist(ph)
                 else:
-                    self._m.BM.add_bg_artist(ph, layer=self.layer)
+                    self._m.l[self.layer].add_bg_artist(ph)
                     self._m.BM._on_draw_cb(None)
 
                 ID = max(self._artists) + 1 if self._artists else 0
