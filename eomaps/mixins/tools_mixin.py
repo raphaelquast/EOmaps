@@ -8,6 +8,7 @@ from ..annotation_editor import AnnotationEditor
 
 class ToolsMixin:
     draw = ShapeDrawer
+    util = Utilities
 
     def __init__(self, *args, **kwargs):
         if self.parent == self:
