@@ -576,7 +576,7 @@ class GridLabels:
             self._kwargs.setdefault("clip_box", self._g.m.ax.bbox)
 
         if not self._g._dynamic:
-            self._g._m.BM._hooks.add_permanent("before_fetch_bg", self._redraw)
+            self._g.m.BM._hooks.add_permanent("before_fetch_bg", self._redraw)
 
     def _set_exclude(self, exclude):
         # a list of tick values to exclude
@@ -631,7 +631,7 @@ class GridLabels:
 
     def remove(self):
         """Remove the grid-labels from the map."""
-        self._g._m.BM._hooks.remove_permanent("before_fetch_bg", self._redraw)
+        self._g.m.BM._hooks.remove_permanent("before_fetch_bg", self._redraw)
 
         self._remove()
 
@@ -724,7 +724,6 @@ class GridLabels:
             lines_fig[:, 0, 0 if axis == 1 else 1] -= 0.01
             lines_fig[:, -1, 0 if axis == 1 else 1] += 0.01
 
-        tr = m.ax.transData.inverted()
         tr_ax = m.ax.transAxes.inverted()
 
         # TODO would be nice to vectorize over gridlines as well
@@ -919,9 +918,7 @@ class GridLabels:
         """
         Add labels to the grid.
         """
-        m = self._g.m
         lines = self._g._get_lines()
-        aspect = m.ax.bbox.height / m.ax.bbox.width
 
         if self._where == "all":
             use_axes = (0, 1)
@@ -1071,7 +1068,7 @@ class GridFactory:
             else:
                 raise TypeError(f"{labels} is not a valid input for labels")
 
-        self.m.f.canvas.draw_idle()
+        self.m.redraw(self.m.layer if layer is None else layer)
         return g
 
     def _update_autogrid(self, *args, **kwargs):
@@ -1079,7 +1076,7 @@ class GridFactory:
             if g.d is None:
                 try:
                     g._redraw()
-                except Exception as ex:
+                except Exception:
                     # catch exceptions to avoid issues with dynamic re-drawing of
                     # invisible grids
                     continue

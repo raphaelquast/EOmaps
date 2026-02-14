@@ -796,7 +796,7 @@ class Maps(
                     path = mpath.Path(np.column_stack((xs, ys)))
                     self.ax.set_boundary(path, transform=self.crs_plot)
 
-                self._m.BM._hooks.add_permanent(
+                self.BM._hooks.add_permanent(
                     "before_fetch_bg", update_round_map_frame_corners
                 )
 

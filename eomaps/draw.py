@@ -192,7 +192,7 @@ class ShapeDrawer:
         while len(active_drawer._cids) > 0:
             active_drawer._m.f.canvas.mpl_disconnect(active_drawer._cids.pop())
 
-        self.m.BM._hooks.remove_permanent("after_restore", self.redraw)
+        self._m.BM._hooks.remove_permanent("after_restore", self.redraw)
 
         # Cleanup.
         if plt.fignum_exists(active_drawer._m.f.number):
