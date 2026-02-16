@@ -1151,7 +1151,7 @@ class ScaleBar:
         return lines
 
     # cache this to avoid re-evaluating the text-size when dragging the scalebar
-    @lru_cache(1)
+    @lru_cache
     def _get_maxw(self, sscale, sn, lscale, lrotation, levery):
         # arguments are only used for caching!
 
@@ -1246,7 +1246,6 @@ class ScaleBar:
         angs = np.arctan2(*np.array([p[0] - p[-1] for p in pts]).T[::-1])
         angs = [*angs, angs[-1]]
         pts = self._get_base_pts(self._lon, self._lat, self._azim, npts=self._n + 2)
-
         for i, (lon, lat, ang) in enumerate(zip(pts.lons, pts.lats, angs)):
             if i not in self._every:
                 continue
@@ -1598,20 +1597,27 @@ class ScaleBar:
                 self._m.f.canvas.mpl_disconnect(cid)
                 setattr(self, cidname, None)
 
+    def _in_visible_extent(self):
+        # auto-positioned scalebars are treated as "always in visible extent"
+        if self._auto_position is False:
+            bbox = self._artists["patch"].get_extents()
+            if not self._m.ax.bbox.overlaps(bbox):
+                return False
+        return True
+
     def _update(self, lon=None, lat=None, azim=None, BM_update=False, **kwargs):
+        in_extent = self._in_visible_extent()
         # only do this if the extent changed (to avoid performance issues)
         if self._extent_changed():
             # check if the scalebar is in the current field-of-view
             # if not, avoid updating it and make it invisible
-            if self._auto_position is False:
-                bbox = self._artists["patch"].get_extents()
-                if not self._m.ax.bbox.overlaps(bbox):
-                    for a in self._artists.values():
-                        a.set_visible(False)
-                    return
-                else:
-                    for a in self._artists.values():
-                        a.set_visible(True)
+            if in_extent:
+                for a in self._artists.values():
+                    a.set_visible(True)
+            else:
+                for a in self._artists.values():
+                    a.set_visible(False)
+                return
 
             # clear the cache to re-evaluate the text-width if label
             # props have changed
@@ -1624,6 +1630,9 @@ class ScaleBar:
                     self._estimate_scale()
                 except Exception:
                     self._scale = prev_scale
+
+        if not in_extent:
+            return
 
         # make sure scalebars are not positioned out of bounds
         if lon is not None and lat is not None:
