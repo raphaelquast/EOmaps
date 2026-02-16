@@ -164,6 +164,19 @@ class AddMixin:
 
         im = mpl.image.imread(filepath)
 
+        # replace default rgba colors of transparent regions with the
+        # color used by the axes background patch
+        try:
+            from matplotlib.colors import to_rgb
+
+            im[..., :3][im[..., 3] == 0] = to_rgb(self.ax.patch.get_facecolor())
+            print("YAY")
+        except Exception as ex:
+            _log.debug(
+                "Encountered a problem while trying to adjsut color of "
+                f"transparent logo regions with axes background color: {ex}",
+            )
+
         def getpos(pos):
             s = size
             if isinstance(pad, tuple):
