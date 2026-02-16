@@ -140,19 +140,6 @@ class GeopandasMixin:
             - if "crs": clip with respect to the boundary-shape of the crs
             - if "crs_bounds" : clip with respect to a rectangular crs boundary
             - if "extent": clip with respect to the current extent of the plot-axis.
-            - if the 'gdal' python-bindings are installed, you can use gdal to clip
-              the shapes with respect to the crs-boundary. (slower but more robust)
-              The following logical operations are supported:
-
-              - "gdal_SymDifference" : symmetric difference
-              - "gdal_Intersection" : intersection
-              - "gdal_Difference" : difference
-              - "gdal_Union" : union
-
-            If a suffix "_invert" is added to the clip-string (e.g. "crs_invert"
-            or "gdal_Intersection_invert") the obtained (clipped) polygons will be
-            inverted.
-
 
             >>> mg = MapsGrid(2, 3, crs=3035)
             >>> mg.m_0_0.add_feature.preset.ocean(use_gpd=True)
@@ -389,19 +376,10 @@ class GeopandasMixin:
         how : str, optional
             Identifier how the clipping should be performed.
 
-            If a suffix "_invert" is added to the string, the polygon will be
-            inverted (via a symmetric-difference to the clip-shape)
-
             - clipping with geopandas:
               - "crs" : use the actual crs boundary polygon
               - "crs_bounds" : use the boundary-envelope of the crs
               - "extent" : use the current plot-extent
-
-            - clipping with gdal (always uses the crs domain as clip-shape):
-              - "gdal_Intersection"
-              - "gdal_SymDifference"
-              - "gdal_Difference"
-              - "gdal_Union"
 
             The default is "crs".
 
@@ -409,54 +387,9 @@ class GeopandasMixin:
         -------
         gdf
             A GeoDataFrame with the clipped geometries
+
         """
         (gpd,) = register_modules("geopandas")
-
-        if how.startswith("gdal"):
-            methods = ["SymDifference", "Intersection", "Difference", "Union"]
-            # "SymDifference", "Intersection", "Difference"
-            method = how.split("_")[1]
-            assert method in methods, "EOmaps: '{how}' is not a valid clip-method"
-            try:
-                from osgeo import gdal
-                from shapely import wkt
-            except ImportError:
-                raise ImportError(
-                    "EOmaps: Missing dependency: 'osgeo'\n"
-                    + "...clipping with gdal requires 'osgeo.gdal'"
-                )
-
-            e = self.ax.projection.domain
-            e2 = gdal.ogr.CreateGeometryFromWkt(e.wkt)
-            if not e2.IsValid():
-                e2 = e2.MakeValid()
-
-            # only reproject geometries if crs cannot be identified
-            # as the initially provided (or cartopy converted) crs
-            if gdf.crs != self.crs_plot and gdf.crs != self._crs_plot:
-                gdf = gdf.to_crs(self.crs_plot)
-
-            clipgeoms = []
-            for g in gdf.geometry:
-                g2 = gdal.ogr.CreateGeometryFromWkt(g.wkt)
-
-                if g2 is None:
-                    continue
-
-                if not g2.IsValid():
-                    g2 = g2.MakeValid()
-
-                i = getattr(g2, method)(e2)
-
-                if how.endswith("_invert"):
-                    i = i.SymDifference(e2)
-
-                gclip = wkt.loads(i.ExportToWkt())
-                clipgeoms.append(gclip)
-
-            gdf = gpd.GeoDataFrame(geometry=clipgeoms, crs=self.crs_plot)
-
-            return gdf
 
         if how == "crs" or how == "crs_invert":
             clip_shp = gpd.GeoDataFrame(
@@ -485,9 +418,6 @@ class GeopandasMixin:
 
         # clip the geo-dataframe with the buffered clipping shape
         clipgdf = gdf.clip(clip_shp)
-
-        if how.endswith("_invert"):
-            clipgdf = clipgdf.symmetric_difference(clip_shp)
 
         return clipgdf
 
