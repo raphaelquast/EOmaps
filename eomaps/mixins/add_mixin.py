@@ -157,7 +157,7 @@ class AddMixin:
         """
         if layer is None:
             # TODO ensure that logos are plotted on top of spines!
-            layer = self.layer
+            layer = "**SPINES**"
 
         if filepath is None:
             filepath = Path(__file__).parent.parent / "logo.png"
