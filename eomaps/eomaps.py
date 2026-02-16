@@ -856,8 +856,8 @@ class Maps(
 
         return copy_cls
 
-    def redraw(self, *args):
-        super().redraw(*args)
+    def redraw(self, *args, **kwargs):
+        super().redraw(*args, **kwargs)
 
     @wraps(MapsBase.snapshot)
     def snapshot(self, *args, **kwargs):
