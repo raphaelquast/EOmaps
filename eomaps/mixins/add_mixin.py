@@ -173,7 +173,7 @@ class AddMixin:
             print("YAY")
         except Exception as ex:
             _log.debug(
-                "Encountered a problem while trying to adjsut color of "
+                "Encountered a problem while trying to adjust color of "
                 f"transparent logo regions with axes background color: {ex}",
             )
 

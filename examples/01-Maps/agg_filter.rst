@@ -5,7 +5,7 @@ AGG filters - visual effects for your map-features!
 This more advanced example shows how to use the `AGG filter`_ feature of
 matplotlib to get nice blurry country-boarders.
 
-- A custom AGG filter is defined to apply a "gaussian blurr" to artists
+- A custom AGG filter is defined to apply a "gaussian blur" to artists
 - The filter is applied to the country-boundaries and map-frames
 
 
