@@ -397,12 +397,12 @@ class GeopandasMixin:
             ).to_crs(gdf.crs)
         elif how == "extent" or how == "extent_invert":
             self.BM.update()
-            x0, x1, y0, y1 = self.get_extent()
+            x0, x1, y0, y1 = self.get_extent(crs=self.crs_plot)
             clip_shp = self._make_rect_poly(x0, y0, x1, y1, self.crs_plot).to_crs(
                 gdf.crs
             )
         elif how == "crs_bounds" or how == "crs_bounds_invert":
-            x0, x1, y0, y1 = self.get_extent()
+            x0, x1, y0, y1 = self.get_extent(crs=self.crs_plot)
             clip_shp = self._make_rect_poly(
                 *self.crs_plot.boundary.bounds, self.crs_plot
             ).to_crs(gdf.crs)
