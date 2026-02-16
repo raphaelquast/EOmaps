@@ -10,14 +10,12 @@ from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import Qt, Signal, Slot, QPointF
 from qtpy.QtGui import QFont
 
-from matplotlib.colors import to_rgba_array
-
 from ...inset_maps import InsetMaps
 from ...helpers import _key_release_event
 from ..common import iconpath
 from ..base import BasicCheckableToolButton, NewWindow
 from .wms import AddWMSMenuButton
-from .utils import ColorWithSlidersWidget, GetColorWidget, AlphaSlider
+from .utils import ColorWithSlidersWidget, AlphaSlider
 from .annotate import AddAnnotationWidget
 from .draw import DrawerTabs
 from .files import OpenDataStartTab
@@ -551,7 +549,7 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
     def move_plus_button(self, *args, **kwargs):
         """Move the plus button to the correct location."""
         # Set the plus button location in a visible area
-        h = self.geometry().top()
+        # h = self.geometry().top()
         w = self.window().width()
 
         self.plus_button.move(w - self.margin_right, -3)
@@ -559,7 +557,7 @@ class LayerArtistTabs(QtWidgets.QTabWidget):
     def move_layer_button(self, *args, **kwargs):
         """Move the plus button to the correct location."""
         # Set the plus button location in a visible area
-        h = self.geometry().top()
+        # h = self.geometry().top()
 
         self.layer_button.move(-5, 2)
 
