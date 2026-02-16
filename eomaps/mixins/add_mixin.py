@@ -156,7 +156,6 @@ class AddMixin:
             Additional kwargs are passed to plt.imshow
         """
         if layer is None:
-            # TODO ensure that logos are plotted on top of spines!
             layer = "**SPINES**"
 
         if filepath is None:
