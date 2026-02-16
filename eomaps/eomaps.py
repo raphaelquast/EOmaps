@@ -312,7 +312,7 @@ class Maps(
         layer=None,
         inherit_data=False,
         inherit_classification=False,
-        inherit_shape=True,
+        inherit_shape=False,
         **kwargs,
     ):
         """
