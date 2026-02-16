@@ -399,7 +399,7 @@ class LayerNamespace:
         return (i.split("__", 1)[0] for i in self._layers)
 
     def __dir__(self):
-        return list(self._layers)
+        return [l for l in self._layers if not l.startswith("**")]
 
     def __iter__(self):
         return iter(self._layers.values())
