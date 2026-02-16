@@ -10,7 +10,6 @@ from pyproj import CRS
 import numpy as np
 
 import matplotlib.pyplot as plt
-import matplotlib.path as mpath
 import matplotlib as mpl
 
 from ..helpers import cmap_alpha, SearchTree, register_modules, _proxy
