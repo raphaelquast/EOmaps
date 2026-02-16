@@ -16,5 +16,3 @@ Customize the appearance of the plot
 
 
 .. literalinclude:: /../../examples/05-custom/customization.py
-
-
