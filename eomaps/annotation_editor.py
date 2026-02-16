@@ -320,7 +320,7 @@ class _EditorBase:
         self._info_cids.add(
             self.m.f.canvas.mpl_connect("button_press_event", self._on_press)
         )
-        self.m.BM._hooks.add_permanent("before_fetch_bg", self._update_info_fontsize)
+        self.m.BM.add_hook("before_fetch_bg", self._update_info_fontsize, True)
         self.m.BM.update()
 
     def toggle_info_text(self):
@@ -332,7 +332,7 @@ class _EditorBase:
         while len(self._info_cids) > 0:
             self.m.f.canvas.mpl_disconnect(self._info_cids.pop())
 
-        self.m.BM._hooks.remove_permanent("before_fetch_bg", self._update_info_fontsize)
+        self.m.BM.remove_hook("before_fetch_bg", self._update_info_fontsize, True)
 
         if getattr(self, "_info_artist", None) is not None:
             self.m.BM.remove_artist(self._info_artist, "all")

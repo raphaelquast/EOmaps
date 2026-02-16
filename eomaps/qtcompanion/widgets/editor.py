@@ -870,6 +870,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         # get currently active layers
         active_layers, alphas = self.m.BM._get_active_layers_alphas
 
+        # TODO this should call a unified "cleanup layer method on the blit-manager!"
         # cleanup the layer and remove any artists etc.
         for m in list(self.m._children):
             if layer == m.layer:
@@ -914,12 +915,9 @@ class LayerTabBar(QtWidgets.QTabBar):
         if layer in self.m.BM._bg_layers:
             del self.m.BM._bg_layers[layer]
 
-        # also remove the layer from any layer-change/layer-activation triggers
-        # (e.g. to deal with not-yet-fetched WMS services)
-
-        for permanent, d in self.m.BM._on_layer_activation.items():
-            if layer in d:
-                del d[layer]
+        self.m.BM.remove_hook(
+            "layer_activation", method=None, permanent=None, layer=layer
+        )
 
         self.populate()
 
@@ -1138,8 +1136,8 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         self.currentChanged.connect(self.populate_layer)
 
-        self.m.BM._hooks.add_permanent("add_bg_artist", self.populate)
-        self.m.BM._hooks.add_permanent("remove_bg_artist", self.populate)
+        self.m.BM.add_hook("add_bg_artist", self.populate, True)
+        self.m.BM.add_hook("remove_bg_artist", self.populate, True)
 
         self.m._on_show_companion_widget.append(self.populate)
         self.m._on_show_companion_widget.append(self.populate_layer)
@@ -1546,17 +1544,12 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         layout.addLayout(layer_actions_layout)
 
-        for text in self.m.BM._pending_webmaps.get(layer, []):
+        # indicate all pending methods (e.g. layer-activation callbacks) in the widget tab
+        for method in self.m.BM._Hooks__hooks["layer_activation"][False].get(layer, []):
             layout.addWidget(
                 QtWidgets.QLabel(
-                    f"<b style='color: chocolate'>PENDING WebMap:</b> &nbsp;&nbsp;{text}"
-                )
-            )
-
-        for text in self.m.BM._pending_methods.get(layer, []):
-            layout.addWidget(
-                QtWidgets.QLabel(
-                    f"<b style='color: chocolate'>PENDING Method:</b> &nbsp;&nbsp;<code>{text}</code>"
+                    f"<b style='color: chocolate'>PENDING Method:</b>"
+                    f" &nbsp;&nbsp;<code>{method.__qualname__}</code>"
                 )
             )
 

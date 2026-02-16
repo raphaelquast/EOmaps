@@ -257,30 +257,43 @@ class ChildAccessor:
 
 
 class Hooks:
-    def __init__(self):
-        self._hooks = dict()
+    def __init__(self, *args, **kwargs):
+        self.__hooks = dict()
 
-    def add_permanent(self, hook, method, unique=True):
-        self._add(hook, method, True, unique)
+        super().__init__(*args, **kwargs)
 
-    def remove_permanent(self, hook, method):
-        self._remove(hook, method, True)
+    def add_hook(self, hook, method, permanent=True, layer="all", unique=True):
+        self.__add(
+            hook=hook, method=method, permanent=permanent, layer=layer, unique=unique
+        )
 
-    def add_single_shot(self, hook, method, unique=True):
-        self._add(hook, method, False, unique)
+    def remove_hook(self, hook, method=None, permanent=None, layer=None, silent=True):
+        self.__remove(
+            hook=hook, method=method, permanent=permanent, layer=layer, silent=silent
+        )
 
-    def remove_single_shot(self, hook, method):
-        self._remove(hook, method, False)
+    def run_hook(self, name, layer="all", **kwargs):
+        # always run callbacks assigned to the "all" layer...
+        if layer != "all":
+            self.__run(name, layer="all", **kwargs)
 
-    def run(self, hook, **kwargs):
-        if hook not in self._hooks:
+        self.__run(name, layer=layer, **kwargs)
+
+        if name == "layer_activation":
+            self.figure._EOmaps_parent._emit_signal("lazyLayerActivated")
+
+    def __run(self, name, layer="all", **kwargs):
+        if (hook := self.__hooks.get(name, None)) is None:
             return
 
+        single_shot_cb = hook.get(False, {}).get(layer, [])
+        permanent_cb = hook.get(True, {}).get(layer, [])
+
         # run single-shot actions
-        while len(self._hooks[hook].get(False, [])) > 0:
+        while len(single_shot_cb) > 0:
             try:
-                action = self._hooks[hook][False].pop(0)
-                action(**kwargs)
+                action = single_shot_cb.pop(0)
+                action(layer=layer, **kwargs)
             except Exception as ex:
                 _log.error(
                     f"EOmaps: Issue during single-shot hook '{hook}': {ex}",
@@ -288,36 +301,85 @@ class Hooks:
                 )
 
         # run permanent actions
-        for action in self._hooks[hook].get(True, []):
+        for action in permanent_cb:
             try:
-                action(**kwargs)
+                action(layer=layer, **kwargs)
             except Exception as ex:
                 _log.error(
                     f"EOmaps: Issue during permanent hook '{hook}': {ex}",
                     exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
-    def _add(self, hook, method, permanent=False, unique=True):
-        callbacks = self._hooks.setdefault(hook, {}).setdefault(permanent, [])
-        if not unique or method not in callbacks:
-            callbacks.append(method)
+    def __add(self, hook, method, permanent=False, layer="all", unique=True):
+        cb = (
+            self.__hooks.setdefault(hook, {})
+            .setdefault(permanent, {})
+            .setdefault(layer, [])
+        )
 
-    def _remove(self, method, hook, permanent=False, silent=True):
-        callbacks = self._hooks.get(hook, {}).get(permanent, [])
-        if method in callbacks:
-            try:
-                callbacks.remove(method)
-            except Exception as ex:
-                _log.debug(
-                    f"EOmaps: unable to remove method {method} from '{hook}' hooks: {ex}",
-                    exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+        if not unique or method not in cb:
+            cb.append(method)
+
+    def __remove(self, hook, method=None, permanent=None, layer=None, silent=True):
+        # if permanent is None, try to remove method as either temporary or
+        # permanent callback
+        if permanent is None:
+            # try to remove method from permanent hook
+            q = self.__remove(
+                hook=hook, method=method, permanent=True, layer=layer, silent=True
+            )
+            # if no method is specified, also remove all temporary hooks of layer!
+            if q is False or method is None:
+                # try to remove method from temporary hook if not found in permanent
+                q = self.__remove(
+                    hook=hook, method=method, permanent=False, layer=layer, silent=True
                 )
-        else:
-            _log.warning(f"EOmaps: method {method} not found in hook '{hook}'")
+            if q is False and not silent:
+                _log.warning(f"EOmaps: method {method} not found in hook '{hook}'")
+
+            return q
+
+        found = False
+        if (hook := self.__hooks.get(hook, None)) is not None:
+            if method is None:
+                if layer is None:
+                    # if method is None, and layer is None, remove ALL callbacks of hook
+                    q = hook.pop(permanent, None) is not None
+                else:
+                    # remove ALL callbacks assigned to the specified layer
+                    if (hook_callbacks := hook.get(permanent, None)) is not None:
+                        q = hook_callbacks.pop(layer, None) is not None
+                    else:
+                        q = False
+                return q
+
+            # search for method
+            if (hook_callbacks := hook.get(permanent, None)) is not None:
+                # if None is passed as layer, traverse all layer assignments
+                for l in (layer,) if layer else hook_callbacks.keys():
+                    cb = hook_callbacks.get(l, [])
+                    if method in cb:
+                        found = True
+                        break
+
+        if not found:
+            if not silent:
+                _log.warning(f"EOmaps: method {method} not found in hook '{hook}'")
+            return False
+
+        try:
+            cb.remove(method)
+            return True
+        except Exception as ex:
+            _log.debug(
+                f"EOmaps: unable to remove method {method} from '{hook}' hooks: {ex}",
+                exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+            )
+            return False
 
 
 # taken from https://matplotlib.org/stable/tutorials/advanced/blitting.html#class-based-example
-class BlitManager(LayerParser):
+class BlitManager(LayerParser, Hooks):
     """Manager used to schedule draw events, cache backgrounds, etc."""
 
     _snapshot_on_update = False
@@ -347,9 +409,6 @@ class BlitManager(LayerParser):
         self._bg_layers = {}
 
         self._managed_axes = weakref.WeakSet()
-
-        self._pending_webmaps = {}
-        self._pending_methods = {}
 
         # the name of the layer at which all "unmanaged" artists are drawn
         self._unmanaged_artists_layer = "base"
@@ -388,9 +447,7 @@ class BlitManager(LayerParser):
         # unmanaged artists
         self._ignored_unmanaged_artists = weakref.WeakSet()
 
-        self._hooks = Hooks()
-
-        self._on_layer_activation = {True: dict(), False: dict()}
+        super().__init__()
 
     @property
     def _artists(self):
@@ -613,26 +670,25 @@ class BlitManager(LayerParser):
         from functools import wraps
 
         @wraps(func)
-        def cb(layer):
+        def layer_callback(layer):
             func(layer, **kwargs)
 
         if _log.getEffectiveLevel() <= 10:
             logmsg = (
                 f"Adding {'persistent' if persistent else 'single-shot'} "
-                f"layer change action for: '{layer if layer else 'all layers'}': {getattr(func, '__qualname__', func)}"
+                f"layer change action for: '{layer if layer else 'all layers'}': "
+                f"{getattr(layer_callback, '__qualname__', layer_callback)}"
             )
             _log.debug(logmsg)
 
         if layer is None:
-            if persistent:
-                self._hooks.add_permanent("layer_change", cb)
-            else:
-                self._hooks.add_single_shot("layer_change", cb)
+            self.add_hook("layer_change", layer_callback, persistent)
         else:
             # treat inset-map layers like normal layers
             if layer.startswith("**inset_"):
                 layer = layer[8:]
-            self._on_layer_activation[persistent].setdefault(layer, list()).append(cb)
+
+            self.add_hook("layer_activation", layer_callback, persistent, layer=layer)
 
     def fetch_bg(self, layer=None, bbox=None):
         """
@@ -709,7 +765,7 @@ class BlitManager(LayerParser):
         if bg_layer is None:
             bg_layer = self.bg_layer
 
-        self._hooks.run("before_update")
+        self.run_hook("before_update")
 
         if clear:
             self._clear_temp_artists(clear)
@@ -724,7 +780,7 @@ class BlitManager(LayerParser):
 
         cv.restore_region(self._get_background(show_layer))
 
-        self._hooks.run("after_restore")
+        self.run_hook("after_restore")
 
         # draw all of the animated artists
         self._draw_animated(layers=layers, artists=artists)
@@ -746,7 +802,7 @@ class BlitManager(LayerParser):
                 # update the GUI state
                 cv.blit(self.figure.bbox)
 
-        self._hooks.run("after_update")
+        self.run_hook("after_update")
 
         # let the GUI event loop process anything it has to do
         # don't do this! it is causing infinite loops
@@ -1043,40 +1099,14 @@ class BlitManager(LayerParser):
         with self._cx_on_layer_change_running():
             # only execute persistent layer-change callbacks if the layer changed!
             if new:
-                self._hooks.run("layer_change", layer=layer)
+                # TODO check how to handle "layer change" actions
+                self.run_hook("layer_change", layer=layer)
 
             sublayers, _ = self._parse_multi_layer_str(layer)
-            if new:
-                for l in sublayers:
-                    # individual callables executed if a specific layer is activated
-                    # persistent callbacks
-                    for f in self._on_layer_activation[True].get(l, []):
-                        f(l)
-
             for l in sublayers:
-                # single-shot callbacks
-                single_shot_funcs = self._on_layer_activation[False].get(l, [])
-                while len(single_shot_funcs) > 0:
-                    try:
-                        f = single_shot_funcs.pop(0)
-                        f(l)
-                    except Exception as ex:
-                        _log.error(
-                            f"EOmaps: Issue during layer-change action: {ex}",
-                            exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                        )
-
-            # clear the list of pending webmaps once the layer has been activated
-            lazy_activated = False
-            if layer in self._pending_webmaps:
-                self._pending_webmaps.pop(layer)
-                lazy_activated = True
-            if layer in self._pending_methods:
-                self._pending_methods.pop(layer)
-                lazy_activated = True
-
-            if lazy_activated:
-                self.figure._EOmaps_parent._emit_signal("lazyLayerActivated")
+                # individual callables executed if a specific layer is activated
+                # persistent callbacks
+                self.run_hook("layer_activation", layer=l)
 
     def _do_fetch_bg(self, layer, bbox=None):
         renderer = self._get_renderer()
@@ -1110,7 +1140,7 @@ class BlitManager(LayerParser):
 
             # execute actions before fetching new artists
             # (e.g. update data based on extent etc.)
-            self._hooks.run("before_fetch_bg", layer=layer, bbox=bbox)
+            self.run_hook("before_fetch_bg", layer=layer, bbox=bbox)
 
             # get all relevant artists to plot and remember zorders
             # self.get_bg_artists() already returns artists sorted by zorder!
@@ -1491,12 +1521,4 @@ class BlitManager(LayerParser):
             )
 
     def _cleanup_on_layer_activation(self, layer):
-        try:
-            # remove not yet executed lazy-activation methods
-            # (e.g. not yet fetched WMS services)
-            if layer in self._on_layer_activation:
-                del self._on_layer_activation[layer]
-        except Exception:
-            _log.debug(
-                "EOmaps-cleanup: Problem while clearing layer activation methods"
-            )
+        self.remove_hook("layer_activation", method=None, permanent=None, layer=layer)

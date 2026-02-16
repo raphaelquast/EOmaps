@@ -192,7 +192,7 @@ class ShapeDrawer:
         while len(active_drawer._cids) > 0:
             active_drawer._m.f.canvas.mpl_disconnect(active_drawer._cids.pop())
 
-        self._m.BM._hooks.remove_permanent("after_restore", self.redraw)
+        self._m.BM.remove_hook("after_restore", self.redraw, True)
 
         # Cleanup.
         if plt.fignum_exists(active_drawer._m.f.number):
@@ -464,7 +464,7 @@ class ShapeDrawer:
         for event in eventnames:
             self._cids.append(canvas.mpl_connect(event, handler))
 
-        self._m.BM._hooks.add_permanent("after_restore", self.redraw)
+        self._m.BM.add_hook("after_restore", self.redraw, True)
 
     # draw only a single point and draw a second point on escape
     # This is basically a copy of matplotlib's ginput function adapted for EOmaps
@@ -615,7 +615,7 @@ class ShapeDrawer:
         for event in eventnames:
             self._cids.append(canvas.mpl_connect(event, handler))
 
-        self._m.BM._hooks.add_permanent("after_restore", self.redraw)
+        self._m.BM.add_hook("after_restore", self.redraw, True)
 
     def polygon(self, smooth=False, draw_on_drag=True, **kwargs):
         """

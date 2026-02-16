@@ -883,7 +883,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
                 self.m.BM._artists_to_clear.setdefault("peek", []).append(marker)
                 self.m.BM._clear_temp_artists("peek")
 
-            self.m.BM._hooks.add_single_shot("after_update", doit)
+            self.m.BM.add_hook("after_update", doit, False)
 
         # create a TransformedPath as needed for clipping
         clip_path = TransformedPath(
@@ -897,7 +897,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
             clip_path=clip_path,
             set_clip_path=False if shape == "rectangles" else True,
         )
-        self.m.BM._hooks.add_single_shot("after_restore", action)
+        self.m.BM.add_hook("after_restore", action, False)
 
 
 class _ClickCallbacks(_CallbacksBase):

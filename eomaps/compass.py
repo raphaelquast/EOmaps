@@ -173,7 +173,7 @@ class Compass:
             self._canvas.mpl_connect("scroll_event", self._on_scroll),
         ]
 
-        self._m.BM._hooks.add_permanent("before_fetch_bg", self._update_offset)
+        self._m.BM.add_hook("before_fetch_bg", self._update_offset, True)
 
         self._m.BM.update()
 
@@ -424,7 +424,7 @@ class Compass:
         for cid in self._cids:
             self._canvas.mpl_disconnect(cid)
 
-        self._m.BM._hooks.remove_permanent("before_fetch_bg", self._update_offset)
+        self._m.BM.remove_hook("before_fetch_bg", self._update_offset, True)
 
         try:
             c1 = self._c1

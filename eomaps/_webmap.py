@@ -31,15 +31,6 @@ from .helpers import _sanitize
 _log = logging.getLogger(__name__)
 
 
-def _add_pending_webmap(m, layer, name):
-    # indicate that there is a pending webmap in the companion-widget editor
-    m.BM._pending_webmaps.setdefault(layer, []).append(name)
-    # TODO make sure the layer is immediately created so the widget
-    # (and the LayerNamespace) know that it is pending
-    if layer not in m._get_layers():
-        m.new_layer(layer)
-
-
 class _WebMapLayer:
     # base class for adding methods to the _WMSLayer- and _WMTSLayer objects
     def __init__(self, m, wms, name):
@@ -411,14 +402,17 @@ class _WMTSLayer(_WebMapLayer):
                 )
             else:
                 # delay adding the layer until it is effectively activated
-                _add_pending_webmap(self._m, self._layer, self.name)
+                func = partial(
+                    self._do_add_layer,
+                    wms_kwargs=kwargs,
+                    zorder=zorder,
+                    alpha=alpha,
+                )
+                # used to display pending method in widget
+                func.__qualname__ = f"Add WebMap layer: {self.name}"
+
                 self._m.BM.on_layer(
-                    func=partial(
-                        self._do_add_layer,
-                        wms_kwargs=kwargs,
-                        zorder=zorder,
-                        alpha=alpha,
-                    ),
+                    func=func,
                     layer=self._layer,
                     persistent=False,
                     m=m,
@@ -522,14 +516,17 @@ class _WMSLayer(_WebMapLayer):
                 )
             else:
                 # delay adding the layer until it is effectively activated
-                _add_pending_webmap(self._m, self._layer, self.name)
+                func = partial(
+                    self._do_add_layer,
+                    wms_kwargs=kwargs,
+                    zorder=zorder,
+                    alpha=alpha,
+                )
+                # used to display pending method in widget
+                func.__qualname__ = f"Add WebMap layer: {self.name}"
+
                 m.BM.on_layer(
-                    func=partial(
-                        self._do_add_layer,
-                        wms_kwargs=kwargs,
-                        zorder=zorder,
-                        alpha=alpha,
-                    ),
+                    func=func,
                     layer=self._layer,
                     persistent=False,
                     m=m,
@@ -1235,9 +1232,12 @@ class _XyzTileService:
                 self._do_add_layer(layer=self._layer, m=self._m, **kwargs)
             else:
                 # delay adding the layer until it is effectively activated
-                _add_pending_webmap(self._m, self._layer, self.name)
+                func = partial(self._do_add_layer, **kwargs)
+                # used to display pending method in widget
+                func.__qualname__ = f"Add WebMap layer: {self.name}"
+
                 self._m.BM.on_layer(
-                    func=partial(self._do_add_layer, **kwargs),
+                    func=func,
                     layer=self._layer,
                     persistent=False,
                     m=self._m,

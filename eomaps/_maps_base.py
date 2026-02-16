@@ -324,12 +324,10 @@ class LazyCaller:
             def _lazy_method(layer):
                 lazy_method(self._m, *args[1:], **kwargs)
 
-            _log.info(
-                f"method submitted for activation of '{self._m.layer}' layer: {lazy_method.__name__}"
-            )
-            self._m.BM._pending_methods.setdefault(self._m.layer, []).append(
-                lazy_method.__name__
-            )
+            if _log.getEffectiveLevel() <= logging.DEBUG:
+                _log.debug(
+                    f"lazy method submitted for activation of '{self._m.layer}' layer: {lazy_method.__name__}"
+                )
 
         else:
 
@@ -337,12 +335,12 @@ class LazyCaller:
             def _lazy_method(layer):
                 self._attr.__call__(*args, **kwargs)
 
-            _log.info(
-                f"method submitted for activation of '{self._m.layer}' layer: {self._name}(...)"
-            )
-            self._m.BM._pending_methods.setdefault(self._m.layer, []).append(
-                f"{self._name}(...)"
-            )
+            _lazy_method.__qualname__ = f"{self._name}(...)"
+
+            if _log.getEffectiveLevel() <= logging.DEBUG:
+                _log.debug(
+                    f"lazy method submitted for activation of '{self._m.layer}' layer: {self._name}(...)"
+                )
 
         self._m.BM.on_layer(
             func=_lazy_method,
@@ -618,7 +616,7 @@ class MapsBase(metaclass=_MapsMeta):
             self.BM._managed_axes.add(artist)
 
         self._artists.add(artist)
-        self.BM._hooks.run("add_artist")
+        self.BM.run_hook("add_artist")
 
     def add_bg_artist(self, artist, draw=True):
         artist.set_animated(True)
@@ -630,14 +628,14 @@ class MapsBase(metaclass=_MapsMeta):
             self.BM._managed_axes.add(artist)
 
         self._bg_artists.add(artist)
-        self.BM._hooks.run("add_bg_artist")
+        self.BM.run_hook("add_bg_artist")
 
         if draw:
             self.redraw(self.layer)
 
     def _remove_artist(self, artist):
         self._artists.remove(artist)
-        self.BM._hooks.run("remove_artist")
+        self.BM.run_hook("remove_artist")
 
     def remove_artist(self, artist):
         self._remove_artist(artist)
@@ -645,7 +643,7 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _remove_bg_artist(self, artist):
         self._bg_artists.remove(artist)
-        self.BM._hooks.run("remove_bg_artist")
+        self.BM.run_hook("remove_bg_artist")
 
     def remove_bg_artist(self, artist, draw=True):
         self._remove_bg_artist(artist)
@@ -1362,6 +1360,10 @@ class MapsBase(metaclass=_MapsMeta):
             # remove the child from the LayerNamespace
             self.l._remove_layer(self.layer)
 
+            self.BM.remove_hook(
+                "layer_activation", method=None, permanent=None, layer=self.layer
+            )
+
             # remove the child from the parent Maps object
             if self in self.BM._children:
                 self.BM._children.remove(self)
@@ -1773,6 +1775,7 @@ class MapsBase(metaclass=_MapsMeta):
             layer = str(layer)
             m = self.new_layer(layer)
 
+        @wraps(func)
         def cb(layer):
             func(m=m, **kwargs)
 

@@ -160,7 +160,7 @@ class InsetMaps(Maps):
             self._bg_patch = None
 
         # attach callback to update indicator patches
-        self.BM._hooks.add_permanent("before_fetch_bg", self._update_indicator)
+        self.BM.add_hook("before_fetch_bg", self._update_indicator, True)
 
     def _get_spine_verts(self):
         s = self.ax.spines["geo"]
@@ -316,7 +316,7 @@ class InsetMaps(Maps):
             self._indicator_lines.append((l2, m))
 
         self._update_indicator_lines()
-        self.BM._hooks.add_permanent("before_fetch_bg", self._update_indicator_lines)
+        self.BM.add_hook("before_fetch_bg", self._update_indicator_lines, True)
 
     def _update_indicator_lines(self, *args, **kwargs):
         spine_verts = self._get_spine_verts()

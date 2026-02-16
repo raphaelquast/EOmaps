@@ -721,8 +721,8 @@ class ColorBar(ColorBarBase):
         """Remove the colorbar from the map."""
         if self._dynamic_shade_indicator:
             try:
-                self._m.BM._hooks.remove_permanent(
-                    "before_fetch_bg", self._check_data_updated
+                self._m.BM.remove_hook(
+                    "before_fetch_bg", self._check_data_updated, True
                 )
             except Exception:
                 _log.debug("Problem while removing dynamic-colorbar callback")
@@ -822,7 +822,7 @@ class ColorBar(ColorBarBase):
             self._cid_redraw = False
 
         if self._cid_redraw is False:
-            self._m.BM._hooks.add_permanent("before_fetch_bg", self._check_data_updated)
+            self._m.BM.add_hook("before_fetch_bg", self._check_data_updated, True)
 
             self._m.BM.on_layer(
                 lambda *args, **kwargs: self._redraw,

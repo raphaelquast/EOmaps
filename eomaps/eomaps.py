@@ -796,8 +796,8 @@ class Maps(
                     path = mpath.Path(np.column_stack((xs, ys)))
                     self.ax.set_boundary(path, transform=self.crs_plot)
 
-                self.BM._hooks.add_permanent(
-                    "before_fetch_bg", update_round_map_frame_corners
+                self.BM.add_hook(
+                    "before_fetch_bg", update_round_map_frame_corners, True
                 )
 
                 self.ax._EOmaps_rounded_spine_attached = True
