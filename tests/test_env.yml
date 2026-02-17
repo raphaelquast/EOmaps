@@ -27,6 +27,9 @@ dependencies:
   - requests
   # --------------to support multiple Qt versions
   - qtpy
+  # --------------perform tests on PyQt5 for now
+  - PyQt5
+
   # --------------for jupyter widgets
   - ipywidgets
 

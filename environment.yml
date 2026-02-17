@@ -28,7 +28,6 @@ dependencies:
   - requests
   # --------------to support multiple Qt versions
   - qtpy
-  - pyside6 <6.9
   # --------------for jupyter widgets
   - ipywidgets
   - ipympl
