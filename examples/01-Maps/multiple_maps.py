@@ -18,16 +18,16 @@ m2 = m.new_map(ax=132, crs=Maps.CRS.Stereographic())
 m3 = m.new_map(ax=133, crs=3035)
 
 # --------- set specs for the first map
-m.text(0.5, 1.1, "epsg=4326", transform=m.ax.transAxes)
+m.add_text(0.5, 1.1, "epsg=4326")
 m.set_classify.EqualInterval(k=10)
 
 # --------- set specs for the second map
-m2.text(0.5, 1.1, "Stereographic", transform=m2.ax.transAxes)
+m2.add_text(0.5, 1.1, "Stereographic")
 m2.set_shape.rectangles()
 m2.set_classify.Quantiles(k=8)
 
 # --------- set specs for the third map
-m3.text(0.5, 1.1, "epsg=3035", transform=m3.ax.transAxes)
+m3.add_text(0.5, 1.1, "epsg=3035")
 m3.set_classify_specs(
     scheme="StdMean",
     multiples=[-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1],

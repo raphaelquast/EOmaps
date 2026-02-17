@@ -62,7 +62,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
     def cb(m, ind, ID, *args, **kwargs):
         # get row and column from the data
         # NOTE: "ind" always represents the index of the flattened array!
-        r, c = np.unravel_index(ind, m.data.shape)
+        r, c = np.unravel_index(ind, m.data_specs.data.shape)
 
         # ---- highlight the picked column
         # use "dynamic=True" to avoid re-drawing the background on each pick
@@ -107,7 +107,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
 
     # ---- add a pick-annotation with a custom text
     def text(ind, val, **kwargs):
-        r, c = np.unravel_index(ind, m.data.shape)
+        r, c = np.unravel_index(ind, m.data_specs.data.shape)
         return (
             f"row/col = {r}/{c}\n"
             f"lon/lat = {m.data_specs.x[r, c]:.2f}/{m.data_specs.y[r, c]:.2f}\n"
