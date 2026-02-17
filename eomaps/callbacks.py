@@ -757,10 +757,10 @@ class _MoveClickPickCallbacks(_CallbacksBase):
         shape = "ellipses" if shape == "round" else "rectangles"
 
         if not isinstance(layer, str):
-            layer = self.m.BM._get_combined_layer_name(*layer)
+            layer = self.m._bm._get_combined_layer_name(*layer)
 
         # add spines and relevant inset-map layers to the specified peek-layer
-        layer = self.m.BM._get_showlayer_name(layer, transparent=True)
+        layer = self.m._bm._get_showlayer_name(layer, transparent=True)
 
         ID, pos, val, ind, picker_name, val_color = self._popargs(kwargs)
 
@@ -880,24 +880,24 @@ class _MoveClickPickCallbacks(_CallbacksBase):
 
             # make sure to clear the marker at the next update to avoid savefig issues
             def doit(*args, **kwargs):
-                self.m.BM._artists_to_clear.setdefault("peek", []).append(marker)
-                self.m.BM._clear_temp_artists("peek")
+                self.m._bm._artists_to_clear.setdefault("peek", []).append(marker)
+                self.m._bm._clear_temp_artists("peek")
 
-            self.m.BM.add_hook("after_update", doit, False)
+            self.m._bm.add_hook("after_update", doit, False)
 
         # create a TransformedPath as needed for clipping
         clip_path = TransformedPath(
             clip_path, self.m.ax.projection._as_mpl_transform(self.m.ax)
         )
 
-        action = self.m.BM._get_restore_bg_action(
-            self.m.BM._get_combined_layer_name(self.m.BM.bg_layer, layer),
+        action = self.m._bm._get_restore_bg_action(
+            self.m._bm._get_combined_layer_name(self.m._bm.bg_layer, layer),
             (x0, y0, blitw, blith),
             alpha=alpha,
             clip_path=clip_path,
             set_clip_path=False if shape == "rectangles" else True,
         )
-        self.m.BM.add_hook("after_restore", action, False)
+        self.m._bm.add_hook("after_restore", action, False)
 
 
 class _ClickCallbacks(_CallbacksBase):
@@ -957,14 +957,14 @@ class _ClickCallbacks(_CallbacksBase):
         if hasattr(self, "permanent_annotations"):
             while len(self.permanent_annotations) > 0:
                 ann = self.permanent_annotations.pop(0)
-                self.m.BM.remove_artist(ann)
+                self.m._bm.remove_artist(ann)
 
     def clear_markers(self, **kwargs):
         """Remove all temporary and permanent annotations from the plot."""
         if hasattr(self, "permanent_markers"):
             while len(self.permanent_markers) > 0:
                 marker = self.permanent_markers.pop(0)
-                self.m.BM.remove_artist(marker)
+                self.m._bm.remove_artist(marker)
             del self.permanent_markers
 
     def get_values(self, **kwargs):
@@ -1321,19 +1321,19 @@ class KeypressCallbacks:
         """
 
         if isinstance(layer, list):
-            layer = self._m.BM._get_combined_layer_name(*layer)
+            layer = self._m._bm._get_combined_layer_name(*layer)
         elif isinstance(layer, tuple):
             # e.g. (layer-name, layer-transparency)
-            layer = self._m.BM._get_combined_layer_name(layer)
+            layer = self._m._bm._get_combined_layer_name(layer)
 
         # in case the layer is currently on top, remove it
-        if not self._m.BM.bg_layer.endswith(f"|{layer}"):
-            self._m.show_layer(self._m.BM.bg_layer, layer)
+        if not self._m._bm.bg_layer.endswith(f"|{layer}"):
+            self._m.show_layer(self._m._bm.bg_layer, layer)
         else:
             if sys.version_info >= (3, 9):
-                newlayer = self._m.BM.bg_layer.removesuffix(f"|{layer}")
+                newlayer = self._m._bm.bg_layer.removesuffix(f"|{layer}")
             else:
-                newlayer = _removesuffix(self._m.BM.bg_layer, f"|{layer}")
+                newlayer = _removesuffix(self._m._bm.bg_layer, f"|{layer}")
 
             if len(newlayer) > 0:
                 self._m.show_layer(newlayer)

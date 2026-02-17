@@ -669,28 +669,28 @@ class TestCallbacks(unittest.TestCase):
 
         key_press_event(m.f.canvas, "0")
         key_release_event(m.f.canvas, "0")
-        self.assertTrue(m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, "A"))
+        self.assertTrue(m._bm._bg_layer == m._bm._get_combined_layer_name(m.layer, "A"))
         key_press_event(m.f.canvas, "0")
         key_release_event(m.f.canvas, "0")
-        self.assertTrue(m.BM._bg_layer == m.layer)
+        self.assertTrue(m._bm._bg_layer == m.layer)
 
         key_press_event(m.f.canvas, "1")
         key_release_event(m.f.canvas, "1")
         self.assertTrue(
-            m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, ("B", 0.5))
+            m._bm._bg_layer == m._bm._get_combined_layer_name(m.layer, ("B", 0.5))
         )
         key_press_event(m.f.canvas, "1")
         key_release_event(m.f.canvas, "1")
-        self.assertTrue(m.BM._bg_layer == m.layer)
+        self.assertTrue(m._bm._bg_layer == m.layer)
 
         key_press_event(m.f.canvas, "2")
         key_release_event(m.f.canvas, "2")
         self.assertTrue(
-            m.BM._bg_layer == m.BM._get_combined_layer_name(m.layer, "A", ("B", 0.5))
+            m._bm._bg_layer == m._bm._get_combined_layer_name(m.layer, "A", ("B", 0.5))
         )
         key_press_event(m.f.canvas, "2")
         key_release_event(m.f.canvas, "2")
-        self.assertTrue(m.BM._bg_layer == m.layer)
+        self.assertTrue(m._bm._bg_layer == m.layer)
 
     def test_switch_layer(self):
         # ---------- test as CLICK callback
@@ -709,23 +709,23 @@ class TestCallbacks(unittest.TestCase):
         # switch to layer 2
         key_press_event(m.f.canvas, "2")
         key_release_event(m.f.canvas, "2")
-        self.assertTrue(m.BM._bg_layer == "2")
+        self.assertTrue(m._bm._bg_layer == "2")
 
         # the 3rd callback should not trigger
         key_press_event(m.f.canvas, "3")
         key_release_event(m.f.canvas, "3")
-        self.assertTrue(m.BM._bg_layer == "2")
+        self.assertTrue(m._bm._bg_layer == "2")
 
         # switch to the "base" layer
         key_press_event(m.f.canvas, "0")
         key_release_event(m.f.canvas, "0")
-        self.assertTrue(m.BM._bg_layer == "base")
+        self.assertTrue(m._bm._bg_layer == "base")
 
         # now the 3rd callback should trigger
         key_press_event(m.f.canvas, "3")
         key_release_event(m.f.canvas, "3")
         self.assertTrue(
-            m.BM._bg_layer == m.BM._get_combined_layer_name("2", ("3", 0.5))
+            m._bm._bg_layer == m._bm._get_combined_layer_name("2", ("3", 0.5))
         )
 
         m.all.cb.keypress.remove(cid0)
@@ -770,11 +770,11 @@ class TestCallbacks(unittest.TestCase):
 
         key_press_event(m.f.canvas, "0")
         key_release_event(m.f.canvas, "0")
-        self.assertTrue(m.BM._bg_layer == "0")
+        self.assertTrue(m._bm._bg_layer == "0")
 
         key_press_event(m.f.canvas, "1")
         key_release_event(m.f.canvas, "1")
-        self.assertTrue(m.BM._bg_layer == "1")
+        self.assertTrue(m._bm._bg_layer == "1")
         plt.close("all")
 
     def test_geodataframe_contains_picking(self):

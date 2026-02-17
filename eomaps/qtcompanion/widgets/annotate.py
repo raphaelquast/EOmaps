@@ -416,20 +416,20 @@ class AddAnnotationWidget(QtWidgets.QWidget):
             text = self.text_inp.toPlainText()
             ann.set_text(text)
 
-            self.m.BM.update(artists=[ann])
+            self.m._bm.update(artists=[ann])
 
     def update_selected_text_props(self, *args, **kwargs):
         ann = self.selected_annotation
         if ann:
             ann.set_color(self.annotate_props.get("color", "k"))
-            self.m.BM.update(artists=[ann])
+            self.m._bm.update(artists=[ann])
 
     def update_selected_rotation(self, r):
         ann = self.selected_annotation
         if ann:
             # update the rotation of the currently selected annotation
             ann.set_rotation(r)
-            self.m.BM.update(artists=[ann])
+            self.m._bm.update(artists=[ann])
 
     def update_selected_patch(self, fc, ec, lw):
         ann = self.selected_annotation
@@ -469,7 +469,7 @@ class AddAnnotationWidget(QtWidgets.QWidget):
                     else:
                         ann.arrow_patch.set(arrowstyle=None)
 
-            self.m.BM.update(artists=[ann])
+            self.m._bm.update(artists=[ann])
 
     def enterEvent(self, e):
         if self.window().showhelp is True:
@@ -513,8 +513,8 @@ class AddAnnotationWidget(QtWidgets.QWidget):
     def remove_selected_annotation(self):
         ann = self.selected_annotation
         if ann:
-            self.m.BM.remove_artist(ann)
-            self.m.BM.update()
+            self.m._bm.remove_artist(ann)
+            self.m._bm.update()
         else:
             self.window().statusBar().showMessage("There is no annotation to remove!")
 

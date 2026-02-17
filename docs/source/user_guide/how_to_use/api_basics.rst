@@ -175,12 +175,12 @@ You can create as many layers as you need! The following image explains how it w
     If you use methods that are **NOT provided by EOmaps**, the corresponding artists will always appear on the ``"base"`` layer by default!
     (e.g. ``cartopy`` or ``matplotlib`` methods accessible via ``m.ax.`` or ``m.f.`` like ``m.ax.plot(...)``)
 
-    In most cases this behavior is sufficient... for more complicated use-cases, artists must be explicitly added to the **Blit Manager** (``m.BM``) so that ``EOmaps`` can handle drawing accordingly.
+    In most cases this behavior is sufficient... for more complicated use-cases, artists must be explicitly added to the ``Maps`` object so that ``EOmaps`` can handle drawing accordingly.
 
     To put the artists on dedicated layers, use one of the the following options:
 
-    - For artists that are dynamically updated on each event, use ``m.BM.add_artist(artist, layer=...)``
-    - For "background" artists that only require updates on pan/zoom/resize, use ``m.BM.add_bg_artist(artist, layer=...)``
+    - For artists that are dynamically updated on each event, use ``m.add_artist(artist)``
+    - For "background" artists that only require updates on pan/zoom/resize, use ``m.add_bg_artist(artist)``
 
 
     .. code-block:: python
@@ -195,9 +195,9 @@ You can create as many layers as you need! The following image explains how it w
         (l1, ) = m.ax.plot([0, 1], [0, 1], lw=5, c="r", transform=m.ax.transAxes)
         (l2, ) = m.ax.plot([0, 1], [1, 0], lw=5, c="r", transform=m.ax.transAxes)
 
-        m.BM.add_bg_artist(l1, layer="mylayer")
-        m.BM.add_bg_artist(l2, layer="mylayer")
-        m.show_layer("mylayer")
+        m.l.mylayer.add_bg_artist(l1)
+        m.l.mylayer.add_bg_artist(l2)
+        m.l.mylayer.show()
 
 .. _combine_layers:
 
@@ -642,15 +642,15 @@ Dynamic updates of figures
 **************************
 
     As soon as a :py:class:`Maps`-object is attached to a figure, EOmaps will handle re-drawing of the figure!
-    Therefore **dynamically updated** artists must be added to the "blit-manager" (``m.BM``) to ensure
+    Therefore **dynamically updated** artists must be added to the ``Maps``-object to ensure
     that they are correctly updated.
 
-    - use ``m.BM.add_artist(artist, layer=...)`` if the artist should be re-drawn on **any event** in the figure
-    - use ``m.BM.add_bg_artist(artist, layer=...)`` if the artist should **only** be re-drawn if the extent of the map changes
+    - use ``m.add_artist(artist, layer=...)`` if the artist should be re-drawn on **any event** in the figure
+    - use ``m.add_bg_artist(artist, layer=...)`` if the artist should **only** be re-drawn if the extent of the map changes
 
 .. note::
 
-    In most cases it is sufficient to simply add the whole axes-object as artist via ``m.BM.add_artist(...)``.
+    In most cases it is sufficient to simply add the whole axes-object as artist via ``m.add_artist(...)``.
 
     This ensures that all artists of the axes are updated as well!
 
@@ -684,7 +684,7 @@ Here's an example to show how it works:
             # Since we want to dynamically update the data on the axis, it must be
             # added to the BlitManager to ensure that the artists are properly updated.
             # (EOmaps handles interactive re-drawing of the figure)
-            m.BM.add_artist(ax, layer=m.layer)
+            m.add_artist(ax, layer=m.layer)
 
             # plot some static data on the axis
             ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])

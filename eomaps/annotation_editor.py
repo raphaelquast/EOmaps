@@ -241,7 +241,7 @@ class DraggableAnnotation(DraggableBase):
                     self._select_signal()
 
         if self.annotation.figure is not None:
-            self.annotation.figure._EOmaps_parent.BM.update()
+            self.annotation.figure._EOmaps_parent._bm.update()
 
     def on_motion(self, evt):
         # check if a keypress event triggered a change of the interaction
@@ -257,7 +257,7 @@ class DraggableAnnotation(DraggableBase):
 
         super().on_motion(evt)
         if self.annotation.figure is not None:
-            self.annotation.figure._EOmaps_parent.BM.update(artists=[self.annotation])
+            self.annotation.figure._EOmaps_parent._bm.update(artists=[self.annotation])
         # emit signal if provided
         if self._edit_signal is not None:
             self._edit_signal()
@@ -320,24 +320,24 @@ class _EditorBase:
         self._info_cids.add(
             self.m.f.canvas.mpl_connect("button_press_event", self._on_press)
         )
-        self.m.BM.add_hook("before_fetch_bg", self._update_info_fontsize, True)
-        self.m.BM.update()
+        self.m._bm.add_hook("before_fetch_bg", self._update_info_fontsize, True)
+        self.m._bm.update()
 
     def toggle_info_text(self):
         if getattr(self, "_info_artist", None) is not None:
             self._info_artist.set_visible(not self._info_artist.get_visible())
-        self.m.BM.update()
+        self.m._bm.update()
 
     def remove_info_text(self):
         while len(self._info_cids) > 0:
             self.m.f.canvas.mpl_disconnect(self._info_cids.pop())
 
-        self.m.BM.remove_hook("before_fetch_bg", self._update_info_fontsize, True)
+        self.m._bm.remove_hook("before_fetch_bg", self._update_info_fontsize, True)
 
         if getattr(self, "_info_artist", None) is not None:
-            self.m.BM.remove_artist(self._info_artist, "all")
+            self.m._bm.remove_artist(self._info_artist, "all")
             self._info_artist = None
-            self.m.BM.update()
+            self.m._bm.update()
 
     def _update_info_fontsize(self, *args, **kwargs):
         if getattr(self, "_info_artist", None) is not None:
@@ -440,7 +440,7 @@ class AnnotationEditor(_EditorBase):
             )
 
             self.m._emit_signal("annotationEditorActivated")
-            self.m.BM._clear_all_temp_artists()
+            self.m._bm._clear_all_temp_artists()
 
             self.show_info_text()
             self.m.cb.execute_callbacks(False)
@@ -461,7 +461,7 @@ class AnnotationEditor(_EditorBase):
             self.remove_info_text()
 
             self.m._emit_signal("annotationEditorDeactivated")
-            self.m.BM.update()
+            self.m._bm.update()
             self.m.cb.execute_callbacks(True)
 
     def _make_ann_editable(self, ann, drag_coords=True):
@@ -550,7 +550,7 @@ class AnnotationEditor(_EditorBase):
             else:
                 ann.a.set_text(str(text))
 
-        self.m.BM.update()
+        self.m._bm.update()
 
     def print_code(
         self,
@@ -710,12 +710,12 @@ class AnnotationEditor(_EditorBase):
         if text is not None:
             _eomaps_picked_ann.set_text(text)
 
-        self.m.BM.update()
+        self.m._bm.update()
 
     def remove_selected_annotation(self, event):
         if event is None or event.key == "delete":
             global _eomaps_picked_ann
             if _eomaps_picked_ann:
-                self.m.BM.remove_artist(_eomaps_picked_ann)
+                self.m._bm.remove_artist(_eomaps_picked_ann)
                 _eomaps_picked_ann = None
-                self.m.BM.update()
+                self.m._bm.update()

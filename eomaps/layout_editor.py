@@ -119,15 +119,15 @@ class LayoutEditor:
             self.m.cb.execute_callbacks(not val)
 
         if self._modifier_pressed:
-            self.m.BM._disable_draw = True
-            self.m.BM._disable_update = True
+            self.m._bm._disable_draw = True
+            self.m._bm._disable_update = True
         else:
-            self.m.BM._disable_draw = False
-            self.m.BM._disable_update = False
+            self.m._bm._disable_draw = False
+            self.m._bm._disable_update = False
 
     @property
     def ms(self):
-        return list(self.m.BM._children)
+        return list(self.m._bm._children)
 
     @property
     def maxes(self):
@@ -385,21 +385,21 @@ class LayoutEditor:
 
     def fetch_current_background(self):
         # clear the renderer to avoid drawing on existing backgrounds
-        renderer = self.m.BM.canvas.get_renderer()
+        renderer = self.m._bm.canvas.get_renderer()
         renderer.clear()
 
         with ExitStack() as stack:
             for ax in self._ax_picked:
                 stack.enter_context(ax._cm_set(visible=False))
 
-            self.m.BM.blit_artists(self.axes, None, False)
+            self.m._bm.blit_artists(self.axes, None, False)
 
             grid = getattr(self, "_snap_grid_artist", None)
             if grid is not None:
-                self.m.BM.blit_artists([grid], None, False)
+                self.m._bm.blit_artists([grid], None, False)
 
-            self.m.BM.canvas.blit()
-            self._current_bg = self.m.BM.canvas.copy_from_bbox(self.m.f.bbox)
+            self.m._bm.canvas.blit()
+            self._current_bg = self.m._bm.canvas.copy_from_bbox(self.m.f.bbox)
 
     def cb_move_with_key(self, event):
         if not self.modifier_pressed:
@@ -463,7 +463,7 @@ class LayoutEditor:
         if getattr(self, "_info_text", None) is not None:
             artists.append(self._info_text)
 
-        self.m.BM.blit_artists(artists, self._current_bg)
+        self.m._bm.blit_artists(artists, self._current_bg)
 
     def cb_scroll(self, event):
         if (self.f.canvas.toolbar is not None) and self.f.canvas.toolbar.mode != "":
@@ -609,16 +609,20 @@ class LayoutEditor:
         return snap
 
     def ax_on_layer(self, ax):
-        if ax in self.m.BM._get_unmanaged_axes():
+        if ax in self.m._bm._get_unmanaged_axes():
             return True
         elif ax in self.maxes:
             return True
         else:
-            for layer in (*self.m.BM._get_active_layers_alphas[0], "**SPINES**", "all"):
+            for layer in (
+                *self.m._bm._get_active_layers_alphas[0],
+                "**SPINES**",
+                "all",
+            ):
                 # logos are put on the spines-layer to appear on top of spines!
-                if ax in self.m.BM.get_bg_artists(layer):
+                if ax in self.m._bm.get_bg_artists(layer):
                     return True
-                elif ax in self.m.BM.get_artists(layer):
+                elif ax in self.m._bm.get_artists(layer):
                     return True
 
         return False
@@ -630,7 +634,7 @@ class LayoutEditor:
         # use a try-except block to avoid issues with ipympl in jupyter notebooks
         # (see https://github.com/matplotlib/ipympl/issues/530#issue-1780919042)
         try:
-            toolbar = getattr(self.m.BM.canvas, "toolbar", None)
+            toolbar = getattr(self.m._bm.canvas, "toolbar", None)
             if toolbar is not None:
                 for key in ["pan", "zoom"]:
                     val = toolbar._actions.get(key, None)

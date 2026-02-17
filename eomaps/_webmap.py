@@ -150,7 +150,7 @@ class _WebMapLayer:
                 _log.warning(
                     "EOmaps: The WebMap for the legend is not yet added to the map!"
                 )
-                self._layer = self._m.BM._bg_layer
+                self._layer = self._m._bm._bg_layer
 
             axpos = self._m.ax.get_position()
             legax = self._m.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
@@ -164,7 +164,7 @@ class _WebMapLayer:
             legax.imshow(legend)
 
             # hide the legend if the corresponding layer is not active at the moment
-            if not self._m.BM._layer_visible(self._layer):
+            if not self._m._bm._layer_visible(self._layer):
                 legax.set_visible(False)
 
             self._m.l[self._layer].add_artist(legax)
@@ -195,7 +195,7 @@ class _WebMapLayer:
                 bbox = bbox.transformed(self._m.f.transFigure.inverted())
                 legax.set_position(bbox)
 
-                self._m.BM.blit_artists([legax])
+                self._m._bm.blit_artists([legax])
 
             def cb_release(event):
                 self._legend_picked = False
@@ -214,9 +214,9 @@ class _WebMapLayer:
                     return
 
                 if event.key in ["delete", "backspace"]:
-                    self._m.BM.remove_artist(legax, self._layer)
+                    self._m._bm.remove_artist(legax, self._layer)
 
-                self._m.BM.update()
+                self._m._bm.update()
 
             def cb_scroll(event):
                 if not self._legend_picked:
@@ -234,7 +234,7 @@ class _WebMapLayer:
                     )
                 )
 
-                self._m.BM.blit_artists([legax])
+                self._m._bm.blit_artists([legax])
 
             self._m.f.canvas.mpl_connect("scroll_event", cb_scroll)
             self._m.f.canvas.mpl_connect("button_press_event", cb_pick)
@@ -244,7 +244,7 @@ class _WebMapLayer:
 
             self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
 
-            self._m.BM.update()
+            self._m._bm.update()
 
             return legax
 
@@ -391,7 +391,7 @@ class _WMTSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or m.BM._layer_visible(self._layer):
+            if self._layer == "all" or m._bm._layer_visible(self._layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     m=self._m,
@@ -411,7 +411,7 @@ class _WMTSLayer(_WebMapLayer):
                 # used to display pending method in widget
                 func.__qualname__ = f"Add WebMap layer: {self.name}"
 
-                self._m.BM.on_layer(
+                self._m._bm.on_layer(
                     func=func,
                     layer=self._layer,
                     persistent=False,
@@ -505,7 +505,7 @@ class _WMSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if m.BM._layer_visible(self._layer):
+            if m._bm._layer_visible(self._layer):
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(
                     m=m,
@@ -525,7 +525,7 @@ class _WMSLayer(_WebMapLayer):
                 # used to display pending method in widget
                 func.__qualname__ = f"Add WebMap layer: {self.name}"
 
-                m.BM.on_layer(
+                m._bm.on_layer(
                     func=func,
                     layer=self._layer,
                     persistent=False,
@@ -1227,7 +1227,7 @@ class _XyzTileService:
             kwargs.setdefault("alpha", alpha)
             kwargs.setdefault("origin", "lower")
 
-            if self._layer in ["all", self._m.BM.bg_layer]:
+            if self._layer in ["all", self._m._bm.bg_layer]:
                 # add the layer immediately if the layer is already active
                 self._do_add_layer(layer=self._layer, m=self._m, **kwargs)
             else:
@@ -1236,7 +1236,7 @@ class _XyzTileService:
                 # used to display pending method in widget
                 func.__qualname__ = f"Add WebMap layer: {self.name}"
 
-                self._m.BM.on_layer(
+                self._m._bm.on_layer(
                     func=func,
                     layer=self._layer,
                     persistent=False,

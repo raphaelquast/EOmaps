@@ -630,12 +630,12 @@ class TestBasicPlotting(unittest.TestCase):
         m.redraw()
 
         m.show_layer("asdf")
-        self.assertTrue(len(m.BM._hidden_artists) == 5)
+        self.assertTrue(len(m._bm._hidden_artists) == 5)
         for cb in m._colorbars:
-            self.assertTrue(cb in m.BM._hidden_artists)
+            self.assertTrue(cb in m._bm._hidden_artists)
         m.show_layer("base")
         for cb in m2._colorbars:
-            self.assertTrue(cb in m.BM._hidden_artists)
+            self.assertTrue(cb in m._bm._hidden_artists)
 
         self.assertTrue(len(m2._colorbars) == 1)
         self.assertTrue(m2.colorbar is cb5)
@@ -1268,8 +1268,8 @@ class TestBasicPlotting(unittest.TestCase):
         m.cb.pick.attach.annotate()
         m.cb.keypress.attach.fetch_layers()
         m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
-        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
+        self.assertTrue(len(m._bm._artists[m.layer]) == 1)
+        self.assertTrue(len(m._bm._bg_artists[m.layer]) == 2)
 
         self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
@@ -1291,25 +1291,25 @@ class TestBasicPlotting(unittest.TestCase):
         m2.on_layer_activation(lambda m: print("permanent", m.layer), persistent=True)
 
         self.assertTrue(
-            len(m.BM._Hooks__hooks["layer_activation"][True][m2.layer]) == 1
+            len(m._bm._Hooks__hooks["layer_activation"][True][m2.layer]) == 1
         )
         self.assertTrue(
-            len(m.BM._Hooks__hooks["layer_activation"][False][m2.layer]) == 1
+            len(m._bm._Hooks__hooks["layer_activation"][False][m2.layer]) == 1
         )
 
         m.show_layer(m2.layer)  # show the layer to draw the artists!
         m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
         self.assertTrue(
-            len(m.BM._Hooks__hooks["layer_activation"][True][m2.layer]) == 1
+            len(m._bm._Hooks__hooks["layer_activation"][True][m2.layer]) == 1
         )
         self.assertTrue(
-            len(m.BM._Hooks__hooks["layer_activation"][False][m2.layer]) == 0
+            len(m._bm._Hooks__hooks["layer_activation"][False][m2.layer]) == 0
         )
 
-        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
-        self.assertTrue(len(m.BM._artists[m2.layer]) == 1)
-        self.assertTrue(len(m.BM._bg_artists[m2.layer]) == 2)
+        self.assertTrue(len(m._bm._artists[m.layer]) == 1)
+        self.assertTrue(len(m._bm._bg_artists[m.layer]) == 2)
+        self.assertTrue(len(m._bm._artists[m2.layer]) == 1)
+        self.assertTrue(len(m._bm._bg_artists[m2.layer]) == 2)
 
         self.assertTrue(m2._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m2, "tree"))
@@ -1319,13 +1319,13 @@ class TestBasicPlotting(unittest.TestCase):
 
         m2.cleanup()
 
-        self.assertTrue(m2.layer not in m.BM._Hooks__hooks["layer_activation"][True])
-        self.assertTrue(m2.layer not in m.BM._Hooks__hooks["layer_activation"][False])
+        self.assertTrue(m2.layer not in m._bm._Hooks__hooks["layer_activation"][True])
+        self.assertTrue(m2.layer not in m._bm._Hooks__hooks["layer_activation"][False])
 
-        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
-        self.assertTrue(m2.layer not in m.BM._artists)
-        self.assertTrue(m2.layer not in m.BM._bg_artists)
+        self.assertTrue(len(m._bm._artists[m.layer]) == 1)
+        self.assertTrue(len(m._bm._bg_artists[m.layer]) == 2)
+        self.assertTrue(m2.layer not in m._bm._artists)
+        self.assertTrue(m2.layer not in m._bm._bg_artists)
 
         # m should still be OK
         self.assertTrue(m._data_manager.x0.size == 3)
@@ -1343,8 +1343,8 @@ class TestBasicPlotting(unittest.TestCase):
 
         m.cleanup()
 
-        self.assertTrue(m.layer not in m.BM._artists)
-        self.assertTrue(m.layer not in m.BM._bg_artists)
+        self.assertTrue(m.layer not in m._bm._artists)
+        self.assertTrue(m.layer not in m._bm._bg_artists)
 
         self.assertTrue(m._data_manager.x0 is None)
         self.assertTrue(not hasattr(m, "tree"))
@@ -1359,7 +1359,7 @@ class TestBasicPlotting(unittest.TestCase):
         line = plt.Line2D(
             [0, 0.25, 1], [0, 0.63, 1], c="k", lw=3, transform=m.ax.transAxes
         )
-        m.BM.blit_artists([line])
+        m._bm.blit_artists([line])
         plt.close("all")
 
     def test_set_frame(self):

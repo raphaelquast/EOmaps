@@ -159,17 +159,17 @@ class DataManager:
     def attach_callbacks(self):
         self._callbacks_attached = True
         if self._dynamic is True:
-            self.m.BM.add_hook("before_update", self.on_fetch_bg, True)
+            self.m._bm.add_hook("before_update", self.on_fetch_bg, True)
         else:
-            self.m.BM.add_hook("before_fetch_bg", self.on_fetch_bg, True)
+            self.m._bm.add_hook("before_fetch_bg", self.on_fetch_bg, True)
 
     def cleanup_callbacks(self):
         if not self._callbacks_attached:
             return
         if self._dynamic is True:
-            self.m.BM.remove_hook("before_update", self.on_fetch_bg, True)
+            self.m._bm.remove_hook("before_update", self.on_fetch_bg, True)
         else:
-            self.m.BM.remove_hook("before_fetch_bg", self.on_fetch_bg, True)
+            self.m._bm.remove_hook("before_fetch_bg", self.on_fetch_bg, True)
 
     def _identify_pandas(self, data=None, x=None, y=None, parameter=None):
         (pd,) = register_modules("pandas", raise_exception=False)
@@ -688,11 +688,11 @@ class DataManager:
 
         # don't re-draw if the layer of the dataset is not requested
         # (note multi-layers trigger re-draws of individual layers as well)
-        if not self.m.BM._layer_is_subset(layer, self.layer):
+        if not self.m._bm._layer_is_subset(layer, self.layer):
             return False
 
         # don't re-draw if the collection has been hidden in the companion-widget
-        if self.m.coll in self.m.BM._hidden_artists:
+        if self.m.coll in self.m._bm._hidden_artists:
             return False
 
         # re-draw if the data has never been plotted

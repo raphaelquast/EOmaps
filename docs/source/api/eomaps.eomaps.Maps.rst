@@ -229,7 +229,6 @@ Miscellaneous
     :nosignatures:
 
     Maps.config
-    Maps.BM
 
 .. autosummary::
     :toctree: ../generated

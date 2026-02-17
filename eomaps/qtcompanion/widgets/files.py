@@ -363,7 +363,7 @@ class PlotFileWidget(QtWidgets.QWidget):
         # layer
         self.layer_label = QtWidgets.QLabel("<b>Layer:</b>")
         self.layer = LayerInput()
-        self.layer.setPlaceholderText(str(self.m.BM.bg_layer))
+        self.layer.setPlaceholderText(str(self.m._bm.bg_layer))
 
         setlayername = QtWidgets.QWidget()
         layername = QtWidgets.QHBoxLayout()
@@ -836,7 +836,7 @@ class PlotGeoTIFFWidget(PlotXarrayWidget):
 
         # set default layer-name to current layer if a single layer is selected,
         # else use the filename
-        use_layer = self.m.BM.bg_layer
+        use_layer = self.m._bm.bg_layer
         if "|" in use_layer:
             use_layer = self.file_path.stem
         else:
@@ -912,7 +912,7 @@ class PlotNetCDFWidget(PlotXarrayWidget):
 
         # set default layer-name to current layer if a single layer is selected,
         # else use the filename
-        use_layer = self.m.BM.bg_layer
+        use_layer = self.m._bm.bg_layer
         if "|" in use_layer:
             use_layer = self.file_path.stem
         else:
@@ -1008,7 +1008,7 @@ class PlotCSVWidget(PlotFileWidget):
 
         # set default layer-name to current layer if a single layer is selected,
         # else use the filename
-        use_layer = self.m.BM.bg_layer
+        use_layer = self.m._bm.bg_layer
         if "|" in use_layer:
             use_layer = self.file_path.stem
         else:
@@ -1231,7 +1231,7 @@ class PlotGeoDataFrameWidget(QtWidgets.QWidget):
 
         # set default layer-name to current layer if a single layer is selected,
         # else use the filename
-        use_layer = self.m.BM.bg_layer
+        use_layer = self.m._bm.bg_layer
         if "|" in use_layer:
             use_layer = self.file_path.stem
         else:
@@ -1440,7 +1440,7 @@ class OpenFileTabs(QtWidgets.QTabWidget):
         widget.m2.cleanup()
 
         # redraw if the layer was currently visible
-        if widget.m2.layer in self.m.BM.bg_layer:
+        if widget.m2.layer in self.m._bm.bg_layer:
             self.m.redraw(widget.m2.layer)
 
         del widget.m2

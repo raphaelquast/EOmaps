@@ -311,7 +311,7 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.set_pick_map(0)
 
         # make sure we re-attach pick-callback on a layer change
-        self.m.BM.on_layer(self.on_layer_change, persistent=True)
+        self.m._bm.on_layer(self.on_layer_change, persistent=True)
 
         self.m._connect_signal("dataPlotted", self.populate_dropdown)
         self.m._connect_signal("dataPlotted", self.update_buttons)
@@ -320,11 +320,11 @@ class ClickCallbacks(QtWidgets.QFrame):
         self.widgetShown.emit()
 
     def identify_pick_map(self):
-        layers, _ = self.m.BM._get_active_layers_alphas
+        layers, _ = self.m._bm._get_active_layers_alphas
         layers.extend(("all", "inset_all"))
 
         pickm = list()
-        for m in self.m.BM._children:
+        for m in self.m._bm._children:
             if m.coll is not None and m.ax == self.m.ax and m.layer in layers:
                 pickm.append(m)
 
@@ -334,14 +334,14 @@ class ClickCallbacks(QtWidgets.QFrame):
     def clear_annotations_and_markers(self):
         # clear all annotations and markers from this axis
         # (irrespective of the visible layer!)
-        for m in self.m.BM._children:
+        for m in self.m._bm._children:
             if m.ax == self.m.ax:
                 m.cb.click._attach.clear_annotations(m.cb.click.attach)
                 m.cb.click._attach.clear_markers(m.cb.click.attach)
                 m.cb.pick._attach.clear_annotations(m.cb.pick.attach)
                 m.cb.pick._attach.clear_markers(m.cb.pick.attach)
 
-        self.m.BM.update()
+        self.m._bm.update()
 
     def reattach_pick_callbacks(self):
         # re-attach all "pick" callbacks (e.g. if the pick_map changed)
@@ -370,8 +370,8 @@ class ClickCallbacks(QtWidgets.QFrame):
                 name = f"{i}"
 
             # indicate map-layer name if combined layer is visible
-            if "|" in m.BM.bg_layer:
-                if m.layer != m.BM.bg_layer:
+            if "|" in m._bm.bg_layer:
+                if m.layer != m._bm.bg_layer:
                     name += f" ({m.layer})"
 
             self.map_dropdown.addItem(name, m)
@@ -468,7 +468,7 @@ class ClickCallbacks(QtWidgets.QFrame):
                     m.cb.click.remove(cid)
         self.cids[key] = None
 
-        self.m.BM.update()
+        self.m._bm.update()
 
     def attach_callback(self, key):
         # remove existing callback

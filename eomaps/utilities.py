@@ -149,7 +149,7 @@ class DraggableLegend_new(DraggableLegend):
             dy = evt.y - self.mouse_y
             self.update_offset(dx, dy)
             self.legend.stale = True
-            self._m.BM.update()
+            self._m._bm.update()
 
     def on_pick(self, evt):
         if self._check_still_parented() and evt.artist == self.ref_artist:
@@ -263,7 +263,7 @@ class LayerSelector(SelectorButtons):
             uselayers = []
             for l in layers:
                 if not isinstance(l, str):
-                    uselayers.append(m.BM._get_combined_layer_name(*l))
+                    uselayers.append(m._bm._get_combined_layer_name(*l))
                 else:
                     uselayers.append(l)
             layers = uselayers
@@ -305,10 +305,10 @@ class LayerSelector(SelectorButtons):
     def on_clicked(self, val):
         l = self.labels[int(val)]
 
-        self._m.BM.bg_layer = l
+        self._m._bm.bg_layer = l
 
-        self._m.BM.update(blit=False)
-        self._m.BM.canvas.draw_idle()
+        self._m._bm.update(blit=False)
+        self._m._bm.canvas.draw_idle()
 
     def _reinit(self):
         """
@@ -334,7 +334,7 @@ class LayerSelector(SelectorButtons):
 
         self.__init__(m=self._m, **self._init_args)
         self._m.util._update_widgets()
-        self._m.BM.update()
+        self._m._bm.update()
 
     def remove(self):
         """
@@ -344,7 +344,7 @@ class LayerSelector(SelectorButtons):
         self._m.all.remove_artist(self.leg)
 
         del self._m.util._selectors[self._init_args["name"]]
-        self._m.BM.update()
+        self._m._bm.update()
 
 
 class LayerSlider(Slider):
@@ -454,7 +454,7 @@ class LayerSlider(Slider):
             uselayers = []
             for l in layers:
                 if not isinstance(l, str):
-                    uselayers.append(m.BM._get_combined_layer_name(*l))
+                    uselayers.append(m._bm._get_combined_layer_name(*l))
                 else:
                     uselayers.append(l)
             layers = uselayers
@@ -538,8 +538,8 @@ class LayerSlider(Slider):
         self.valmax = max(len(layers) - 1, 0.01)
         self.ax.set_xlim(self.valmin, self.valmax)
 
-        if self._m.BM.bg_layer in self._layers:
-            currval = self._layers.index(self._m.BM.bg_layer)
+        if self._m._bm.bg_layer in self._layers:
+            currval = self._layers.index(self._m._bm.bg_layer)
             self.set_val(currval)
         else:
             self.set_val(0)
@@ -547,7 +547,7 @@ class LayerSlider(Slider):
         self._on_changed(self.val)
 
         self._m.util._update_widgets()
-        self._m.BM.update()
+        self._m._bm.update()
 
     def _reinit(self):
         """
@@ -563,23 +563,23 @@ class LayerSlider(Slider):
 
         self.__init__(m=self._m, pos=self.ax.get_position(), **self._init_args)
         self._m.util._update_widgets()
-        self._m.BM.update()
+        self._m._bm.update()
 
     def _on_changed(self, val):
         l = self._layers[int(val)]
-        self._m.BM.bg_layer = l
-        self._m.BM.update()
+        self._m._bm.bg_layer = l
+        self._m._bm.update()
 
     def remove(self):
         """
         Remove the widget from the map
         """
         self.disconnect_events()
-        self._m.BM.remove_artist(self.ax)
+        self._m._bm.remove_artist(self.ax)
 
         del self._m.util._sliders[self._init_args["name"]]
 
-        self._m.BM.update()
+        self._m._bm.update()
 
 
 class Utilities:
@@ -600,15 +600,15 @@ class Utilities:
         self._sliders = dict()
 
         # register a function to update all associated widgets on a layer-chance
-        self._m.BM.on_layer(lambda layer: self._update_widgets(layer), persistent=True)
+        self._m._bm.on_layer(lambda layer: self._update_widgets(layer), persistent=True)
 
     def _update_widgets(self, l=None):
         if l is None:
-            l = self._m.BM._bg_layer
+            l = self._m._bm._bg_layer
 
         # this function is called whenever the background-layer changed
         # to synchronize changes across all selectors and sliders
-        # see setter for   helpers.BM._bg_layer
+        # see setter for   helpers._bm._bg_layer
         for s in self._sliders.values():
             try:
                 s.eventson = False
@@ -617,11 +617,11 @@ class Utilities:
                 s.valtext.set_color(rcParams["text.color"])
                 s.eventson = True
             except ValueError:
-                s.valtext.set_text(self._m.BM._bg_layer)
+                s.valtext.set_text(self._m._bm._bg_layer)
                 s.valtext.set_color("r")
                 pass
             except IndexError:
-                s.valtext.set_text(self._m.BM._bg_layer)
+                s.valtext.set_text(self._m._bm._bg_layer)
                 s.valtext.set_color("r")
                 pass
             finally:

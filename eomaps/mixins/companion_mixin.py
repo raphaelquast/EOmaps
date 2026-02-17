@@ -57,13 +57,13 @@ class CompanionMixin:
 
     def _hide_all_companion_widget_indicators(self):
         # hide companion-widget indicator
-        for m in self.BM._children:
+        for m in self._bm._children:
             # hide companion-widget indicator
             m._indicate_companion_map(False)
 
     def _show_all_companion_widget_indicators(self):
         # hide companion-widget indicator
-        for m in self.BM._children:
+        for m in self._bm._children:
             if (w := getattr(m, "_companion_widget", None)) is not None:
                 if w.isVisible():
                     # hide companion-widget indicator
@@ -102,7 +102,7 @@ class CompanionMixin:
             del self._companion_map_indicator
 
         # don't draw an indicator if only one map is present in the figure
-        if all(m.ax == self.ax for m in self.BM._children):
+        if all(m.ax == self.ax for m in self._bm._children):
             return
 
         if visible:
@@ -114,12 +114,12 @@ class CompanionMixin:
             self.ax.add_artist(self._companion_map_indicator)
             self.all.add_artist(self._companion_map_indicator)
 
-        self.BM.update()
+        self._bm.update()
 
     def _identify_maps_object(self, xy):
         clicked_map = None
         if xy is not None:
-            for m in self.BM._children:
+            for m in self._bm._children:
                 if not m._new_axis_map:
                     # only search for Maps-object that initialized new axes
                     continue
@@ -155,7 +155,7 @@ class CompanionMixin:
             return
 
         # hide all other companion-widgets
-        for m in self.BM._children:
+        for m in self._bm._children:
             if m == clicked_map:
                 continue
             if m._companion_widget is not None and m._companion_widget.isVisible():

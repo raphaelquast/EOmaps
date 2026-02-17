@@ -149,7 +149,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
         def cb():
             # TODO set the layer !!!!
             if self.layer is None:
-                layer = self.m.BM.bg_layer
+                layer = self.m._bm.bg_layer
             else:
                 layer = self.layer
 
@@ -673,7 +673,7 @@ class LayerTabBar(QtWidgets.QTabBar):
             # NOTE this is done by the TabWidget if tabs have content!!
             self.populate()
             # re-populate on show to make sure currently active layers are shown
-            self.m.BM.on_layer(self.populate_on_layer, persistent=True)
+            self.m._bm.on_layer(self.populate_on_layer, persistent=True)
             self.m._after_add_child.append(self.populate)
             self.m._on_show_companion_widget.append(self.populate)
 
@@ -799,7 +799,9 @@ class LayerTabBar(QtWidgets.QTabBar):
         # activate the currently visible layer tab
         try:
             idx = next(
-                i for i in range(self.count()) if self.tabText(i) == self.m.BM._bg_layer
+                i
+                for i in range(self.count())
+                if self.tabText(i) == self.m._bm._bg_layer
             )
             self.setCurrentIndex(idx)
         except StopIteration:
@@ -808,7 +810,7 @@ class LayerTabBar(QtWidgets.QTabBar):
     @Slot()
     def tab_moved(self):
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_active_layers_alphas
+        active_layers, alphas = self.m._bm._get_active_layers_alphas
 
         # get the name of the layer that was moved
         layer = self.tabText(self.currentIndex())
@@ -866,14 +868,14 @@ class LayerTabBar(QtWidgets.QTabBar):
             return
 
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_active_layers_alphas
+        active_layers, alphas = self.m._bm._get_active_layers_alphas
 
         # TODO this should call a unified "cleanup layer method on the blit-manager!"
         # cleanup the layer and remove any artists etc.
         for m in list(self.m._children):
             if layer == m.layer:
                 m.cleanup()
-                m.BM._bg_layers.pop(layer, None)
+                m._bm._bg_layers.pop(layer, None)
 
         # in case the layer was visible, try to activate a suitable replacement
         if layer in active_layers:
@@ -894,8 +896,8 @@ class LayerTabBar(QtWidgets.QTabBar):
                     switchlayer = next(
                         (
                             i
-                            for i in self.m.BM._bg_artists
-                            if layer not in self.m.BM._parse_multi_layer_str(i)[0]
+                            for i in self.m._bm._bg_artists
+                            if layer not in self.m._bm._parse_multi_layer_str(i)[0]
                         )
                     )
                     self.m.show_layer(switchlayer)
@@ -904,16 +906,16 @@ class LayerTabBar(QtWidgets.QTabBar):
                     _log.error("EOmaps: Unable to delete the last available layer!")
                     return
 
-        if layer in list(self.m.BM._bg_artists):
-            for a in self.m.BM._bg_artists[layer]:
-                self.m.BM.remove_bg_artist(a)
+        if layer in list(self.m._bm._bg_artists):
+            for a in self.m._bm._bg_artists[layer]:
+                self.m._bm.remove_bg_artist(a)
                 a.remove()
-            del self.m.BM._bg_artists[layer]
+            del self.m._bm._bg_artists[layer]
 
-        if layer in self.m.BM._bg_layers:
-            del self.m.BM._bg_layers[layer]
+        if layer in self.m._bm._bg_layers:
+            del self.m._bm._bg_layers[layer]
 
-        self.m.BM.remove_hook(
+        self.m._bm.remove_hook(
             "layer_activation", method=None, permanent=None, layer=layer
         )
 
@@ -926,7 +928,7 @@ class LayerTabBar(QtWidgets.QTabBar):
         multicolor = QtGui.QColor(50, 150, 50)  # QtGui.QColor(0, 128, 0)
 
         # get currently active layers
-        active_layers, alphas = self.m.BM._get_active_layers_alphas
+        active_layers, alphas = self.m._bm._get_active_layers_alphas
 
         for i in range(self.count()):
             selected_layer = self.tabText(i)
@@ -966,10 +968,10 @@ class LayerTabBar(QtWidgets.QTabBar):
     @Slot()
     def populate_on_layer(self, *args, **kwargs):
         lastlayer = getattr(self, "_last_populated_layer", "")
-        currlayer = self.m.BM.bg_layer
+        currlayer = self.m._bm.bg_layer
         # only populate if the current layer is not part of the last set of layers
         # (e.g. to allow show/hide of selected layers without removing the tabs)
-        if not self.m.BM._layer_is_subset(currlayer, lastlayer):
+        if not self.m._bm._layer_is_subset(currlayer, lastlayer):
             self.populate(*args, **kwargs)
             self._last_populated_layer = currlayer
         else:
@@ -998,7 +1000,7 @@ class LayerTabBar(QtWidgets.QTabBar):
 
             # if more than max_n_layers layers are available, show only active tabs to
             # avoid performance issues when too many tabs are created
-            alllayers = [i for i in self.m.BM._bg_layer.split("|") if i in alllayers]
+            alllayers = [i for i in self.m._bm._bg_layer.split("|") if i in alllayers]
             for i in range(self.count(), -1, -1):
                 self.removeTab(i)
         else:
@@ -1041,7 +1043,7 @@ class LayerTabBar(QtWidgets.QTabBar):
     @Slot(str)
     def set_current_tab_by_name(self, layer):
         if layer is None:
-            layer = self.m.BM.bg_layer
+            layer = self.m._bm.bg_layer
 
         found = False
         ntabs = self.count()
@@ -1092,10 +1094,10 @@ class LayerTabBar(QtWidgets.QTabBar):
                 return
 
             # get currently active layers
-            active_layers, alphas = self.m.BM._get_active_layers_alphas
+            active_layers, alphas = self.m._bm._get_active_layers_alphas
 
             for x in (
-                i for i in self.m.BM._parse_multi_layer_str(layer)[0] if i != "_"
+                i for i in self.m._bm._parse_multi_layer_str(layer)[0] if i != "_"
             ):
                 if x not in active_layers:
                     active_layers.append(x)
@@ -1130,14 +1132,14 @@ class ArtistEditorTabs(LayerArtistTabs):
         # re-populate tabs if a new layer is created
         self.populate()
         self.m._after_add_child.append(self.populate)
-        self.m.BM.on_layer(self.populate_on_layer, persistent=True)
+        self.m._bm.on_layer(self.populate_on_layer, persistent=True)
 
         self.currentChanged.connect(self.populate_layer)
 
-        self.m.BM.add_hook("add_bg_artist", self.populate_layer, True)
-        self.m.BM.add_hook("remove_bg_artist", self.populate_layer, True)
+        self.m._bm.add_hook("add_bg_artist", self.populate_layer, True)
+        self.m._bm.add_hook("remove_bg_artist", self.populate_layer, True)
 
-        self.m.BM.add_hook("on_layer_callback_added", self.populate_layer, True)
+        self.m._bm.add_hook("on_layer_callback_added", self.populate_layer, True)
 
         self.m._on_show_companion_widget.append(self.populate)
         self.m._on_show_companion_widget.append(self.populate_layer)
@@ -1182,7 +1184,9 @@ class ArtistEditorTabs(LayerArtistTabs):
         # activate the currently visible layer tab
         try:
             idx = next(
-                i for i in range(self.count()) if self.tabText(i) == self.m.BM._bg_layer
+                i
+                for i in range(self.count())
+                if self.tabText(i) == self.m._bm._bg_layer
             )
             self.setCurrentIndex(idx)
 
@@ -1237,7 +1241,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         b_sh = ShowHideToolButton()
         b_sh.setAutoRaise(True)
 
-        if a in self.m.BM._hidden_artists:
+        if a in self.m._bm._hidden_artists:
             b_sh.setIcon(QtGui.QIcon(str(iconpath / "eye_closed.png")))
         else:
             b_sh.setIcon(QtGui.QIcon(str(iconpath / "eye_open.png")))
@@ -1378,8 +1382,8 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         # only populate if the current layer is not part of the last set of layers
         # (e.g. to allow show/hide of selected layers without removing the tabs)
-        if not self.m.BM._layer_visible(lastlayer):
-            self._last_populated_layer = self.m.BM.bg_layer
+        if not self.m._bm._layer_visible(lastlayer):
+            self._last_populated_layer = self.m._bm.bg_layer
             self.populate(*args, **kwargs)
         else:
             # TODO check why adjusting the tab-order causes recursions if multiple
@@ -1410,7 +1414,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
             # if more than max_n_layers layers are available, show only active tabs to
             # avoid performance issues when too many tabs are created
-            alllayers = self.m.BM._get_active_layers_alphas[0]
+            alllayers = self.m._bm._get_active_layers_alphas[0]
             for i in range(self.count(), -1, -1):
                 self.removeTab(i)
         else:
@@ -1453,7 +1457,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         tabbar.set_current_tab_by_name(self._current_tab_name)
 
     def get_layer_alpha(self, layer):
-        layers, alphas = self.m.BM._get_active_layers_alphas
+        layers, alphas = self.m._bm._get_active_layers_alphas
         if layer in layers:
             idx = layers.index(layer)
             alpha = alphas[idx]
@@ -1487,7 +1491,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         edit_layout = QtWidgets.QGridLayout()
         edit_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
-        artists = self.m.BM.get_bg_artists(layer)
+        artists = self.m._bm.get_bg_artists(layer)
 
         for i, a in enumerate(artists):
             for art, pos in self._get_artist_layout(a, layer):
@@ -1545,7 +1549,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         layout.addLayout(layer_actions_layout)
 
         # indicate all pending methods (e.g. layer-activation callbacks) in the widget tab
-        for method in self.m.BM._get_hooks(
+        for method in self.m._bm._get_hooks(
             "layer_activation", layer=layer, permanent=False
         ):
             layout.addWidget(
@@ -1574,8 +1578,8 @@ class ArtistEditorTabs(LayerArtistTabs):
             artist.set_fc(colorwidget.facecolor.getRgbF())
             artist.set_edgecolor(colorwidget.edgecolor.getRgbF())
 
-            self.m.BM._refetch_layer(layer)
-            self.m.BM.update()
+            self.m._bm._refetch_layer(layer)
+            self.m._bm.update()
 
         return cb
 
@@ -1583,7 +1587,7 @@ class ArtistEditorTabs(LayerArtistTabs):
         if self._msg.standardButton(self._msg.clickedButton()) != self._msg.Yes:
             return
 
-        self.m.BM.remove_bg_artist(artist, layer)
+        self.m._bm.remove_bg_artist(artist, layer)
         try:
             artist.remove()
         except Exception:
@@ -1625,11 +1629,11 @@ class ArtistEditorTabs(LayerArtistTabs):
     def show_hide(self, artist, layer):
         @Slot()
         def cb():
-            if artist in self.m.BM._hidden_artists:
-                self.m.BM._hidden_artists.remove(artist)
+            if artist in self.m._bm._hidden_artists:
+                self.m._bm._hidden_artists.remove(artist)
                 artist.set_visible(True)
             else:
-                self.m.BM._hidden_artists.add(artist)
+                self.m._bm._hidden_artists.add(artist)
                 artist.set_visible(False)
 
             self.m.redraw(layer)
@@ -1683,7 +1687,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
     @Slot()
     def set_layer_alpha(self, layer, alpha):
-        layers, alphas = self.m.BM._get_active_layers_alphas
+        layers, alphas = self.m._bm._get_active_layers_alphas
         if layer in layers:
             idx = layers.index(layer)
             alphas[idx] = alpha

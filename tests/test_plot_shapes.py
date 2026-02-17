@@ -125,7 +125,7 @@ def test_contour(data):
 
     # arts = m3_1.ax.clabel(m3_1.coll.contour_set)
     # for a in arts:
-    #     m3_1.BM.add_bg_artist(a, layer=m3_1.layer)
+    #     m3_1._bm.add_bg_artist(a, layer=m3_1.layer)
 
     m.show_layer("base", "contours")
 

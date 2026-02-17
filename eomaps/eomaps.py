@@ -300,10 +300,10 @@ class Maps(
             m2.ax.set_label("inset_map")
 
             spine = m2.ax.spines["geo"]
-            if spine in self.BM._bg_artists["**SPINES**"]:
-                self.BM._bg_artists._free_artists["**SPINES**"].remove(spine)
-            if spine not in self.BM._bg_artists["**inset_**SPINES**"]:
-                self.BM._bg_artists.add("**inset_**SPINES**", spine)
+            if spine in self._bm._bg_artists["**SPINES**"]:
+                self._bm._bg_artists._free_artists["**SPINES**"].remove(spine)
+            if spine not in self._bm._bg_artists["**inset_**SPINES**"]:
+                self._bm._bg_artists.add("**inset_**SPINES**", spine)
 
         return m2
 
@@ -796,7 +796,7 @@ class Maps(
                     path = mpath.Path(np.column_stack((xs, ys)))
                     self.ax.set_boundary(path, transform=self.crs_plot)
 
-                self.BM.add_hook(
+                self._bm.add_hook(
                     "before_fetch_bg", update_round_map_frame_corners, True
                 )
 
@@ -891,7 +891,7 @@ class Maps(
 
             self._hide_all_companion_widget_indicators()
 
-            for m in self.BM._children:
+            for m in self._bm._children:
                 # handle colorbars
                 for cb in m._colorbars:
                     for a in (cb.ax_cb, cb.ax_cb_plot):

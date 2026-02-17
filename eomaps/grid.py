@@ -576,7 +576,7 @@ class GridLabels:
             self._kwargs.setdefault("clip_box", self._g.m.ax.bbox)
 
         if not self._g._dynamic:
-            self._g.m.BM.add_hook("before_fetch_bg", self._redraw, True)
+            self._g.m._bm.add_hook("before_fetch_bg", self._redraw, True)
 
     def _set_exclude(self, exclude):
         # a list of tick values to exclude
@@ -622,7 +622,7 @@ class GridLabels:
                 t = self._texts.pop(-1)
 
                 if self._g._dynamic:
-                    self._g.m.BM.remove_artist(t)
+                    self._g.m._bm.remove_artist(t)
                 else:
                     self._g.m.l[self._g.layer].remove_bg_artist(t, draw=False)
             except Exception:
@@ -631,7 +631,7 @@ class GridLabels:
 
     def remove(self):
         """Remove the grid-labels from the map."""
-        self._g.m.BM.remove_hook("before_fetch_bg", self._redraw, True)
+        self._g.m._bm.remove_hook("before_fetch_bg", self._redraw, True)
 
         self._remove()
 
@@ -939,7 +939,7 @@ class GridFactory:
     def __init__(self, m):
         self.m = m
         self._gridlines = []
-        self.m.BM.add_hook("before_fetch_bg", self._update_autogrid, True)
+        self.m._bm.add_hook("before_fetch_bg", self._update_autogrid, True)
 
     def add_grid(
         self,

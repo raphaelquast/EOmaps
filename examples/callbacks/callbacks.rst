@@ -173,7 +173,7 @@ Callbacks : turn your maps into interactive widgets
         # plot a marker at the pixel-position
         (l,) = m.ax.plot(*pos, marker="*", animated=True)
         # add the custom marker to the blit-manager!
-        m.BM.add_artist(l)
+        m._bm.add_artist(l)
 
         # print the value at the pixel-position
         # use a low zorder so the text will be drawn below the temporary annotations

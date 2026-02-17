@@ -2292,7 +2292,7 @@ class Shapes(object):
             # TODO remove this once mpl >= 3.10 is required
             if isinstance(coll, _CollectionAccessor):
                 for c in coll.collections:
-                    self._m.BM._ignored_unmanaged_artists.add(c)
+                    self._m._bm._ignored_unmanaged_artists.add(c)
 
             return coll
 

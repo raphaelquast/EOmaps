@@ -1362,7 +1362,7 @@ class ScaleBar:
 
         # update scalebar props whenever new backgrounds are fetched
         # (e.g. to take care of updates on pan/zoom/resize)
-        self._m.BM.add_hook("before_fetch_bg", self._update, True)
+        self._m._bm.add_hook("before_fetch_bg", self._update, True)
 
         if pickable is True:
             self._make_pickable()
@@ -1649,17 +1649,17 @@ class ScaleBar:
         if BM_update:
             # note: when using this function as before_fetch_bg action, updates
             # would cause a recursion!
-            self._m.BM.update()
+            self._m._bm.update()
 
     def remove(self):
         """Remove the scalebar from the map."""
         self._unpick()
         for a in self._artists.values():
-            self._m.BM.remove_artist(a)
+            self._m._bm.remove_artist(a)
 
         # remove trigger to update scalebar properties on fetch_bg
-        self._m.BM.remove_hook("before_fetch_bg", self._update)
+        self._m._bm.remove_hook("before_fetch_bg", self._update)
 
         self._renderer = None
 
-        self._m.BM.update()
+        self._m._bm.update()

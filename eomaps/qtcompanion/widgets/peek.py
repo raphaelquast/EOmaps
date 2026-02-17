@@ -442,7 +442,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
             self.m.all.cb._click_move._execute_cbs(
                 self.m.all.cb._click_move._event, [self.cid]
             )
-            self.m.BM.update()
+            self.m._bm.update()
 
     def remove_peek_cb(self):
         if self.cid is not None:

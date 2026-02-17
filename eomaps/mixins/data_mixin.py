@@ -669,7 +669,7 @@ class DataMixin:
                 **kwargs,
             )
 
-            self.BM._refetch_layer(layer)
+            self._bm._refetch_layer(layer)
 
         if getattr(self, "_data_mask", None) is not None and not np.all(
             self._data_mask
@@ -680,7 +680,7 @@ class DataMixin:
 
         self._emit_signal("dataPlotted")
 
-        self.BM.update()
+        self._bm.update()
 
     @wraps(ColorBar._new_colorbar)
     def add_colorbar(self, *args, **kwargs):
@@ -692,8 +692,8 @@ class DataMixin:
         colorbar = ColorBar._new_colorbar(self, *args, **kwargs)
 
         self._colorbars.append(colorbar)
-        self.BM._refetch_layer(self.layer)
-        self.BM._refetch_layer("**SPINES**")
+        self._bm._refetch_layer(self.layer)
+        self._bm._refetch_layer("**SPINES**")
 
         return colorbar
 
@@ -786,7 +786,7 @@ class DataMixin:
             self._coll_dynamic = dynamic
 
             # NOTE: the actual plot is performed by the data-manager
-            # at the next call to m.BM.fetch_bg() for the corresponding layer
+            # at the next call to m._bm.fetch_bg() for the corresponding layer
             # this is called to make sure m.coll is properly set
             self._data_manager.on_fetch_bg(check_redraw=False)
 
@@ -830,7 +830,7 @@ class DataMixin:
 
         # remove previously fetched backgrounds for the used layer
         if dynamic is False:
-            self.BM._refetch_layer(layer)
+            self._bm._refetch_layer(layer)
 
         # in case the aggregation does not represent data-values
         # (e.g. count, std, var ... ) use an automatic "linear" normalization
@@ -989,7 +989,7 @@ class DataMixin:
             y_range = (np.nanmin(y[yf]), np.nanmax(y[yf]))
         else:
             # update here to ensure bounds are set
-            self.BM.update()
+            self._bm.update()
             x0, x1, y0, y1 = self.get_extent(self.crs_plot)
             x_range = (x0, x1)
             y_range = (y0, y1)
@@ -1029,7 +1029,7 @@ class DataMixin:
             self.l[layer].add_bg_artist(coll)
 
         if dynamic is True:
-            self.BM.update(clear=False)
+            self._bm.update(clear=False)
 
     @property
     def _shape_assigned(self):
@@ -1418,7 +1418,7 @@ class DataMixin:
         return
         # set the axis-size that is used to determine the number of pixels used
         # when using "shade" shapes for ALL maps objects of a figure
-        for m in self.BM._children:
+        for m in self._bm._children:
             if m.coll is not None and m.shape.name.startswith("shade_"):
                 w, h = m._get_shade_axis_size(dpi=dpi, flush=flush)
                 m.coll.plot_width = w

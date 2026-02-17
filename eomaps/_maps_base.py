@@ -342,7 +342,7 @@ class LazyCaller:
                     f"lazy method submitted for activation of '{self._m.layer}' layer: {self._name}(...)"
                 )
 
-        self._m.BM.on_layer(
+        self._m._bm.on_layer(
             func=_lazy_method,
             layer=self._m.layer,
             persistent=persistent,
@@ -583,13 +583,13 @@ class MapsBase(metaclass=_MapsMeta):
             # Make sure the figure-background patch is on an explicit layer
             # This is used to avoid having the background patch on each fetched
             # background while maintaining the capability of restoring it
-            if self.f.patch not in self.BM._bg_artists["**BG**"]:
+            if self.f.patch not in self._bm._bg_artists["**BG**"]:
                 self.f.patch.set_zorder(-2)
-                self.BM._bg_artists.add("**BG**", self.f.patch)
+                self._bm._bg_artists.add("**BG**", self.f.patch)
 
-            if self.ax.patch not in self.BM._bg_artists["**BG**"]:
+            if self.ax.patch not in self._bm._bg_artists["**BG**"]:
                 self.ax.patch.set_zorder(-1)
-                self.BM._bg_artists.add("**BG**", self.ax.patch)
+                self._bm._bg_artists.add("**BG**", self.ax.patch)
 
         # Treat cartopy geo-spines separately in the blit-manager
         # to avoid issues with overlapping spines that are drawn on each layer
@@ -613,10 +613,10 @@ class MapsBase(metaclass=_MapsMeta):
         # NOTE: this is required to avoid consecutive re-draws of axes-artists
         # such as backgrounds, spines etc. during fast executed callbacks (e.g. move)!
         if isinstance(artist, plt.Axes):
-            self.BM._managed_axes.add(artist)
+            self._bm._managed_axes.add(artist)
 
         self._artists.add(artist)
-        self.BM.run_hook("add_artist")
+        self._bm.run_hook("add_artist")
 
     def add_bg_artist(self, artist, draw=True):
         artist.set_animated(True)
@@ -625,17 +625,17 @@ class MapsBase(metaclass=_MapsMeta):
         # NOTE: this is required to avoid consecutive re-draws of axes-artists
         # such as backgrounds, spines etc. during fast executed callbacks (e.g. move)!
         if isinstance(artist, plt.Axes):
-            self.BM._managed_axes.add(artist)
+            self._bm._managed_axes.add(artist)
 
         self._bg_artists.add(artist)
-        self.BM.run_hook("add_bg_artist")
+        self._bm.run_hook("add_bg_artist")
 
         if draw:
             self.redraw(self.layer)
 
     def _remove_artist(self, artist):
         self._artists.remove(artist)
-        self.BM.run_hook("remove_artist")
+        self._bm.run_hook("remove_artist")
 
     def remove_artist(self, artist):
         self._remove_artist(artist)
@@ -643,7 +643,7 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _remove_bg_artist(self, artist):
         self._bg_artists.remove(artist)
-        self.BM.run_hook("remove_bg_artist")
+        self._bm.run_hook("remove_bg_artist")
 
     def remove_bg_artist(self, artist, draw=True):
         self._remove_bg_artist(artist)
@@ -715,11 +715,6 @@ class MapsBase(metaclass=_MapsMeta):
         return self._ll
 
     @property
-    def BM(self):
-        """Blit-Manager used to dynamically update the plots."""
-        return self._BM
-
-    @property
     def all(self):
         """
         Get a Maps-object on the "all" layer.
@@ -772,14 +767,14 @@ class MapsBase(metaclass=_MapsMeta):
         if len(args) == 0:
             # in case no argument is provided, force a complete re-draw of
             # all layers (and datasets) of the map
-            self.BM._refetch_bg = True
+            self._bm._refetch_bg = True
             if force_data_redraw and getattr(self, "_data_manager", None) is not None:
                 self._data_manager.last_extent = None
 
         else:
             # only re-fetch the required layers
             for layer in args:
-                self.BM._refetch_layer(layer)
+                self._bm._refetch_layer(layer)
                 if (
                     force_data_redraw
                     and getattr(self.l[layer], "_data_manager", None) is not None
@@ -832,14 +827,14 @@ class MapsBase(metaclass=_MapsMeta):
         Maps.util.layer_slider : Add a slider to switch layers to the map.
 
         """
-        name = self.BM._get_combined_layer_name(*args)
+        name = self._bm._get_combined_layer_name(*args)
         if not isinstance(name, str):
             _log.info("EOmaps: All layer-names are converted to strings!")
             name = str(name)
 
         # check if all layers exist
         existing_layers = self._get_layers(exclude_private=False)
-        layers_to_show, _ = self.BM._parse_multi_layer_str(name)
+        layers_to_show, _ = self._bm._parse_multi_layer_str(name)
 
         # don't check private layer-names
         layers_to_show = [i for i in layers_to_show if not i.startswith("_")]
@@ -857,11 +852,11 @@ class MapsBase(metaclass=_MapsMeta):
             )
 
         # invoke the bg_layer setter of the blit-manager
-        self.BM.bg_layer = name
-        self.BM.update()
+        self._bm.bg_layer = name
+        self._bm.update()
 
         # plot a snapshot to jupyter notebook cell if inline backend is used
-        if not self.BM._snapshot_on_update and plt.get_backend() in [
+        if not self._bm._snapshot_on_update and plt.get_backend() in [
             "module://matplotlib_inline.backend_inline"
         ]:
             self.snapshot(clear=clear)
@@ -996,7 +991,7 @@ class MapsBase(metaclass=_MapsMeta):
         Maps.cb.keypress.attach.fetch_layers : use a keypress callback to fetch layers
 
         """
-        active_layer = self.BM._bg_layer
+        active_layer = self._bm._bg_layer
         all_layers = self._get_layers()
 
         if layers is None:
@@ -1018,12 +1013,12 @@ class MapsBase(metaclass=_MapsMeta):
             self.show_layer(l)
 
         self.show_layer(active_layer)
-        self.BM.update()
+        self._bm.update()
 
     def _get_layers(self, exclude=None, exclude_private=True):
         # return a list of all (empty and non-empty) layer-names
         layers = set(self.l._get_layer_names())
-        layers = set(chain(*(m.l._get_layer_names() for m in self.BM._children)))
+        layers = set(chain(*(m.l._get_layer_names() for m in self._bm._children)))
 
         # exclude private layers
         if exclude_private:
@@ -1096,25 +1091,25 @@ class MapsBase(metaclass=_MapsMeta):
 
             with ExitStack() as stack:
                 # don't clear on layer-changes
-                stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
+                stack.enter_context(self._bm._cx_dont_clear_on_layer_change())
 
                 if len(layer) == 0:
                     layer = [self.layer]
 
                 if layer is not None:
-                    layer = self.BM._get_combined_layer_name(*layer)
+                    layer = self._bm._get_combined_layer_name(*layer)
 
                 # add the figure background patch as the bottom layer
-                initial_layer = self.BM.bg_layer
+                initial_layer = self._bm.bg_layer
 
                 if transparent is False:
-                    showlayer_name = self.BM._get_showlayer_name(
+                    showlayer_name = self._bm._get_showlayer_name(
                         layer=layer, transparent=transparent
                     )
                     self.show_layer(showlayer_name)
                     sn = self._get_snapshot()
                     # restore the previous layer
-                    self.BM._refetch_layer(showlayer_name)
+                    self._bm._refetch_layer(showlayer_name)
                     self.show_layer(initial_layer)
                 else:
                     if layer is not None:
@@ -1181,7 +1176,7 @@ class MapsBase(metaclass=_MapsMeta):
     def subplots_adjust(self, **kwargs):
         """Adjust the margins of subplots."""
         with self.delay_draw():
-            for m in self.BM._children:
+            for m in self._bm._children:
                 try:
                     m.ax.get_gridspec().update(**kwargs)
                 except AttributeError:
@@ -1201,7 +1196,7 @@ class MapsBase(metaclass=_MapsMeta):
         dpi = kwargs.get("dpi", None)
 
         # get the currently visible layer (to restore it after saving is done)
-        initial_layer = self.BM.bg_layer
+        initial_layer = self._bm.bg_layer
 
         if plt.get_backend() == "agg":
             # make sure that a draw-event was triggered when using the agg backend
@@ -1212,11 +1207,11 @@ class MapsBase(metaclass=_MapsMeta):
         with ExitStack() as stack:
 
             # don't clear on layer-changes
-            stack.enter_context(self.BM._cx_dont_clear_on_layer_change())
+            stack.enter_context(self._bm._cx_dont_clear_on_layer_change())
 
             # add the figure background patch as the bottom layer if transparent=False
             transparent = kwargs.get("transparent", False)
-            showlayer_name = self.BM._get_showlayer_name(initial_layer, transparent)
+            showlayer_name = self._bm._get_showlayer_name(initial_layer, transparent)
             self.show_layer(showlayer_name)
 
             redraw = False
@@ -1225,10 +1220,10 @@ class MapsBase(metaclass=_MapsMeta):
 
                 # clear all cached background layers before saving to make sure they
                 # are re-drawn with the correct dpi-settings
-                self.BM._refetch_bg = True
+                self._bm._refetch_bg = True
 
             # get all layer names that should be drawn
-            savelayers, alphas = self.BM._parse_multi_layer_str(showlayer_name)
+            savelayers, alphas = self._bm._parse_multi_layer_str(showlayer_name)
 
             # make sure inset-maps are drawn on top of normal maps
             savelayers.sort(key=lambda x: x.startswith("**inset_"))
@@ -1237,12 +1232,12 @@ class MapsBase(metaclass=_MapsMeta):
             for layer, alpha in zip(savelayers, alphas):
                 # get all (sorted) artists of a layer
                 if layer.startswith("**inset"):
-                    artists = self.BM.get_bg_artists(["**inset_all", layer])
+                    artists = self._bm.get_bg_artists(["**inset_all", layer])
                 else:
                     if layer.startswith("**"):
-                        artists = self.BM.get_bg_artists([layer])
+                        artists = self._bm.get_bg_artists([layer])
                     else:
-                        artists = self.BM.get_bg_artists(["all", layer])
+                        artists = self._bm.get_bg_artists(["all", layer])
 
                 for a in artists:
                     if isinstance(a, plt.Axes):
@@ -1269,7 +1264,7 @@ class MapsBase(metaclass=_MapsMeta):
             # always draw dynamic artists on top of background artists
             for layer, alpha in zip(savelayers, alphas):
                 # get all (sorted) artists of a layer
-                artists = self.BM.get_artists([layer])
+                artists = self._bm.get_artists([layer])
 
                 for a in artists:
                     zorder += 1
@@ -1277,13 +1272,13 @@ class MapsBase(metaclass=_MapsMeta):
 
             # hide all artists on non-visible layers
             # for key, val in chain(
-            #     self.BM._bg_artists.items(), self.BM._artists.items()
+            #     self._bm._bg_artists.items(), self._bm._artists.items()
             # ):
             #     if key not in savelayers:
             #         for a in val:
             #             stack.enter_context(a._cm_set(visible=False, animated=True))
 
-            for m in self.BM._children:
+            for m in self._bm._children:
                 # hide all artists on non-visible layers
 
                 # TODO use proper layer parsing not hard-coding!
@@ -1299,7 +1294,7 @@ class MapsBase(metaclass=_MapsMeta):
                 stack.enter_context(m.ax._cm_set(animated=False))
 
             # explicitly set axes to non-animated to re-enable draw cycle
-            for a in m.BM._managed_axes:
+            for a in m._bm._managed_axes:
                 stack.enter_context(a._cm_set(animated=False))
 
             # trigger a redraw of all savelayers to make sure unmanaged artists
@@ -1360,13 +1355,13 @@ class MapsBase(metaclass=_MapsMeta):
             # remove the child from the LayerNamespace
             self.l._remove_layer(self.layer)
 
-            self.BM.remove_hook(
+            self._bm.remove_hook(
                 "layer_activation", method=None, permanent=None, layer=self.layer
             )
 
             # remove the child from the parent Maps object
-            if self in self.BM._children:
-                self.BM._children.remove(self)
+            if self in self._bm._children:
+                self._bm._children.remove(self)
         except Exception:
             _log.error(
                 "EOmaps: Cleanup problem!",
@@ -1463,12 +1458,12 @@ class MapsBase(metaclass=_MapsMeta):
                 # e.g. in case a explicit figure is provided
                 self.parent.f._EOmaps_parent = self.parent._real_self
 
-        if getattr(self.parent, "_BM", None) is not None:
-            self._BM = self.parent._BM
+        if getattr(self.parent, "_bm", None) is not None:
+            self._bm = self.parent._bm
         else:
             _log.debug("New BlitManager initialized")
-            self._BM = BlitManager(self.f)
-            self._BM._bg_layer = self.layer
+            self._bm = BlitManager(self.f)
+            self._bm._bg_layer = self.layer
 
         if self.parent == self:  # use == instead of "is" since the parent is a proxy!
             # override Figure.savefig with Maps.savefig but keep original
@@ -1501,7 +1496,7 @@ class MapsBase(metaclass=_MapsMeta):
     def _init_axes(self, ax, plot_crs, **kwargs):
         if isinstance(ax, plt.Axes):
             # check if the axis is already used by another maps-object
-            if ax not in (i.ax for i in self.BM._children):
+            if ax not in (i.ax for i in self._bm._children):
                 newax = True
                 ax.set_animated(True)
                 # make sure axes are drawn once to properly set transforms etc.
@@ -1578,7 +1573,7 @@ class MapsBase(metaclass=_MapsMeta):
 
             # use the namespace from the parent map
             self._l, self._ll = next(
-                ((m._l, m._ll) for m in self.BM._children if m.ax is ax)
+                ((m._l, m._ll) for m in self._bm._children if m.ax is ax)
             )
 
     def _get_snapshot(self, layer=None):
@@ -1586,7 +1581,7 @@ class MapsBase(metaclass=_MapsMeta):
             buf = self.f.canvas.print_to_buffer()
             x = np.frombuffer(buf[0], dtype=np.uint8).reshape(buf[1][1], buf[1][0], 4)
         else:
-            x = self.BM._get_array(layer)[::-1, ...]
+            x = self._bm._get_array(layer)[::-1, ...]
         return x
 
     def _get_ax_label(self):
@@ -1648,7 +1643,7 @@ class MapsBase(metaclass=_MapsMeta):
         return self
 
     def _add_child(self, m):
-        self.BM._children.add(m)
+        self._bm._children.add(m)
 
         # execute hooks to notify the gui that a new child was added
         for action in self._after_add_child:
@@ -1674,16 +1669,16 @@ class MapsBase(metaclass=_MapsMeta):
     def _handle_spines(self):
         # put cartopy spines on a separate layer
         for spine in self.ax.spines.values():
-            if spine and spine not in self.BM._bg_artists["**SPINES**"]:
-                self.BM._bg_artists.add("**SPINES**", spine)
+            if spine and spine not in self._bm._bg_artists["**SPINES**"]:
+                self._bm._bg_artists.add("**SPINES**", spine)
 
     def _on_resize(self, event):
         # make sure the background is re-fetched if the canvas has been resized
         # (required for peeking layers after the canvas has been resized
         #  and for webagg and nbagg backends to correctly re-draw the layer)
 
-        self.BM._refetch_bg = True
-        self.BM._refetch_blank = True
+        self._bm._refetch_bg = True
+        self._bm._refetch_blank = True
 
         # update the figure dimensions in case shading is used.
         # Avoid flushing events during resize
@@ -1693,7 +1688,7 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _on_close(self, event):
         # reset attributes that might use up a lot of memory when the figure is closed
-        for m in list(self.BM._children):
+        for m in list(self._bm._children):
             if hasattr(m.f, "_EOmaps_parent"):
                 m.f._EOmaps_parent = None
 
@@ -1703,10 +1698,10 @@ class MapsBase(metaclass=_MapsMeta):
         gc.collect
 
     def _on_xlims_change(self, *args, **kwargs):
-        self.BM._refetch_bg = True
+        self._bm._refetch_bg = True
 
     def _on_ylims_change(self, *args, **kwargs):
-        self.BM._refetch_bg = True
+        self._bm._refetch_bg = True
 
     def on_layer_activation(self, func, layer=None, persistent=False, **kwargs):
         """
@@ -1779,7 +1774,7 @@ class MapsBase(metaclass=_MapsMeta):
         def cb(layer):
             func(m=m, **kwargs)
 
-        self.BM.on_layer(func=cb, layer=layer, persistent=persistent)
+        self._bm.on_layer(func=cb, layer=layer, persistent=persistent)
 
     @property
     def on_all_layers(self):
@@ -2078,12 +2073,12 @@ class MapsBase(metaclass=_MapsMeta):
 
         """
         try:
-            self.BM._disable_draw = True
-            self.BM._disable_update = True
+            self._bm._disable_draw = True
+            self._bm._disable_update = True
 
             yield
         finally:
-            self.BM._disable_draw = False
-            self.BM._disable_update = False
+            self._bm._disable_draw = False
+            self._bm._disable_update = False
             if redraw:
                 self.redraw()

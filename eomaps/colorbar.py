@@ -559,7 +559,7 @@ class ColorBarBase:
 
     def _redraw(self, *args, **kwargs):
         # only re-draw if the corresponding layer is visible
-        if not self._m.BM._layer_visible(self.layer):
+        if not self._m._bm._layer_visible(self.layer):
             return
 
         self.ax_cb.clear()
@@ -677,7 +677,7 @@ class ColorBar(ColorBarBase):
         # colorbars that are not on the visible layer
 
         super()._hide_singular_axes()
-        if not self._m.BM._layer_visible(self.layer):
+        if not self._m._bm._layer_visible(self.layer):
             self.ax_cb.set_visible(False)
             self.ax_cb_plot.set_visible(False)
 
@@ -705,7 +705,7 @@ class ColorBar(ColorBarBase):
         else:
             # check if self is actually just another layer of an existing Maps object
             # that already has a colorbar assigned
-            for m in self._m.BM._children:
+            for m in self._m._bm._children:
                 if m is not self._m and m.ax is self._m.ax:
                     if m.colorbar is not None:
                         if m.colorbar._parent_cb is None:
@@ -721,7 +721,7 @@ class ColorBar(ColorBarBase):
         """Remove the colorbar from the map."""
         if self._dynamic_shade_indicator:
             try:
-                self._m.BM.remove_hook(
+                self._m._bm.remove_hook(
                     "before_fetch_bg", self._check_data_updated, True
                 )
             except Exception:
@@ -770,7 +770,7 @@ class ColorBar(ColorBarBase):
 
     def _set_hist_size(self, *args, **kwargs):
         super()._set_hist_size(*args, **kwargs)
-        self._m.BM._refetch_layer(self.layer)
+        self._m._bm._refetch_layer(self.layer)
 
     def set_hist_size(self, size=None):
         """
@@ -788,7 +788,7 @@ class ColorBar(ColorBarBase):
             The default is None.
         """
         self._set_hist_size(size, update_all=True)
-        self._m.BM.update()
+        self._m._bm.update()
 
     def _check_data_updated(self, *args, **kwargs):
         # make sure the artist is updated before checking for new data
@@ -822,9 +822,9 @@ class ColorBar(ColorBarBase):
             self._cid_redraw = False
 
         if self._cid_redraw is False:
-            self._m.BM.add_hook("before_fetch_bg", self._check_data_updated, True)
+            self._m._bm.add_hook("before_fetch_bg", self._check_data_updated, True)
 
-            self._m.BM.on_layer(
+            self._m._bm.on_layer(
                 lambda *args, **kwargs: self._redraw,
                 layer=self.layer,
                 persistent=True,
@@ -1205,7 +1205,7 @@ class ColorBar(ColorBarBase):
                 left=False, top=False, labelleft=False, labeltop=False, which="both"
             )
 
-        self._m.BM._refetch_layer(self.layer)
+        self._m._bm._refetch_layer(self.layer)
 
     def _set_tick_formatter(self):
         if "format" in self._cb_kwargs:
@@ -1310,7 +1310,7 @@ class ColorBar(ColorBarBase):
             # no need to redraw the background for dynamically updated artists
             self._m.redraw(self.layer)
         else:
-            self._m.BM.update()
+            self._m._bm.update()
 
     def tick_params(self, what="colorbar", **kwargs):
         """Set the appearance of the colorbar (or histogram) ticks."""

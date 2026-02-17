@@ -107,7 +107,7 @@ class AddMixin:
 
         # add the scalebar to the map at the desired position
         s._add_scalebar(pos=pos, azim=rotation, pickable=pickable)
-        self.BM.update()
+        self._bm.update()
         return s
 
     def add_logo(
@@ -497,7 +497,7 @@ class AddMixin:
         if layer is None:
             layer = self.layer
         self.l[layer].add_artist(a)
-        self.BM.update()
+        self._bm.update()
 
         return a
 
@@ -591,7 +591,7 @@ class AddMixin:
             kwargs passed to the matplotlib patch.
             (e.g. `zorder`, `facecolor`, `edgecolor`, `linewidth`, `alpha` etc.)
         update : bool, optional
-            If True, call m.BM.update() to immediately show dynamic annotations
+            If True, call m._bm.update() to immediately show dynamic annotations
             If False, dynamic annotations will only be shown at the next update
 
         Examples
@@ -643,7 +643,7 @@ class AddMixin:
         )
 
         if permanent is False and update:
-            self.BM.update()
+            self._bm.update()
 
         return marker
 
@@ -685,7 +685,7 @@ class AddMixin:
 
             The default is None.
         update : bool, optional
-            If True, call m.BM.update() to immediately show dynamic annotations
+            If True, call m._bm.update() to immediately show dynamic annotations
             If False, dynamic annotations will only be shown at the next update
         **kwargs
             kwargs passed to m.cb.annotate
@@ -811,7 +811,7 @@ class AddMixin:
                 )
 
         if update:
-            self.BM.update(clear=False)
+            self._bm.update(clear=False)
         return ann
 
     def add_background_patch(self, color, layer=None, **kwargs):
@@ -856,9 +856,3 @@ class AddMixin:
 
         self.l[layer].add_bg_artist(art)
         return art
-
-    # for backwards compatibility
-    # TODO deprecate "text" in favor of "add_text"
-    # TODO deprecate "indicate_extent" in favor of "add_extent_indicator"
-    text = add_text
-    indicate_extent = add_extent_indicator

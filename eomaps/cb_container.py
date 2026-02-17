@@ -152,7 +152,7 @@ class _CallbackContainer(object):
 
             # make sure that "all" layer callbacks are executed before other callbacks
             ms, malls = [], []
-            for m in self._m.BM._children:
+            for m in self._m._bm._children:
                 if m.layer == "all":
                     malls.append(m)
                 else:
@@ -191,7 +191,7 @@ class _CallbackContainer(object):
     def _clear_temporary_artists(self):
         while len(self._temporary_artists) > 0:
             art = self._temporary_artists.pop(-1)
-            self._m.BM._artists_to_clear.setdefault(self._method, []).append(art)
+            self._m._bm._artists_to_clear.setdefault(self._method, []).append(art)
 
     def _sort_cbs(self, cbs):
         _cb_list = self._attach._available_callbacks()
@@ -354,7 +354,7 @@ class _CallbackContainer(object):
         if self.execute_on_all_layers or layer == "all":
             return True
 
-        return self._m.BM._layer_visible(layer)
+        return self._m._bm._layer_visible(layer)
 
     @property
     def execute_on_all_layers(self):
@@ -1131,7 +1131,7 @@ class ClickContainer(_ClickContainer):
     def _reset_cids(self):
         # clear all temporary artists
         self._clear_temporary_artists()
-        self._m.BM._clear_temp_artists(self._method)
+        self._m._bm._clear_temp_artists(self._method)
 
         if self._cid_button_press_event:
             self._m.f.canvas.mpl_disconnect(self._cid_button_press_event)
@@ -1167,9 +1167,9 @@ class ClickContainer(_ClickContainer):
                     # forward callbacks to the connected maps-objects
                     obj._fwd_cb(event)
 
-                self._m.BM._clear_temp_artists(self._method)
+                self._m._bm._clear_temp_artists(self._method)
 
-                self._m.parent.BM.update(clear=self._method)
+                self._m.parent._bm.update(clear=self._method)
             except ReferenceError:
                 pass
 
@@ -1303,7 +1303,7 @@ class MoveContainer(ClickContainer):
     def _reset_cids(self):
         # clear all temporary artists
         self._clear_temporary_artists()
-        self._m.BM._clear_temp_artists(self._method)
+        self._m._bm._clear_temp_artists(self._method)
 
         if self._cid_motion_event:
             self._m.f.canvas.mpl_disconnect(self._cid_motion_event)
@@ -1324,7 +1324,7 @@ class MoveContainer(ClickContainer):
                         if self._method == "move":
                             for obj in self._objs:
                                 obj._clear_temporary_artists()
-                            self._m.BM._clear_temp_artists(self._method)
+                            self._m._bm._clear_temp_artists(self._method)
                         return
                 else:
                     if event.button:  # or (event.inaxes != self._m.ax):
@@ -1332,7 +1332,7 @@ class MoveContainer(ClickContainer):
                         if self._method == "move":
                             for obj in self._objs:
                                 obj._clear_temporary_artists()
-                            self._m.BM._clear_temp_artists(self._method)
+                            self._m._bm._clear_temp_artists(self._method)
                         return
 
                 # execute onclick on the maps object that belongs to the clicked axis
@@ -1347,7 +1347,7 @@ class MoveContainer(ClickContainer):
                     # clear temporary artists before executing new callbacks to avoid
                     # having old artists around when callbacks are triggered again
                     obj._clear_temporary_artists()
-                    self._m.BM._clear_temp_artists(self._method)
+                    self._m._bm._clear_temp_artists(self._method)
                     obj._onclick(event)
 
                     # forward callbacks to the connected maps-objects
@@ -1358,9 +1358,9 @@ class MoveContainer(ClickContainer):
                 if call_update:
                     if self._button_down:
                         if event.button:
-                            self._m.parent.BM.update(clear=self._method)
+                            self._m.parent._bm.update(clear=self._method)
                     else:
-                        self._m.parent.BM.update(clear=self._method)
+                        self._m.parent._bm.update(clear=self._method)
 
             except ReferenceError:
                 pass
@@ -1688,7 +1688,7 @@ class PickContainer(_ClickContainer):
         # make sure temporary artists are cleared before executing new callbacks
         # to avoid having old artists around when callbacks are triggered again
         self._clear_temporary_artists()
-        self._m.BM._clear_temp_artists(self._method)
+        self._m._bm._clear_temp_artists(self._method)
 
         clickdict = self._get_pickdict(event)
 
@@ -1733,7 +1733,7 @@ class PickContainer(_ClickContainer):
     def _reset_cids(self):
         # clear all temporary artists
         self._clear_temporary_artists()
-        self._m.BM._clear_temp_artists(self._method)
+        self._m._bm._clear_temp_artists(self._method)
 
         for method, cid in self._cid_pick_event.items():
             self._m.f.canvas.mpl_disconnect(cid)
@@ -1910,7 +1910,7 @@ class KeypressContainer(_CallbackContainer):
     def _reset_cids(self):
         # clear all temporary artists
         self._clear_temporary_artists()
-        self._m.BM._clear_temp_artists(self._method)
+        self._m._bm._clear_temp_artists(self._method)
 
         if self._cid_keypress_event:
             self._m.f.canvas.mpl_disconnect(self._cid_keypress_event)
@@ -1971,7 +1971,7 @@ class KeypressContainer(_CallbackContainer):
                 # DO NOT UPDATE in here!
                 # otherwise keypress modifiers for peek-layer callbacks will
                 # have glitches!
-                # self._m.parent.BM.update(clear=self._method)
+                # self._m.parent._bm.update(clear=self._method)
             except ReferenceError:
                 pass
 

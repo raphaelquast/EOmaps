@@ -98,8 +98,6 @@ def setup(app):
     Maps.cb.move.attach.__name__ = "attach"
     Maps.cb.move.get.__name__ = "get"
 
-    Maps.BM.__name__ = "BM"
-
     Maps.data_specs.__name__ = "data_specs"
 
 

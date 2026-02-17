@@ -4,14 +4,6 @@ from itertools import chain
 
 from eomaps import Maps, widgets
 
-# TODO there must be a better way than this...
-# BM needs to be a property otherwise there are problems with jupyter notebooks
-# In order to make BM still accessible to sphinx, override it prior to generating
-# the autodoc-files
-from eomaps._blit_manager import BlitManager
-
-Maps.BM = BlitManager
-
 
 def get_autosummary(
     currentmodule="eomaps.eomaps",
@@ -75,7 +67,6 @@ def make_feature_toctree_file():
         "read_file",
         "util",
         "add_wms",
-        "BM",
         "data_specs",
     ):
         members.extend(get_members(Maps, key, False))

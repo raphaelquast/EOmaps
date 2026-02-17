@@ -98,7 +98,6 @@ class MapsGrid(MultiCaller):
         "get_layout",
         "apply_layout",
         "subplots_adjust",
-        "BM",
         "CRS",
         "fetch_layers",
         "new_inset_map",
