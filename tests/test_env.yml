@@ -27,9 +27,6 @@ dependencies:
   - requests
   # --------------to support multiple Qt versions
   - qtpy
-  # --------------perform tests on PyQt5 for now
-  - PyQt5
-
   # --------------for jupyter widgets
   - ipywidgets
 
@@ -37,6 +34,7 @@ dependencies:
   - coveralls
   - pytest
   - pytest-cov
+  - pytest-qt
   # --------------for testing the docs
   # (e.g. parsing .rst code-blocks and Jupyter Notebooks)
   - docutils
