@@ -429,8 +429,10 @@ class Shapes(object):
 
                 # check if the first element of x0 is nonzero...
                 # (to avoid slow performance of np.any for large arrays)
-                if not np.any(m._data_manager.x0.take(0)):
-                    return None
+                # TODO... why do we need this?
+                # it results in no proper radius estimation for x0[0] = 0
+                # if not np.any(m._data_manager.x0.take(0)):
+                #     return None
 
                 _log.info("EOmaps: Estimating shape radius...")
                 radiusx, radiusy = Shapes._estimate_radius(m, radius_crs)
