@@ -66,8 +66,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_simple_map(self):
         m = Maps(4326)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.plot_map()
         plt.close(m.f)
 
@@ -78,7 +77,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.coastline()
         m.set_data(data=self.data, x="x", y="y", crs=3857, cpos="ur", cpos_radius=1)
         m.plot_map()
-        m.indicate_extent(20, 10, 60, 76, crs=4326, fc="r", ec="k", alpha=0.5)
+        m.add_extent_indicator(20, 10, 60, 76, crs=4326, fc="r", ec="k", alpha=0.5)
         plt.close(m.f)
 
     def test_simple_plot_shapes(self):
@@ -247,8 +246,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_alpha_and_splitbins(self):
         m = Maps(4326)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.set_shape.rectangles()
         m.set_classify.Percentiles(pct=[0.1, 0.2])
 
@@ -258,8 +256,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_classification(self):
         m = Maps(4326)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.set_shape.rectangles(radius=1, radius_crs="out")
 
         m.set_classify.Quantiles(k=5)
@@ -270,8 +267,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_add_callbacks(self):
         m = Maps(3857, layer="layername")
-        m.data = self.data.sample(10)
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data.sample(10), x="x", y="y", crs=3857)
         m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
@@ -350,20 +346,19 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_add_annotate(self):
         m = Maps()
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
 
         m.plot_map()
 
-        m.add_annotation(ID=m.data["value"].idxmax(), fontsize=15, text="adsf")
+        m.add_annotation(ID=self.data["value"].idxmax(), fontsize=15, text="adsf")
 
         def customtext(m, ID, val, pos, ind):
             return f"{m.data_specs}\n {val}\n {pos}\n {ID} \n {ind}"
 
-        m.add_annotation(ID=m.data["value"].idxmin(), text=customtext)
+        m.add_annotation(ID=self.data["value"].idxmin(), text=customtext)
 
         m.add_annotation(
-            xy=(m.data.x[0], m.data.y[0]), xy_crs=3857, fontsize=15, text="adsf"
+            xy=(self.data.x[0], self.data.y[0]), xy_crs=3857, fontsize=15, text="adsf"
         )
 
         plt.close(m.f)
@@ -371,8 +366,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_marker(self):
         crs = Maps.CRS.Orthographic(central_latitude=45, central_longitude=45)
         m = Maps(crs)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.plot_map(set_extent=True)
 
         m.add_marker(
@@ -449,7 +443,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         m.add_marker(
-            xy=(m.data.x[10], m.data.y[10]),
+            xy=(self.data.x[10], self.data.y[10]),
             xy_crs=3857,
             facecolor="none",
             edgecolor="r",
@@ -466,8 +460,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_copy(self):
         m = Maps(3857)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
 
         m.set_classify.Quantiles(k=5)
 
@@ -478,7 +471,7 @@ class TestBasicPlotting(unittest.TestCase):
             == {"x": None, "y": None, "parameter": None, "crs": 4326}
         )
         self.assertTrue([*m._classify_specs] == [*m2._classify_specs])
-        self.assertTrue(m2.data == None)
+        self.assertTrue(m2.data_specs.data == None)
 
         m3 = m.copy(data_specs=True)
 
@@ -487,16 +480,15 @@ class TestBasicPlotting(unittest.TestCase):
             == m3.data_specs[["x", "y", "parameter", "crs"]]
         )
         self.assertTrue([*m._classify_specs] == [*m3._classify_specs])
-        self.assertFalse(m3.data is m.data)
-        self.assertTrue(m3.data.equals(m.data))
+        self.assertFalse(m3.data_specs.data is m.data_specs.data)
+        self.assertTrue(m3.data_specs.data.equals(m.data_specs.data))
 
         m3.plot_map()
         plt.close(m3.f)
 
     def test_copy_connect(self):
         m = Maps(3857)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.set_shape.rectangles()
         m.set_classify.Quantiles(k=5)
         m.plot_map()
@@ -536,8 +528,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_prepare_data(self):
         m = Maps()
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857, parameter="value")
+        m.set_data(self.data, x="x", y="y", crs=3857, parameter="value")
         data = m._data_manager._prepare_data()
 
         # TODO add proper checks here!
@@ -967,8 +958,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_combine_layers(self):
         m = Maps(4326)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.plot_map()
 
         m2 = m.new_layer("ocean")

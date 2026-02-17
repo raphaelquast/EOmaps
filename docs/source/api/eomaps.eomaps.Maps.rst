@@ -31,7 +31,6 @@ Properties
     :template: obj_with_attributes_no_toc.rst
     :nosignatures:
 
-    Maps.data
     Maps.data_specs
     Maps.colorbar
 

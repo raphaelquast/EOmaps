@@ -100,7 +100,7 @@ class _CallbacksBase:
         if text is None:
             # use "ind is not None" to distinguish between click and pick
             # TODO implement better distinction between click and pick!
-            if self.m.data is not None and ind is not None:
+            if self.m.data_specs.data is not None and ind is not None:
                 if not multipick:
                     x, y = [
                         np.format_float_positional(i, trim="-", precision=pos_precision)

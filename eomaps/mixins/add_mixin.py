@@ -464,7 +464,7 @@ class AddMixin:
             The position of the text in axis-coordinates (0-1).
             The default is 0.5, 1.01.
         kwargs :
-            Additional kwargs are passed to `m.text()`
+            Additional kwargs are passed to `m.add_text()`
             The defaults are:
 
             - `"fontsize": "large"`
@@ -482,7 +482,7 @@ class AddMixin:
         kwargs.setdefault("verticalalignment", "bottom")
         kwargs.setdefault("transform", self.ax.transAxes)
 
-        self.text(x, y, title, layer=self.layer, **kwargs)
+        self.add_text(x, y, title, layer=self.layer, **kwargs)
 
     @wraps(plt.Figure.text)
     def add_text(self, *args, layer=None, **kwargs):
@@ -551,7 +551,7 @@ class AddMixin:
         Parameters
         ----------
         ID : any
-            The index-value of the pixel in m.data.
+            The index-value of the pixel in m.data_specs.data.
         xy : tuple
             A tuple of the position of the pixel provided in "xy_crs".
             If "xy_crs" is None, xy must be provided in the plot-crs!

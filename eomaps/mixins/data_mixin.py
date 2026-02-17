@@ -118,16 +118,6 @@ class DataMixin:
         if len(self._colorbars) > 0:
             return self._colorbars[-1]
 
-    @property
-    def data(self):
-        """The data assigned to this Maps-object."""
-        return self.data_specs.data
-
-    @data.setter
-    def data(self, val):
-        # for downward-compatibility
-        self.data_specs.data = val
-
     def set_data(
         self,
         data=None,
@@ -1148,8 +1138,7 @@ class DataMixin:
         return scheme
 
     def _set_default_shape(self):
-        if self.data is not None:
-            # size = np.size(self.data)
+        if self.data_specs.data is not None:
             size = np.size(self._data_manager.z_data)
             shape = np.shape(self._data_manager.z_data)
 
@@ -1299,7 +1288,7 @@ class DataMixin:
             return val
 
     def _calc_vmin_vmax(self, vmin=None, vmax=None):
-        if self.data is None:
+        if self.data_specs.data is None:
             return vmin, vmax
 
         calc_min, calc_max = vmin is None, vmax is None
