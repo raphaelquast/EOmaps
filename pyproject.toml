@@ -76,7 +76,10 @@ gui = [
     ]
 
 test = [
-    "eomaps[io, classify, wms, shade, gui, test]",
+    "eomaps[io, classify, wms, shade, gui]",
+    "docutils",
+    "nbformat",
+    "ipywidgets",
     "pytest",
     "pytest-mpl",
     "pytest-qt",
