@@ -7,7 +7,7 @@
 
 import logging
 from contextlib import ExitStack, contextmanager
-from functools import lru_cache
+from functools import lru_cache, wraps
 from itertools import chain
 import weakref
 
@@ -672,8 +672,6 @@ class BlitManager(LayerParser, Hooks):
             func(layer, **kwargs)
             if persistent is False:
                 return
-
-        from functools import wraps
 
         @wraps(func)
         def layer_callback(layer):
