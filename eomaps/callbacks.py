@@ -879,7 +879,7 @@ class _MoveClickPickCallbacks(_CallbacksBase):
             self.m.cb.click.add_temporary_artist(marker)
 
             # make sure to clear the marker at the next update to avoid savefig issues
-            def doit():
+            def doit(*args, **kwargs):
                 self.m.BM._artists_to_clear.setdefault("peek", []).append(marker)
                 self.m.BM._clear_temp_artists("peek")
 

@@ -974,7 +974,7 @@ class BlitManager(LayerParser, Hooks):
         else:
             bbox = Bbox.from_bounds(*bbox_bounds)
 
-        def action():
+        def action(*args, **kwargs):
             renderer = self._get_renderer()
             if renderer is None:
                 return

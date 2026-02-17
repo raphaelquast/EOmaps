@@ -297,7 +297,7 @@ class ShapeDrawer:
             if i is not None
         )
 
-    def redraw(self, blit=False, *args):
+    def redraw(self, *args, blit=False, **kwargs):
         """Trigger re-drawing shapes."""
         self._m.BM.blit_artists(self._indicator_artists, bg=None, blit=blit)
 
