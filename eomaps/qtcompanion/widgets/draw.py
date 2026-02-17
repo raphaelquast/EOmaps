@@ -111,7 +111,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
         self.addTab(newtabwidget, "+")
         # don't show the close button for this tab
-        self.tabBar().setTabButton(self.count() - 1, self.tabBar().RightSide, None)
+        self.tabBar().setTabButton(self.count() - 1, QtWidgets.QTabBar.RightSide, None)
 
         self.tabBarClicked.connect(self.tabbar_clicked)
         self.setCurrentIndex(0)

@@ -1031,7 +1031,7 @@ class LayerTabBar(QtWidgets.QTabBar):
 
             if layer == "all" or layer == self.m.layer:
                 # don't show the close button for this tab
-                self.setTabButton(self.count() - 1, self.RightSide, None)
+                self.setTabButton(self.count() - 1, QtWidgets.QTabBar.RightSide, None)
 
         self.color_active_tab()
 
@@ -1443,7 +1443,7 @@ class ArtistEditorTabs(LayerArtistTabs):
 
             if layer == "all" or layer == self.m.layer:
                 # don't show the close button for this tab
-                tabbar.setTabButton(self.count() - 1, tabbar.RightSide, None)
+                tabbar.setTabButton(self.count() - 1, QtWidgets.QTabBar.RightSide, None)
 
         tabbar.color_active_tab()
 

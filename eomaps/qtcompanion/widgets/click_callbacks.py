@@ -120,7 +120,7 @@ class PickMapDropdown(QtWidgets.QComboBox):
         # long layer names... (full name is shown in dropdown)
         self.setMinimumWidth(150)
         self.setMaximumWidth(150)
-        self.setSizeAdjustPolicy(self.AdjustToContents)
+        self.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
 
     def enterEvent(self, e):
         if self.window().showhelp is True:

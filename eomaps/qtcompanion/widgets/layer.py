@@ -34,7 +34,7 @@ class AutoUpdatePeekLayerDropdown(QtWidgets.QComboBox):
 
         self.update_layers()
 
-        self.setSizeAdjustPolicy(self.AdjustToMinimumContentsLengthWithIcon)
+        self.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToMinimumContentsLengthWithIcon)
 
         self.activated.connect(self.set_last_active)
 
