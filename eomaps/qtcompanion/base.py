@@ -472,8 +472,9 @@ class AlwaysOnTopWindow(QtWidgets.QMainWindow):
         self.out_alpha = 0.25
         self.m = m
 
-        # get the current PyQt app and connect the focus-change callback
-        self.app = QtWidgets.QApplication([]).instance()
+        self.app = QtWidgets.QApplication.instance()
+        if self.app is None:
+            self.app = QtWidgets.QApplication([])
 
         # make sure the window does not steal focus from the matplotlib-canvas
         # on show (otherwise callbacks are inactive as long as the window is focused!)
