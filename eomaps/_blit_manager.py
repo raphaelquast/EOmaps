@@ -1442,11 +1442,12 @@ class BlitManager(LayerParser, Hooks):
 
     # TODO fix this for EOmaps v9.0!
     def _clear_all_temp_artists(self):
-        for method in self._m.cb._methods:
-            container = getattr(self._m.cb, method, None)
-            if container:
-                container._clear_temporary_artists()
-            self._clear_temp_artists(method)
+        _log.warning("clear_all_temp_artists NotImplemented for EOmaps v9.0")
+        # for method in self._m.cb._methods:
+        #     container = getattr(self._m.cb, method, None)
+        #     if container:
+        #         container._clear_temporary_artists()
+        #     self._clear_temp_artists(method)
 
     def _clear_temp_artists(self, method, forward=True):
         # clear artists from connected methods
