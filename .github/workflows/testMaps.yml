@@ -34,7 +34,7 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install -e .[test]
-          python -m pytest -v --cov=eomaps --cov-report=xml -n auto
+          python -m pytest -v --cov=eomaps --cov-report=xml --numprocesses=auto
       - name: Upload Image Comparison Artefacts
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
