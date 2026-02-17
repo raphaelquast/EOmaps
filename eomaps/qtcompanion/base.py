@@ -139,7 +139,7 @@ class BasicCheckableToolButton(QtWidgets.QToolButton):
         if self.active_icon:
             self.setIcon(self.active_icon)
 
-        return super().enterEvent(event)
+        return super().leaveEvent(event)
 
     def swap_icon(self, *args, **kwargs):
         if self.normal_icon and self.hoover_icon:

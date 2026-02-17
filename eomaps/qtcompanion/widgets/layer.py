@@ -241,7 +241,7 @@ class AutoUpdateLayerMenuButton(QtWidgets.QPushButton):
         if self.active_icon:
             self.setIcon(self.active_icon)
 
-        return super().enterEvent(event)
+        return super().leaveEvent(event)
 
     def enterEvent(self, e):
         if self.hoover_icon and not self.isChecked():
