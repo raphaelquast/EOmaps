@@ -1543,7 +1543,9 @@ class ArtistEditorTabs(LayerArtistTabs):
         layout.addLayout(layer_actions_layout)
 
         # indicate all pending methods (e.g. layer-activation callbacks) in the widget tab
-        for method in self.m.BM._Hooks__hooks["layer_activation"][False].get(layer, []):
+        for method in self.m.BM._get_hooks(
+            "layer_activation", layer=layer, permanent=False
+        ):
             layout.addWidget(
                 QtWidgets.QLabel(
                     f"<b style='color: chocolate'>PENDING Method:</b>"
