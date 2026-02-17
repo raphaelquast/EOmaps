@@ -37,6 +37,7 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-mpl
+  - pytest-qt
   # --------------for testing the docs
   # (e.g. parsing .rst code-blocks and Jupyter Notebooks)
   - docutils
