@@ -78,7 +78,9 @@ gui = [
 test = [
     "eomaps[io, classify, wms, shade, gui, test]",
     "pytest",
-    "pytest-mpl"
+    "pytest-mpl",
+    "pytest-qt",
+    "pytest-cov"
 ]
 
 docs = [
