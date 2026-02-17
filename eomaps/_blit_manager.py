@@ -694,6 +694,13 @@ class BlitManager(LayerParser, Hooks):
 
             self.add_hook("layer_activation", layer_callback, persistent, layer=layer)
 
+        self.run_hook("on_layer_callback_added")
+
+        # clear cached backgrounds to enforce a re-draw of the target-layer
+        for l in list(self._bg_layers):
+            if layer in l.split("|"):
+                self._bg_layers.pop(l)
+
     def fetch_bg(self, layer=None, bbox=None):
         """
         Trigger fetching (and caching) the background for a given layer-name.

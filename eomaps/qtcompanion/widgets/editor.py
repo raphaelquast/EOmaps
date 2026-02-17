@@ -1134,8 +1134,10 @@ class ArtistEditorTabs(LayerArtistTabs):
 
         self.currentChanged.connect(self.populate_layer)
 
-        self.m.BM.add_hook("add_bg_artist", self.populate, True)
-        self.m.BM.add_hook("remove_bg_artist", self.populate, True)
+        self.m.BM.add_hook("add_bg_artist", self.populate_layer, True)
+        self.m.BM.add_hook("remove_bg_artist", self.populate_layer, True)
+
+        self.m.BM.add_hook("on_layer_callback_added", self.populate_layer, True)
 
         self.m._on_show_companion_widget.append(self.populate)
         self.m._on_show_companion_widget.append(self.populate_layer)
