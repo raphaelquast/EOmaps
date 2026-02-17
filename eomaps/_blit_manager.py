@@ -282,6 +282,12 @@ class Hooks:
         if name == "layer_activation":
             self.figure._EOmaps_parent._emit_signal("lazyLayerActivated")
 
+    def _get_hooks(self, name, layer="all", permanent=False):
+        if (hook := self.__hooks.get(name, None)) is None:
+            return []
+
+        return hook.get(permanent, {}).get(layer, [])
+
     def __run(self, name, layer="all", **kwargs):
         if (hook := self.__hooks.get(name, None)) is None:
             return
