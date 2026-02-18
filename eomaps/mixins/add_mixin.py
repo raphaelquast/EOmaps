@@ -39,10 +39,10 @@ class AddMixin:
 
     def __init__(self, *args, **kwargs):
         if WebMapContainer is not None:
-            self.add_wms = self.add_wms(weakref.proxy(self))
+            self.add_wms = WebMapContainer(weakref.proxy(self))
             self._wms_legend = dict()
 
-        self.add_feature = self.add_feature(weakref.proxy(self))
+        self.add_feature = NaturalEarthFeatures(weakref.proxy(self))
 
         if self.parent == self:
             self._grid = GridFactory(self)

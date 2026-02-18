@@ -58,7 +58,7 @@ class DataMixin:
 
         self.new_layer_from_file = new_layer_from_file(weakref.proxy(self))
 
-        self.set_shape = self.set_shape(weakref.proxy(self))
+        self.set_shape = Shapes(weakref.proxy(self))
         self._shape = None
         # the dpi used for shade shapes
         self._shade_dpi = None
