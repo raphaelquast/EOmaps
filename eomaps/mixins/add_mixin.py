@@ -450,9 +450,12 @@ class AddMixin:
 
         return out_d_int, out_d_tot
 
-    def add_title(self, title, x=0.5, y=1.01, **kwargs):
+    def add_title(self, title, **kwargs):
         """
         Convenience function to add a title to the map.
+
+        If used multiple-times, the title will be updated instead of creating
+        a new artist that will be added to the map.
 
         (The title will be visible at the assigned layer.)
 
@@ -477,18 +480,26 @@ class AddMixin:
         :py:meth:`Maps.text` : General function to add text to the figure.
 
         """
+        if (t := getattr(self, "_title", None)) is not None:
+            kwargs["text"] = title
+            t.set(**kwargs)
+            self._bm.update(layers=(self.layer))
+            return t
+
+        kwargs["s"] = title
+        kwargs.setdefault("x", 0.5)
+        kwargs.setdefault("y", 1.01)
         kwargs.setdefault("fontsize", "large")
         kwargs.setdefault("horizontalalignment", "center")
         kwargs.setdefault("verticalalignment", "bottom")
-        kwargs.setdefault("transform", self.ax.transAxes)
 
-        self.add_text(x, y, title, layer=self.layer, **kwargs)
+        self._title = self.add_text(**kwargs)
 
     @wraps(plt.Figure.text)
     def add_text(self, *args, layer=None, **kwargs):
         """Add text to the map."""
+
         kwargs.setdefault("animated", True)
-        kwargs.setdefault("horizontalalignment", "center")
         kwargs.setdefault("verticalalignment", "center")
         kwargs.setdefault("transform", self.ax.transAxes)
 
