@@ -646,7 +646,13 @@ class DataMixin:
             self.f.canvas.draw_idle()
         else:
             # dont set extent if "m.set_extent" was called explicitly
-            if set_extent and self._set_extent_on_plot:
+            # don't set extent if layer is not explicitly visible to avoid
+            # changing the plot-extent when peeking on a layer that is not yet fetched
+            if (
+                set_extent
+                and self._set_extent_on_plot
+                and self._bm._layer_visible(layer)
+            ):
                 # note bg-layers are automatically triggered for re-draw
                 # if the extent changes!
                 self._data_manager._set_lims()
@@ -971,7 +977,13 @@ class DataMixin:
             if self.shape.name == "shade_points":
                 df = df.to_dataframe().reset_index()
 
-        if set_extent is True and self._set_extent_on_plot is True:
+        # don't set extent if layer is not explicitly visible to avoid
+        # changing the plot-extent when peeking on a layer that is not yet fetched
+        if (
+            set_extent is True
+            and self._set_extent_on_plot is True
+            and self._bm._layer_visible(layer)
+        ):
             # convert to a numpy-array to support 2D indexing with boolean arrays
             x, y = np.asarray(df.x), np.asarray(df.y)
             xf, yf = np.isfinite(x), np.isfinite(y)
