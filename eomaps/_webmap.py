@@ -410,6 +410,8 @@ class _WMTSLayer(_WebMapLayer):
                 )
                 # used to display pending method in widget
                 func.__qualname__ = f"Add WebMap layer: {self.name}"
+                if layer not in m._get_layers():
+                    m.new_layer(layer)
 
                 self._m._bm.on_layer(
                     func=func,
@@ -524,6 +526,9 @@ class _WMSLayer(_WebMapLayer):
                 )
                 # used to display pending method in widget
                 func.__qualname__ = f"Add WebMap layer: {self.name}"
+
+                if layer not in m._get_layers():
+                    m.new_layer(layer)
 
                 m._bm.on_layer(
                     func=func,
@@ -1235,6 +1240,8 @@ class _XyzTileService:
                 func = partial(self._do_add_layer, **kwargs)
                 # used to display pending method in widget
                 func.__qualname__ = f"Add WebMap layer: {self.name}"
+                if layer not in self._m._get_layers():
+                    self._m.new_layer(layer)
 
                 self._m._bm.on_layer(
                     func=func,
