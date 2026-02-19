@@ -286,65 +286,67 @@ class MultiCaller:
 
 class LazyCaller:
     def __init__(self, m, attr, name="Maps"):
-        self._m = m
-        self._attr = attr
-        self._name = name
+        self.__m = m
+        self.__attr = attr
+        self.__name = name
 
     def __dir__(self):
         # in case attributes ready for lazy-evaluation are explicitly defined,
         # return them, else return all public attributes
         return getattr(
-            self._attr,
+            self.__attr,
             "_lazy_attrs",
-            [i for i in dir(self._attr) if not i.startswith("_")],
+            [i for i in dir(self.__attr) if not i.startswith("_")],
         )
 
     @property
     def __doc__(self):
         return f"LazyCaller object for {self._m}"
 
-    def __getattr__(self, name):
-        attr = object.__getattribute__(self, "_attr")
-        get_attr = object.__getattribute__(attr, name)
+    def __getattribute__(self, name):
+        if name in ("_LazyCaller__m", "_LazyCaller__attr", "_LazyCaller__name"):
+            return object.__getattribute__(self, name)
+
+        get_attr = object.__getattribute__(self.__attr, name)
 
         if name.startswith("_") or isinstance(
-            get_attr, (list, set, tuple, dict, int, float, np.number, np.ndarray)
+            get_attr, (list, set, str, tuple, dict, int, float, np.number, np.ndarray)
         ):
             return get_attr
 
-        return LazyCaller(
-            self._m, object.__getattribute__(attr, name), f"{self._name}.{name}"
-        )
+        return LazyCaller(self.__m, get_attr, f"{self.__name}.{name}")
 
     def __call__(self, *args, persistent=False, **kwargs):
-        if self._m is self._attr:
+        if self.__m is self.__attr:
             lazy_method = args[0]
 
             @wraps(lazy_method)
             def _lazy_method(layer):
-                lazy_method(self._m, *args[1:], **kwargs)
+                lazy_method(self.__m, *args[1:], **kwargs)
 
             if _log.getEffectiveLevel() <= logging.DEBUG:
                 _log.debug(
-                    f"lazy method submitted for activation of '{self._m.layer}' layer: {lazy_method.__name__}"
+                    f"lazy method submitted for activation of '{self.__m.layer}'"
+                    f" layer: {lazy_method.__name__}"
                 )
 
         else:
 
-            @wraps(self._attr.__call__)
+            @wraps(self.__attr.__call__)
             def _lazy_method(layer):
-                self._attr.__call__(*args, **kwargs)
+                self.__attr.__call__(*args, **kwargs)
 
-            _lazy_method.__qualname__ = f"{self._name}(...)"
+            _lazy_method.__qualname__ = f"{self.__name}(...)"
 
             if _log.getEffectiveLevel() <= logging.DEBUG:
                 _log.debug(
-                    f"lazy method submitted for activation of '{self._m.layer}' layer: {self._name}(...)"
+                    f"lazy method submitted for activation of '{self.__m.layer}'"
+                    f"layer: {self.__name}(...)"
                 )
 
-        self._m._bm.on_layer(
+        self.__m._bm.on_layer(
             func=_lazy_method,
-            layer=self._m.layer,
+            layer=self.__m.layer,
             persistent=persistent,
         )
 
@@ -392,8 +394,9 @@ class LayerNamespace:
         super().__setattr__(name, m)
 
     def _remove_layer(self, layer):
-        self._layers.pop(layer)
-        delattr(self, layer)
+        self._layers.pop(layer, None)
+        if hasattr(self, layer):
+            delattr(self, layer)
 
     def _get_layer_names(self):
         return (i.split("__", 1)[0] for i in self._layers)
@@ -411,7 +414,7 @@ class LayerNamespace:
         if isinstance(name, str):
             return getattr(self, name)
         else:
-            return MultiCaller([getattr(self, n) for n in name])
+            return MultiMaps([getattr(self, n) for n in name])
 
     def __repr__(self):
         return fill(
@@ -474,12 +477,18 @@ class LazyLayerNamespace(LayerNamespace):
     def _layers(self):
         return self._parent_namespace._layers
 
+    def _remove_layer(self, layer):
+        self._parent_namespace._remove_layer(layer)
+
     def __dir__(self):
         return dir(self._parent_namespace)
 
     def __getattr__(self, name):
         m = getattr(self._parent_namespace, name)
-        return LazyCaller(m, m, "Maps")
+        # if the layer is currently visible, return the Maps-object directly
+        if m._bm._layer_visible(name):
+            return m
+        return LazyMaps(m, m, "Maps")
 
 
 class MapsLayerBase:
@@ -519,6 +528,7 @@ class MapsBase(metaclass=_MapsMeta):
         ax=None,
         **kwargs,
     ):
+        self._view_transparency = 1
 
         self._artists = weakref.WeakSet()
         self._bg_artists = weakref.WeakSet()
@@ -652,13 +662,21 @@ class MapsBase(metaclass=_MapsMeta):
         if draw:
             self.redraw(self.layer)
 
+    def __mul__(self, value):
+        self._view_transparency = value
+        return self
+
+    def __rmul__(self, value):
+        self._view_transparency = value
+        return self
+
     def __add__(self, value):
-        return MultiCaller([self, value])
+        return MultiMaps([self, value])
 
     # to add support for sum()
     def __radd__(self, value):
         if value == 0:
-            return MultiCaller([self])
+            return MultiMaps([self])
         else:
             return self.__add__(value)
 
@@ -686,8 +704,10 @@ class MapsBase(metaclass=_MapsMeta):
         return self
 
     def __exit__(self, type, value, traceback):
+        # all action on Maps-objects must be performed BEFORE cleanup!
+        is_parent = self.parent == self
         self.cleanup()
-        if self.parent == self:
+        if is_parent:
             plt.close(self.f)
         gc.collect()
 
@@ -706,7 +726,7 @@ class MapsBase(metaclass=_MapsMeta):
     @wraps(LayerNamespace)
     def l(self):
         """LayerNamespace accessor to create/access layers on the map."""
-        return self._l
+        return self._ll
 
     @property
     @wraps(LazyLayerNamespace)
@@ -1328,18 +1348,6 @@ class MapsBase(metaclass=_MapsMeta):
         """
 
         try:
-            # disconnect callback on xlim-change (only relevant for parent)
-            if not isinstance(self, MapsBase):
-                try:
-                    if hasattr(self, "_cid_xlim"):
-                        self.ax.callbacks.disconnect(self._cid_xlim)
-                        del self._cid_xlim
-                except Exception:
-                    _log.error(
-                        "EOmaps-cleanup: Problem while clearing xlim-cid",
-                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
-                    )
-
             # cleanup all artists
             for a in (*self._artists, *self._bg_artists):
                 try:
@@ -1362,6 +1370,19 @@ class MapsBase(metaclass=_MapsMeta):
             # remove the child from the parent Maps object
             if self in self._bm._children:
                 self._bm._children.remove(self)
+
+            # disconnect callback on xlim-change (only relevant for parent)
+            if self.parent == self:
+                try:
+                    if hasattr(self, "_cid_xlim"):
+                        self.ax.callbacks.disconnect(self._cid_xlim)
+                        del self._cid_xlim
+                except Exception:
+                    _log.error(
+                        "EOmaps-cleanup: Problem while clearing xlim-cid",
+                        exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
+                    )
+
         except Exception:
             _log.error(
                 "EOmaps: Cleanup problem!",
@@ -1779,7 +1800,7 @@ class MapsBase(metaclass=_MapsMeta):
     @property
     def on_all_layers(self):
         """
-        Return a MultiCaller that executes action on all layers defined
+        Return a MultiMaps that executes action on all layers defined
         on the map at the moment of execution.
 
 
@@ -2082,3 +2103,72 @@ class MapsBase(metaclass=_MapsMeta):
             self._bm._disable_update = False
             if redraw:
                 self.redraw()
+
+
+class MultiMaps(MultiCaller):
+    """
+    Wrapper around Maps-objects to run methods on multiple Maps objects in one go.
+    """
+
+    @wraps(MapsBase.show)
+    def show(self, **kwargs):
+        layers = [(m._layer, m._view_transparency) for m in self._elements]
+        self._elements[0].show_layer(*layers)
+
+    @wraps(MapsBase.snapshot)
+    def snapshot(self, *args, **kwargs):
+        layers = [(m._layer, m._view_transparency) for m in self._elements]
+        self._elements[0].snapshot(*layers, **kwargs)
+
+    @wraps(MapsBase.savefig)
+    def savefig(self, *args, **kwargs):
+        self.show()
+        self._elements[0].savefig(*args, **kwargs)
+
+    def __getattribute__(self, name):
+        if name in ("show", "snapshot", "savefig"):
+            return object.__getattribute__(self, name)
+
+        return super().__getattribute__(name)
+
+
+class LazyMaps(LazyCaller):
+    """
+    Wrapper around Maps-objects to lazily evaluate methods.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __mul__(self, value):
+        self._LazyCaller__m._view_transparency = value
+        return self
+
+    def __rmul__(self, value):
+        self._LazyCaller__m._view_transparency = value
+        return self
+
+    def __add__(self, value):
+        return MultiMaps([self, value])
+
+    # to add support for sum()
+    def __radd__(self, value):
+        if value == 0:
+            return MultiMaps([self])
+        else:
+            return self.__add__(value)
+
+    def __getattribute__(self, name):
+        if name in ("_LazyCaller__m", "_LazyCaller__attr", "_LazyCaller__name"):
+            return super().__getattribute__(name)
+
+        if name not in self._LazyCaller__m._lazy_attrs:
+            return object.__getattribute__(self._LazyCaller__m, name)
+        else:
+            return super().__getattribute__(name)
+
+    def __enter__(self):
+        return self._LazyCaller__m.__enter__()
+
+    def __exit__(self, type, value, traceback):
+        return self._LazyCaller__m.__exit__(type, value, traceback)
