@@ -550,7 +550,6 @@ class MapsBase(metaclass=_MapsMeta):
             self._f = f
 
         self._ax = None
-        self._children = set()  # weakref.WeakSet()
         self._after_add_child = list()
 
         if isinstance(ax, plt.Axes):
