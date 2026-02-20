@@ -213,9 +213,6 @@ class ChildAccessor:
     def __getitem__(self, key):
         return self._children[key]
 
-    def __setitem__(self, key, value):
-        self._children[key] = value
-
     def __iter__(self):
         return iter(chain(*self._children.values()))
 
