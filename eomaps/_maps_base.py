@@ -1313,7 +1313,7 @@ class MapsBase(metaclass=_MapsMeta):
                 stack.enter_context(m.ax._cm_set(animated=False))
 
             # explicitly set axes to non-animated to re-enable draw cycle
-            for a in m._bm._managed_axes:
+            for a in self._bm._managed_axes:
                 stack.enter_context(a._cm_set(animated=False))
 
             # trigger a redraw of all savelayers to make sure unmanaged artists
