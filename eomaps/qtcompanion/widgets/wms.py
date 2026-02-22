@@ -86,9 +86,9 @@ class WMS_GEBCO(WMSBase):
             self.wmslayers = []
             _log_problem(self.name)
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.m.add_wms.GEBCO.add_layer, wmslayer)
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -108,9 +108,9 @@ class WMS_GMRT(WMSBase):
             self.wmslayers = []
             _log_problem(self.name)
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.m.add_wms.GMRT.add_layer, wmslayer)
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -130,9 +130,9 @@ class WMS_GLAD(WMSBase):
             self.wmslayers = []
             _log_problem(self.name)
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.m.add_wms.GLAD.add_layer, wmslayer)
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -152,9 +152,9 @@ class WMS_GOOGLE(WMSBase):
             self.wmslayers = []
             _log_problem(self.name)
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.m.add_wms.GOOGLE.add_layer, wmslayer)
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -174,9 +174,9 @@ class WMS_CAMS(WMSBase):
             self.wmslayers = []
             _log_problem(self.name)
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.m.add_wms.CAMS.add_layer, wmslayer)
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -208,9 +208,9 @@ class WMS_NASA_GIBS(WMSBase):
             self.wmslayers = []
             _log_problem(self.name)
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.usewms.add_layer, wmslayer)
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -250,7 +250,7 @@ class WMS_Austria(WMSBase):
 
         self.wmslayers = [*self._AT_layers, *self._Wien_layers, *self._Wien_data_layers]
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         if wmslayer in self._AT_layers:
             wms = getattr(
                 self.m.add_wms.Austria.AT_basemap.add_layer,
@@ -267,7 +267,7 @@ class WMS_Austria(WMSBase):
                 remove_prefix(wmslayer, "WienData__"),
             )
 
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -293,7 +293,7 @@ class ESRI_ArcGIS(WMSBase):
                 ]
             )
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
 
         wms = None
 
@@ -312,10 +312,10 @@ class ESRI_ArcGIS(WMSBase):
                 break
 
         if wms is None:
-            _log.error(f"EOaps: WebMap layer {wmslayer}, {layer} not found")
+            _log.error(f"EOaps: WebMap layer {wmslayer} not found")
             return
 
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -416,7 +416,7 @@ class WMS_OSM(WMSBase):
         self.wmslayers += self._OSM_openrailwaymap
         self.wmslayers += self._OSM_cartodb
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
 
         wms = None
 
@@ -440,7 +440,7 @@ class WMS_OSM(WMSBase):
         if wms is None:
             wms = getattr(self.m.add_wms.OpenStreetMap.add_layer, wmslayer)
 
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -456,9 +456,9 @@ class WMS_S2_cloudless(WMSBase):
             self.wmslayers = []
             _log_problem(self.name)
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.m.add_wms.S2_cloudless.add_layer, wmslayer)
-        wms(layer=layer)
+        wms()
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -474,9 +474,9 @@ class WMS_ESA_WorldCover(WMSBase):
             self.wmslayers = []
             _log_problem(self.name)
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.m.add_wms.ESA_WorldCover.add_layer, wmslayer)
-        wms(layer=layer)
+        wms()
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -488,9 +488,9 @@ class WMS_S1GBM(WMSBase):
         self.m = m
         self.wmslayers = ["vv", "vh"]
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         wms = getattr(self.m.add_wms.S1GBM.add_layer, wmslayer)
-        wms(layer=layer)
+        wms()
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -518,12 +518,12 @@ class WMS_ISRIC_SoilGrids(WMSBase):
             except Exception:
                 _log_problem(f"ISRIC_SoilGrids {subs}")
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
 
         sub = wmslayer.split("_", 1)[0]
 
         wms = getattr(getattr(self.m.add_wms.ISRIC_SoilGrids, sub).add_layer, wmslayer)
-        wms(layer=layer)
+        wms()
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -544,11 +544,11 @@ class WMS_DLR(WMSBase):
             except Exception:
                 _log_problem(f"DLR_{name}")
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
         name, wmslayer = wmslayer.split("__", 1)
         wms = getattr(getattr(self.m.add_wms.DLR, name).add_layer, wmslayer)
 
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -583,7 +583,7 @@ class WMS_OpenPlanetary(WMSBase):
         self.wmslayers += self._moon
         self.wmslayers += self._mars
 
-    def do_add_layer(self, wmslayer, layer):
+    def do_add_layer(self, wmslayer):
 
         wms = None
 
@@ -602,7 +602,7 @@ class WMS_OpenPlanetary(WMSBase):
             _log.error("EOmaps: the wms service {wmslayer} does not exist")
             return
 
-        wms(layer=layer, transparent=True)
+        wms(transparent=True)
         self.ask_for_legend(wms, wmslayer)
 
 
@@ -877,10 +877,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
             self.window().statusBar().repaint()
 
             wmsclass = self.wms_dict[wmsname]
-            wms = wmsclass(m=self.m)
 
             if self._new_layer:
-                layer = wms.layer_prefix + wmslayer
+                layer = wmsclass.layer_prefix + wmslayer
                 # indicate creation of new layer in statusbar
                 self.window().statusBar().showMessage(
                     f"New WebMap layer '{layer}' created!", 5000
@@ -900,7 +899,9 @@ class AddWMSMenuButton(QtWidgets.QPushButton):
                 )
             self.window().statusBar().repaint()
 
-            wms.do_add_layer(wmslayer, layer=layer)
+            wms = wmsclass(m=self.m.l[layer])
+
+            wms.do_add_layer(wmslayer)
 
             # update the cached layer-names if necessary
             self._update_layer_cache(wmsname, wms.wmslayers)
