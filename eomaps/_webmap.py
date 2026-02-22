@@ -391,34 +391,13 @@ class _WMTSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or m._bm._layer_visible(self._layer):
-                # add the layer immediately if the layer is already active
-                self._do_add_layer(
-                    m=self._m,
-                    layer=self._layer,
-                    wms_kwargs=kwargs,
-                    zorder=zorder,
-                    alpha=alpha,
-                )
-            else:
-                # delay adding the layer until it is effectively activated
-                func = partial(
-                    self._do_add_layer,
-                    wms_kwargs=kwargs,
-                    zorder=zorder,
-                    alpha=alpha,
-                )
-                # used to display pending method in widget
-                func.__qualname__ = f"Add WebMap layer: {self.name}"
-                if layer not in m._get_layers():
-                    m.new_layer(layer)
-
-                self._m._bm.on_layer(
-                    func=func,
-                    layer=self._layer,
-                    persistent=False,
-                    m=m,
-                )
+            self._do_add_layer(
+                m=self._m,
+                layer=self._layer,
+                wms_kwargs=kwargs,
+                zorder=zorder,
+                alpha=alpha,
+            )
 
     # ------------------------
     # The following is very much a copy of "cartopy.mpl.geoaxes.GeoAxes.add_raster"
@@ -507,35 +486,13 @@ class _WMSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if m._bm._layer_visible(self._layer):
-                # add the layer immediately if the layer is already active
-                self._do_add_layer(
-                    m=m,
-                    layer=self._layer,
-                    wms_kwargs=kwargs,
-                    zorder=zorder,
-                    alpha=alpha,
-                )
-            else:
-                # delay adding the layer until it is effectively activated
-                func = partial(
-                    self._do_add_layer,
-                    wms_kwargs=kwargs,
-                    zorder=zorder,
-                    alpha=alpha,
-                )
-                # used to display pending method in widget
-                func.__qualname__ = f"Add WebMap layer: {self.name}"
-
-                if layer not in m._get_layers():
-                    m.new_layer(layer)
-
-                m._bm.on_layer(
-                    func=func,
-                    layer=self._layer,
-                    persistent=False,
-                    m=m,
-                )
+            self._do_add_layer(
+                m=m,
+                layer=self._layer,
+                wms_kwargs=kwargs,
+                zorder=zorder,
+                alpha=alpha,
+            )
 
     # ------------------------
     # The following is very much a copy of "cartopy.mpl.geoaxes.GeoAxes.add_raster"
@@ -1232,23 +1189,8 @@ class _XyzTileService:
             kwargs.setdefault("alpha", alpha)
             kwargs.setdefault("origin", "lower")
 
-            if self._layer in ["all", self._m._bm.bg_layer]:
-                # add the layer immediately if the layer is already active
-                self._do_add_layer(layer=self._layer, m=self._m, **kwargs)
-            else:
-                # delay adding the layer until it is effectively activated
-                func = partial(self._do_add_layer, **kwargs)
-                # used to display pending method in widget
-                func.__qualname__ = f"Add WebMap layer: {self.name}"
-                if layer not in self._m._get_layers():
-                    self._m.new_layer(layer)
-
-                self._m._bm.on_layer(
-                    func=func,
-                    layer=self._layer,
-                    persistent=False,
-                    m=self._m,
-                )
+            # add the layer immediately if the layer is already active
+            self._do_add_layer(layer=self._layer, m=self._m, **kwargs)
 
     def _do_add_layer(self, layer, m, **kwargs):
         # actually add the layer to the map.
