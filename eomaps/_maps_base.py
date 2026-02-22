@@ -388,7 +388,7 @@ class LayerNamespace:
             return
 
         if name is None:
-            name = m.layer
+            name = m.name
 
         self._layers[name] = m
         super().__setattr__(name, m)
@@ -397,9 +397,6 @@ class LayerNamespace:
         self._layers.pop(layer, None)
         if hasattr(self, layer):
             delattr(self, layer)
-
-    def _get_layer_names(self):
-        return (i.split("__", 1)[0] for i in self._layers)
 
     def __dir__(self):
         return [l for l in self._layers if not l.startswith("**")]
@@ -431,64 +428,25 @@ class LayerNamespace:
 
         super().__setattr__(name, value)
 
-    def __getattr__(self, name):
+    def __getattribute__(self, name):
         # private attributes are handled in ordinary manner.
         # only public attribute names will trigger layer-creation!
         if name.startswith("_"):
             return super().__getattribute__(name)
 
-        # Note: new_layer calls "LayerNamespace._ingest_layer" to ingest
-        # the new layer into the namespace!
-        return self._layers.get(name, self._m.new_layer(name))
+        # get the maps-object associated with the name (create if it does not exist)
+        # Note: new_layer calls "LayerNamespace._ingest_layer" to ingest the layer
+        m = self._layers.get(name)
+        if m is None:
+            m = self._m.new_layer(name)
 
-
-class LazyLayerNamespace(LayerNamespace):
-    """
-    Accessor to create, access and **lazily** populate layers on the map.
-
-    Any action run on the LazyLayerNamespace will only become effective
-    if the associated layer becomes visible!
-
-    `m.ll.my_layer` will return a LazyCaller instance for the :py:class:`Maps`
-    object on the layer named`"my_layer"`.
-
-    - If no :py:class:`Maps` object exists in the LayerNamespace, it will be created.
-    - Otherwise, the existing :py:class:`Maps` object is used
-        - To create additional :py:class`Maps` objects on the same layer,
-          you can use double-underscores in the name, e.g. "my_layer__a"
-
-    Examples
-    --------
-
-    Create a :py:class:`Maps` object on the `"overlay"` layer and lazily
-    populate the layer with the "ocean" and "land" features.
-
-    >>> m = Maps()
-    >>> m.ll.overlay.add_feature.preset.ocean()
-    >>> m.ll.overlay.add_feature.preset.land()
-
-    """
-
-    def __init__(self, parent_namespace):
-        self._parent_namespace = parent_namespace
-        self._m = self._parent_namespace._m
-
-    @property
-    def _layers(self):
-        return self._parent_namespace._layers
-
-    def _remove_layer(self, layer):
-        self._parent_namespace._remove_layer(layer)
-
-    def __dir__(self):
-        return dir(self._parent_namespace)
-
-    def __getattr__(self, name):
-        m = getattr(self._parent_namespace, name)
-        # if the layer is currently visible, return the Maps-object directly
-        if m._bm._layer_visible(name):
+        if m._bm._layer_visible(m.layer):
+            # if the layer is currently visible, return the Maps-object directly
             return m
-        return LazyMaps(m, m, "Maps")
+        else:
+            # return a LazyMaps object used to submit actions that will be
+            # evaluated as soon as the layer becomes visible
+            return LazyMaps(m, m, "Maps")
 
 
 class MapsLayerBase:
@@ -503,14 +461,30 @@ class MapsLayerBase:
             layer = "base"
 
         layer = BlitManager._check_layer_name(layer)
-        self._layer = layer
+
+        # the "full" layer-name including sublayer-(__) suffix
+        self._name = layer
+
+        # the layer at which the artists should be visible
+        # TODO write a proper parser method
+        self._layer = layer.split("__", 1)[0]
 
         super().__init__(*args, **kwargs)
 
     @property
     def layer(self):
-        """The layer-name associated with this Maps-object."""
+        """Name of the layer at which artists of this Maps-object are visible."""
         return self._layer
+
+    @property
+    def name(self):
+        """
+        The name associated with this Maps-object.
+
+        <visible-layer-name>__<sublayer-id>
+
+        """
+        return self._name
 
     @property
     def parent(self):
@@ -529,6 +503,7 @@ class MapsBase(metaclass=_MapsMeta):
         **kwargs,
     ):
         self._view_transparency = 1
+        self._figure_closed = False
 
         self._artists = weakref.WeakSet()
         self._bg_artists = weakref.WeakSet()
@@ -572,18 +547,18 @@ class MapsBase(metaclass=_MapsMeta):
         self._init_figure(**kwargs)
         self._init_axes(ax=ax, plot_crs=crs, **kwargs)
 
-        if self.layer in self._l._layers:
-            name = self.layer.split("__", 1)[0]
+        if self.name in self._l._layers:
+            name = self.layer
             i = 0
             while name in self._l._layers:
                 name = f"{self.layer}__{i}"
                 i += 1
 
             print(
-                f"The layer name '{self.layer}' already exists!\n"
+                f"The layer name '{self.name}' already exists!\n"
                 f"It has been re-named to {name} in the LayerNamespace!"
             )
-            self._layer = name
+            self._name = name
 
         self._l._ingest_layer(self)
         self._add_child(self)
@@ -725,13 +700,7 @@ class MapsBase(metaclass=_MapsMeta):
     @wraps(LayerNamespace)
     def l(self):
         """LayerNamespace accessor to create/access layers on the map."""
-        return self._ll
-
-    @property
-    @wraps(LazyLayerNamespace)
-    def ll(self):
-        """LazyLayerNamespace accessor to lazily create/access layers on the map."""
-        return self._ll
+        return self._l
 
     @property
     def all(self):
@@ -1036,8 +1005,7 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _get_layers(self, exclude=None, exclude_private=True):
         # return a list of all (empty and non-empty) layer-names
-        layers = set(self.l._get_layer_names())
-        layers = set(chain(*(m.l._get_layer_names() for m in self._bm._children)))
+        layers = self._bm._children.get_layers()
 
         # exclude private layers
         if exclude_private:
@@ -1050,8 +1018,7 @@ class MapsBase(metaclass=_MapsMeta):
             layers = {remove_prefix(i, "**inset_") for i in layers}
             layers = {i for i in layers if not i.startswith("**")}
         else:
-            layers.add("**BG**")
-            layers.add("**SPINES**")
+            layers.extend(("**BG**", "**SPINES**"))
 
         if exclude:
             for i in exclude:
@@ -1301,7 +1268,7 @@ class MapsBase(metaclass=_MapsMeta):
                 # hide all artists on non-visible layers
 
                 # TODO use proper layer parsing not hard-coding!
-                if m.layer.split("__", 1)[0] not in savelayers:
+                if m.layer not in savelayers:
                     for a in (*m._artists, *m._bg_artists):
                         stack.enter_context(a._cm_set(visible=False, animated=True))
 
@@ -1367,8 +1334,7 @@ class MapsBase(metaclass=_MapsMeta):
             )
 
             # remove the child from the parent Maps object
-            if self in self._bm._children:
-                self._bm._children.remove(self)
+            self._bm._children.remove(self)
 
             # disconnect callback on xlim-change (only relevant for parent)
             if self.parent == self:
@@ -1574,7 +1540,6 @@ class MapsBase(metaclass=_MapsMeta):
             self._new_axis_map = True
 
             self._l = LayerNamespace(self)
-            self._ll = LazyLayerNamespace(self._l)
 
             # explicitly set initial limits to global to avoid issues if NE-features
             # are added (and clipped) before actual limits are set
@@ -1592,9 +1557,7 @@ class MapsBase(metaclass=_MapsMeta):
             self._new_axis_map = False
 
             # use the namespace from the parent map
-            self._l, self._ll = next(
-                ((m._l, m._ll) for m in self._bm._children if m.ax is ax)
-            )
+            self._l = next((m._l for m in self._bm._children if m.ax is ax))
 
     def _get_snapshot(self, layer=None):
         if layer is None:
@@ -1707,6 +1670,8 @@ class MapsBase(metaclass=_MapsMeta):
             self._update_shade_axis_size(flush=False)
 
     def _on_close(self, event):
+        self._figure_closed = True
+
         # reset attributes that might use up a lot of memory when the figure is closed
         for m in list(self._bm._children):
             if hasattr(m.f, "_EOmaps_parent"):
@@ -2138,6 +2103,12 @@ class LazyMaps(LazyCaller):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def __repr__(self):
+        try:
+            return f"<eomaps.LazyMaps object on layer '{self.layer}'>"
+        except Exception:
+            return object.__repr__(self)
 
     def __mul__(self, value):
         self._LazyCaller__m._view_transparency = value

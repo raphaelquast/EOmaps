@@ -102,8 +102,7 @@ class LayerParser:
             combnames = []
             for arg in args:
                 if isinstance(arg, str):
-                    layer = arg.split("__", 1)[0]
-                    combnames.append(layer)
+                    combnames.append(arg)
                 elif isinstance(arg, (list, tuple)):
                     assert (
                         len(arg) == 2
@@ -118,7 +117,6 @@ class LayerParser:
                     )
 
                     layer, alpha = arg
-                    layer = layer.split("__", 1)[0]
 
                     if alpha < 1:
                         combnames.append(layer + "{" + str(alpha) + "}")
@@ -221,6 +219,8 @@ class ChildAccessor:
 
     def remove(self, m):
         self._children[m.layer].remove(m)
+        if len(self._children[m.layer]) == 0:
+            del self._children[m.layer]
 
     def _get_artists(self, layer=None):
         if layer is None:
@@ -235,13 +235,10 @@ class ChildAccessor:
         return chain(*(m._bg_artists for m in self.get_maps(layer)))
 
     def _get_maps(self, layer):
-        return chain(
-            *(
-                ms
-                for key, ms in self._children.items()
-                if key.split("__", 1)[0] == layer
-            )
-        )
+        return self._children.get(layer, [])
+
+    def get_layers(self):
+        return list(self._children)
 
     def get_artists(self, layer=None):
         return list(self._get_artists(layer))
@@ -1329,7 +1326,6 @@ class BlitManager(LayerParser, Hooks):
             True if the layer is currently visible, False otherwise
 
         """
-        layer = layer.split("__", 1)[0]
         return layer == "all" or self._layer_is_subset(layer, self.bg_layer)
 
     # cache the last 10 combined backgrounds to avoid re-combining backgrounds

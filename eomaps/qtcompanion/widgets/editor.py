@@ -161,7 +161,7 @@ class AddFeaturesMenuButton(QtWidgets.QPushButton):
                 return
             try:
                 # f = getattr(getattr(self.m.add_feature, featuretype), feature)
-                f = getattr(getattr(self.m.ll[layer].add_feature, featuretype), feature)
+                f = getattr(getattr(self.m.l[layer].add_feature, featuretype), feature)
 
                 if featuretype == "preset":
                     f(**f.kwargs)
@@ -872,10 +872,9 @@ class LayerTabBar(QtWidgets.QTabBar):
 
         # TODO this should call a unified "cleanup layer method on the blit-manager!"
         # cleanup the layer and remove any artists etc.
-        for m in list(self.m._children):
-            if layer == m.layer:
-                m.cleanup()
-                m._bm._bg_layers.pop(layer, None)
+        for m in list(self.m._bm._children._get_maps(layer)):
+            m.cleanup()
+            m._bm._bg_layers.pop(layer, None)
 
         # in case the layer was visible, try to activate a suitable replacement
         if layer in active_layers:
