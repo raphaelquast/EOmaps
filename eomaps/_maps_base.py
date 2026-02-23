@@ -394,9 +394,14 @@ class LayerNamespace:
         super().__setattr__(name, m)
 
     def _remove_layer(self, layer):
-        self._layers.pop(layer, None)
-        if hasattr(self, layer):
+        # NOTE it is important to first delete the attribute and then
+        # delete the entry from the dict in order to avoid re-creating
+        # the layer when checking for attribute-existence!
+        try:
             delattr(self, layer)
+        except AttributeError:
+            pass
+        self._layers.pop(layer, None)
 
     def __dir__(self):
         return [l for l in self._layers if not l.startswith("**")]
