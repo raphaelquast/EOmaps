@@ -499,6 +499,12 @@ class MapsLayerBase:
         """
         return self._parent
 
+    @property
+    @wraps(LayerNamespace)
+    def l(self):
+        """LayerNamespace accessor to create/access layers on the map."""
+        return self._l
+
     def new_layer(
         self,
         layer=None,
@@ -810,12 +816,6 @@ class MapsBase(metaclass=_MapsMeta):
     def ax(self):
         """Cartopy GeoAxes associated with this Maps-object."""
         return self._ax
-
-    @property
-    @wraps(LayerNamespace)
-    def l(self):
-        """LayerNamespace accessor to create/access layers on the map."""
-        return self._l
 
     @property
     def all(self):
