@@ -566,12 +566,6 @@ class MapsLayerBase:
 
         """
 
-        inherit_data = kwargs.get("copy_data_specs", inherit_data)
-        inherit_classification = kwargs.get(
-            "copy_classify_specs", inherit_classification
-        )
-        inherit_shape = kwargs.get("copy_shape", inherit_shape)
-
         if layer is None:
             layer = self.layer
         else:
