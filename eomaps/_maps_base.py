@@ -740,18 +740,18 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _remove_artist(self, artist):
         self._artists.remove(artist)
-        self._bm.run_hook("remove_artist")
 
     def remove_artist(self, artist):
         self._remove_artist(artist)
+        self._bm.run_hook("remove_artist")
         artist.remove()
 
     def _remove_bg_artist(self, artist):
         self._bg_artists.remove(artist)
-        self._bm.run_hook("remove_bg_artist")
 
     def remove_bg_artist(self, artist, draw=True):
         self._remove_bg_artist(artist)
+        self._bm.run_hook("remove_bg_artist")
         artist.remove()
 
         if draw:
