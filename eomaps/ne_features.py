@@ -94,6 +94,19 @@ class _Category:
 
     _category = "???"
 
+    def __init__(self, m):
+        self._m = m
+
+    def __getattribute__(self, key):
+        if key.startswith("_"):
+            return object.__getattribute__(self, key)
+        elif key in _NE_features_all.get(self._category, []):
+            feature = _Feature(self._category, key)
+            feature._set_map(self._m)
+            return feature
+        else:
+            return object.__getattribute__(self, key)
+
     def __repr__(self):
         return f"EOmaps interface for {self._category} " + "NaturalEarth features"
 
@@ -109,15 +122,6 @@ class _Category:
             f"NaturalEarth feature interface for: **{category}**.\n",
             _Category.__doc__,
         )
-
-    def _set_map(self, m):
-        for feature_name in filter(lambda x: not x.startswith("_"), dir(self)):
-            try:
-                feature = _Feature(self._category, feature_name)
-                feature._set_map(m)
-                setattr(self, feature_name, feature)
-            except Exception:
-                _log.error(f"EOmaps: unable to set map for feature {feature}")
 
 
 class _Feature:
@@ -722,12 +726,9 @@ class NaturalEarthFeatures:
     def __init__(self, m):
         self._m = m
 
-        self.preset = self.preset(self._m)
-        self.cultural = _Cultural()
-        self.cultural._set_map(m)
-
-        self.physical = _Physical()
-        self.physical._set_map(m)
+        self.preset = NaturalEarthPresets(self._m)
+        self.cultural = _Cultural(self._m)
+        self.physical = _Physical(self._m)
 
     def __call__(self, category, name, **kwargs):
         feature = self._get_feature(category, name)
