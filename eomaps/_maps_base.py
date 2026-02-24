@@ -413,10 +413,11 @@ class LayerNamespace:
         return len(self._layers)
 
     def __getitem__(self, name):
-        if isinstance(name, str):
-            return getattr(self, name)
+        # NOTE: convert args to string since layer-names are always strings
+        if isinstance(name, tuple):
+            return MultiMaps([getattr(self, str(name)) for n in name])
         else:
-            return MultiMaps([getattr(self, n) for n in name])
+            return getattr(self, str(name))
 
     def __repr__(self):
         return fill(
