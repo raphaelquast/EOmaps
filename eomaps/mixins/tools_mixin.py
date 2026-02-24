@@ -15,10 +15,17 @@ class ToolsMixin:
             self.__util = Utilities(self)
             self.__edit_annotations = AnnotationEditor(self)
 
-        self.draw = ShapeDrawer(weakref.proxy(self))
         self.util = self.parent._ToolsMixin__util
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def draw(self):
+        # avoid initializing draw on init of Maps object
+        # to reduce init-time
+        if not hasattr(self, "_draw"):
+            self._draw = ShapeDrawer(weakref.proxy(self))
+        return self._draw
 
     @property
     def _edit_annotations(self):
