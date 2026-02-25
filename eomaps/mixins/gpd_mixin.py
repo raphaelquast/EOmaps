@@ -9,7 +9,12 @@ import numpy as np
 import matplotlib.path as mpath
 
 from ..cb_container import GeoDataFramePicker
-from ..helpers import _get_rect_poly_verts, register_modules, progressbar
+from ..helpers import (
+    _get_rect_poly_verts,
+    register_modules,
+    progressbar,
+    _submit_on_activation,
+)
 
 
 class GeopandasMixin:
@@ -46,6 +51,7 @@ class GeopandasMixin:
 
         return gdf
 
+    @_submit_on_activation(label="Maps.add_gdf(...)")
     def add_gdf(
         self,
         gdf,

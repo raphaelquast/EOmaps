@@ -16,7 +16,7 @@ from matplotlib.collections import Collection
 from pyproj import CRS
 import numpy as np
 
-from .helpers import register_modules, version, mpl_version
+from .helpers import register_modules, version, mpl_version, _submit_on_activation
 
 
 _log = logging.getLogger(__name__)
@@ -609,6 +609,7 @@ class Shapes(object):
         def __init__(self, m):
             super().__init__(m=m)
 
+        @_submit_on_activation(maps_attr="_m", label="Maps.set_shape.{name}(...)")
         def __call__(self, radius=None, n=None):
             """
             Draw geodesic circles with a radius defined in meters.

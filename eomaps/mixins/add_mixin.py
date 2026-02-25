@@ -17,7 +17,11 @@ from matplotlib.colors import to_rgb
 
 from ..ne_features import NaturalEarthFeatures
 from ..grid import GridFactory
-from ..helpers import _TransformedBoundsLocator, _get_rect_poly_verts
+from ..helpers import (
+    _TransformedBoundsLocator,
+    _get_rect_poly_verts,
+    _submit_on_activation,
+)
 from ..compass import Compass
 from ..scalebar import ScaleBar
 
@@ -54,11 +58,13 @@ class AddMixin:
 
     @property
 
+    @_submit_on_activation(label="Maps.add_gridlines(...)")
     @wraps(GridFactory.add_grid)
     def add_gridlines(self, *args, **kwargs):
         """Add gridlines to the Map."""
         return self.parent._grid.add_grid(m=self, *args, **kwargs)
 
+    @_submit_on_activation(label="Maps.add_compass(...)")
     @wraps(Compass.__call__)
     def add_compass(self, *args, **kwargs):
         """Add a compass (or north-arrow) to the map."""
@@ -68,6 +74,7 @@ class AddMixin:
         self._compass.add(c)
         return c
 
+    @_submit_on_activation(label="Maps.add_scalebar(...)")
     @wraps(ScaleBar.__init__)
     def add_scalebar(
         self,
@@ -107,6 +114,7 @@ class AddMixin:
         self._bm.update()
         return s
 
+    @_submit_on_activation(label="Maps.add_logo(...)")
     def add_logo(
         self,
         filepath=None,
@@ -214,6 +222,7 @@ class AddMixin:
                 _TransformedBoundsLocator(fixed_pos.bounds, self.ax.transAxes)
             )
 
+    @_submit_on_activation(label="Maps.add_line(...)")
     def add_line(
         self,
         xy,
@@ -447,6 +456,7 @@ class AddMixin:
 
         return out_d_int, out_d_tot
 
+    @_submit_on_activation(label="Maps.add_title(...)")
     def add_title(self, title, **kwargs):
         """
         Convenience function to add a title to the map.
@@ -492,6 +502,7 @@ class AddMixin:
 
         self._title = self.add_text(**kwargs)
 
+    @_submit_on_activation(label="Maps.add_text(...)")
     @wraps(plt.Figure.text)
     def add_text(self, *args, layer=None, **kwargs):
         """Add text to the map."""
@@ -509,6 +520,7 @@ class AddMixin:
 
         return a
 
+    @_submit_on_activation(label="Maps.add_extent_indicator(...)")
     def add_extent_indicator(self, x0, y0, x1, y1, crs=4326, npts=100, **kwargs):
         """
         Indicate a rectangular extent in a given crs on the map.
@@ -539,6 +551,7 @@ class AddMixin:
         artist = self.ax.add_patch(p)
         self.add_bg_artist(artist)
 
+    @_submit_on_activation(label="Maps.add_marker(...)")
     def add_marker(
         self,
         ID=None,
@@ -655,6 +668,7 @@ class AddMixin:
 
         return marker
 
+    @_submit_on_activation(label="Maps.add_annotation(...)")
     def add_annotation(
         self,
         ID=None,
@@ -822,6 +836,7 @@ class AddMixin:
             self._bm.update(clear=False)
         return ann
 
+    @_submit_on_activation(label="Maps.add_background_patch(...)")
     def add_background_patch(self, color, layer=None, **kwargs):
         """
         Add a background-patch for the map.

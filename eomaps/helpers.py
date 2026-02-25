@@ -11,9 +11,10 @@ import re
 import sys
 from importlib import import_module
 from textwrap import indent, dedent
-from functools import wraps, lru_cache
+from functools import wraps, lru_cache, reduce
 import warnings
 import weakref
+from string import Formatter
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -245,6 +246,74 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
         show(i + 1)
     file.write("\n")
     file.flush()
+
+
+# a recursive getattr method
+# see https://stackoverflow.com/a/31174427/9703451
+def rgetattr(obj, attr, *args):
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+
+    return reduce(_getattr, [obj] + attr.split("."))
+
+
+def _submit_on_activation(maps_attr="self", label=""):
+    """
+    Decorator that will submit the method when the associated layer
+    becomes active.
+
+    Parameters
+    ----------
+    maps_attr : str, optional
+        The name of the attribute of the class that holds the reference to the
+        Maps-object to use.
+        If "self" is passed, the class is expected to be a Maps-subclass!
+        Otherwise `self.<maps_attr>` is used.
+        The default is "self".
+    label : str, optional
+        A string that is used to indicate the pending method in the
+        companion widget.
+        Variable substitution is used via the '{NAME}` syntax.
+        NAME can hereby be any property of the class of the decorated method.
+        (also nested access, e.g. "{a.b.c} -> self.a.b.c" is supported!)
+        The default is "".
+
+    """
+
+    def decorator(f):
+        @wraps(f)
+        def inner(self, *args, **kwargs):
+            if maps_attr == "self":
+                m = self
+            else:
+                m = getattr(self, maps_attr)
+
+            @wraps(f)
+            def lazy_method(m):
+                ret = f(self, *args, **kwargs)
+                return ret
+
+            if label:
+                # to get a proper label in the CompanionWidget
+                substitutions = {}
+                for (_, key, _, _) in Formatter().parse(label):
+                    if key:
+                        substitutions[key] = rgetattr(self, key, "?")
+
+                # use reduce to allow for substitutions containing "."
+                # (e.g. recursive attribute access)
+                lazy_method.__qualname__ = reduce(
+                    lambda s, key: s.replace(f"{{{key}}}", substitutions[key]),
+                    substitutions,
+                    label,
+                )
+
+            ret = m.on_layer_activation(lazy_method)
+            return ret
+
+        return inner
+
+    return decorator
 
 
 def _add_to_docstring(prefix=None, suffix=None, insert=None):

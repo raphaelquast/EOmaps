@@ -12,7 +12,7 @@ import json
 
 from cartopy import crs as ccrs
 
-from .helpers import register_modules
+from .helpers import register_modules, _submit_on_activation
 
 _log = logging.getLogger(__name__)
 
@@ -212,6 +212,7 @@ class _Feature:
     def _set_map(self, m):
         self._m = m
 
+    @_submit_on_activation("_m", "Maps.add_feature.{_category}.{_name}(...)")
     def __call__(self, layer=None, scale="auto", **kwargs):
         assert hasattr(
             self, "_m"

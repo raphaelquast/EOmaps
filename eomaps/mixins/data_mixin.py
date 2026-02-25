@@ -12,7 +12,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-from ..helpers import cmap_alpha, SearchTree, register_modules, _proxy
+from ..helpers import (
+    cmap_alpha,
+    SearchTree,
+    register_modules,
+    _proxy,
+    _submit_on_activation,
+)
 from ..shapes import Shapes
 from ..colorbar import ColorBar
 from .._containers import DataSpecs, ClassifySpecs
@@ -105,6 +111,7 @@ class DataMixin:
         if len(self._colorbars) > 0:
             return self._colorbars[-1]
 
+    @_submit_on_activation(label="Maps.set_data(...)")
     def set_data(
         self,
         data=None,
@@ -381,6 +388,7 @@ class DataMixin:
         self._shade_dpi = dpi
         self._update_shade_axis_size()
 
+    @_submit_on_activation(label="Maps.inherit_data(...)")
     def inherit_data(self, m):
         """
         Use the data of another Maps-object (without copying).
@@ -406,6 +414,7 @@ class DataMixin:
 
             self.set_data = set_data
 
+    @_submit_on_activation(label="Maps.inherit_classification(...)")
     def inherit_classification(self, m):
         """
         Use the classification of another Maps-object when plotting the data.
@@ -429,6 +438,7 @@ class DataMixin:
         else:
             self._inherit_classification = None
 
+    @_submit_on_activation(label="Maps.plot_map(...)")
     def plot_map(
         self,
         layer=None,
@@ -665,6 +675,7 @@ class DataMixin:
 
         self._bm.update()
 
+    @_submit_on_activation(label="Maps.add_colorbar(...)")
     @wraps(ColorBar._new_colorbar)
     def add_colorbar(self, *args, **kwargs):
         """Add a colorbar to the map."""
@@ -680,6 +691,7 @@ class DataMixin:
 
         return colorbar
 
+    @_submit_on_activation(label="Maps.make_dataset_pickable(...)")
     def make_dataset_pickable(
         self,
     ):

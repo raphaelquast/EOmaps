@@ -26,7 +26,7 @@ from cartopy import crs as ccrs
 from cartopy.io.img_tiles import GoogleWTS
 from cartopy.io import RasterSource
 
-from .helpers import _sanitize
+from .helpers import _sanitize, _submit_on_activation
 
 _log = logging.getLogger(__name__)
 
@@ -347,6 +347,7 @@ class _WMTSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @_submit_on_activation(maps_attr="_m", label="{_EOmaps_source_code}")
     def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMTS layer to the map
@@ -441,6 +442,7 @@ class _WMSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @_submit_on_activation(maps_attr="_m", label="{_EOmaps_source_code}")
     def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMS layer to the map
@@ -1127,6 +1129,7 @@ class _XyzTileService:
     def _reinit(self, m):
         return _XyzTileService(m, url=self.url, maxzoom=self._maxzoom, name=self.name)
 
+    @_submit_on_activation(maps_attr="_m", label="{_EOmaps_source_code}")
     def __call__(
         self,
         layer=None,
