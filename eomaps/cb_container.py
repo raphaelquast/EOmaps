@@ -117,7 +117,7 @@ class GeoDataFramePicker:
 class _CallbackContainer(object):
     """Base-class for callback containers."""
 
-    def __init__(self, m, cb_class=None, method="click", parent_container=None):
+    def __init__(self, m, method="click", parent_container=None):
         self._m = m
         self._parent_container = parent_container
 
@@ -460,8 +460,8 @@ class _ClickContainer(_CallbackContainer):
 
     """
 
-    def __init__(self, m, cb_cls=None, method="pick", default_button=1, **kwargs):
-        super().__init__(m, cb_cls, method, **kwargs)
+    def __init__(self, m, method="pick", default_button=1, **kwargs):
+        super().__init__(m, method, **kwargs)
 
         # a dict to identify connected _move callbacks
         # (e.g. to remove "_move" and "click" cbs in one go)
@@ -1888,8 +1888,8 @@ class KeypressContainer(_CallbackContainer):
 
     """
 
-    def __init__(self, m, cb_cls=None, method="keypress"):
-        super().__init__(m, cb_cls, method)
+    def __init__(self, m, method="keypress"):
+        super().__init__(m, method)
 
         self._cid_keypress_event = None
 
@@ -2207,7 +2207,6 @@ class CallbackContainer:
 
         self.click = ClickContainer(
             m=self._m,
-            cb_cls=ClickCallbacks,
             method="click",
         )
         # internal "always_active" click container to handle click-callbacks
@@ -2215,14 +2214,12 @@ class CallbackContainer:
         # (used in AnnotationEditor)
         self._always_active = ClickContainer(
             m=self._m,
-            cb_cls=ClickCallbacks,
             method="_always_active",
         )
 
         # a move-container that shares temporary artists with the click-container
         self._click_move = MoveContainer(
             m=self._m,
-            cb_cls=MoveCallbacks,
             method="_click_move",
             parent_container=self.click,
             button_down=True,
@@ -2230,7 +2227,6 @@ class CallbackContainer:
 
         self.move = MoveContainer(
             m=self._m,
-            cb_cls=MoveCallbacks,
             method="move",
             button_down=False,
             default_button=None,
@@ -2238,13 +2234,11 @@ class CallbackContainer:
 
         self.pick = PickContainer(
             m=self._m,
-            cb_cls=PickCallbacks,
             method="pick",
         )
 
         self.keypress = KeypressContainer(
             m=self._m,
-            cb_cls=KeypressCallbacks,
             method="keypress",
         )
 
@@ -2325,7 +2319,6 @@ class CallbackContainer:
 
         new_pick = PickContainer(
             m=self._m,
-            cb_cls=PickCallbacks,
             method=method,
             picker_name=name,
             picker=picker,
