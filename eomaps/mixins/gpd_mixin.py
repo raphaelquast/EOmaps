@@ -16,11 +16,6 @@ class GeopandasMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @property
-    def __lazy_attrs(self):
-        # list of attributes that support lazy-evaluation
-        return [i for i in dir(GeopandasMixin) if not i.startswith("_")]
-
     def _make_rect_poly(self, x0, y0, x1, y1, crs=None, npts=100):
         """
         Return a geopandas.GeoDataFrame with a rectangle in the given crs.

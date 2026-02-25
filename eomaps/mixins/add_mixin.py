@@ -53,9 +53,6 @@ class AddMixin:
         super().__init__(*args, **kwargs)
 
     @property
-    def __lazy_attrs(self):
-        # list of attributes that support lazy-evaluation
-        return [i for i in dir(AddMixin) if not i.startswith("_")]
 
     @wraps(GridFactory.add_grid)
     def add_gridlines(self, *args, **kwargs):
