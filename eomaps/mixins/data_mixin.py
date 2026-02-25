@@ -855,17 +855,31 @@ class DataMixin:
             # fill masked-values with None to avoid issues with numba not being
             # able to deal with numpy-arrays
             # TODO report this to datashader to get it fixed properly?
-            if isinstance(zdata, np.ma.masked_array):
-                zdata = zdata.filled(None)
 
-            df = pd.DataFrame(
-                dict(
-                    x=x0.ravel(),
-                    y=y0.ravel(),
-                    val=zdata.ravel(),
-                ),
-                copy=False,
-            )
+            if isinstance(zdata, np.ma.masked_array):
+                if all(zdata.mask):
+                    if _log.getEffectiveLevel() <= logging.DEBUG:
+                        _log.debug("EOmaps: No data to plot after masking!")
+
+                    return
+
+                df = pd.DataFrame(
+                    dict(
+                        x=x0[~zdata.mask].ravel(),
+                        y=y0[~zdata.mask].ravel(),
+                        val=zdata[~zdata.mask].compressed(),
+                    ),
+                    copy=False,
+                )
+            else:
+                df = pd.DataFrame(
+                    dict(
+                        x=x0.ravel(),
+                        y=y0.ravel(),
+                        val=zdata.ravel(),
+                    ),
+                    copy=False,
+                )
 
         else:
             if len(zdata.shape) == 2:
