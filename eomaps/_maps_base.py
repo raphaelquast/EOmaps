@@ -1800,9 +1800,9 @@ class MapsBase(metaclass=_MapsMeta):
 
         @wraps(func)
         def cb(layer):
-            func(m=m, **kwargs)
+            return func(m=m, **kwargs)
 
-        self._bm.on_layer(func=cb, layer=layer, persistent=persistent)
+        return self._bm.on_layer(func=cb, layer=layer, persistent=persistent)
 
     @property
     def on_all_layers(self):

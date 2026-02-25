@@ -661,11 +661,13 @@ class BlitManager(LayerParser, Hooks):
             should be called whenever a layer is activated.
             The default is False.
         """
+        method_evaluated = False
         # in case the layer is currently visible, directly execute the callback
         if layer in self._get_active_layers_alphas[0]:
-            func(layer, **kwargs)
+            ret = func(layer, **kwargs)
+            method_evaluated = True
             if persistent is False:
-                return
+                return ret
 
         @wraps(func)
         def layer_callback(layer):
@@ -694,6 +696,11 @@ class BlitManager(LayerParser, Hooks):
         for l in list(self._bg_layers):
             if layer in l.split("|"):
                 self._bg_layers.pop(l)
+
+        # return the return-value of the callback in case it is submitted
+        # as persistent callback and immediately evaluated
+        if method_evaluated:
+            return ret
 
     def fetch_bg(self, layer=None, bbox=None):
         """
