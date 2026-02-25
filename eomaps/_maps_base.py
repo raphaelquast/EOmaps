@@ -26,6 +26,7 @@ from .helpers import _parse_log_level
 from .layout_editor import LayoutEditor
 from ._blit_manager import BlitManager
 from .projections import Equi7Grid_projection  # import also supercharges cartopy.ccrs
+from ._zoom import LazyZoomMixin
 
 
 def _handle_backends():
@@ -233,7 +234,7 @@ class _MapsMeta(type):
         FigureManagerWebAgg.refresh_all = refresh_all
 
 
-class MapsBase(metaclass=_MapsMeta):
+class MapsBase(LazyZoomMixin, metaclass=_MapsMeta):
     def __init__(
         self,
         crs=None,
@@ -453,6 +454,7 @@ class MapsBase(metaclass=_MapsMeta):
             # variable of the parent Maps-object while keeping the figure open
             # causes all weakrefs to be garbage-collected!
             self.parent.f._EOmaps_parent = self.parent._real_self
+            self._connect_zoom_events()
         else:
             if not hasattr(self.parent.f, "_EOmaps_parent"):
                 self.parent.f._EOmaps_parent = self.parent._real_self
