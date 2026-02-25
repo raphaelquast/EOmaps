@@ -4,6 +4,10 @@
 # See LICENSE in the root of the repository for full licensing details.
 
 """Base class for Maps objects."""
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .eomaps import Maps
 
 import logging
 
@@ -433,7 +437,7 @@ class LayerNamespace:
 
         super().__setattr__(name, value)
 
-    def __getattribute__(self, name):
+    def __getattribute__(self, name) -> "Maps":
         # private attributes are handled in ordinary manner.
         # only public attribute names will trigger layer-creation!
         if name.startswith("_"):
