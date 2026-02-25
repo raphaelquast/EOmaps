@@ -56,8 +56,6 @@ class AddMixin:
 
         super().__init__(*args, **kwargs)
 
-    @property
-
     @_submit_on_activation(label="Maps.add_gridlines(...)")
     @wraps(GridFactory.add_grid)
     def add_gridlines(self, *args, **kwargs):
