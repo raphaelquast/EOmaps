@@ -287,73 +287,6 @@ class MultiCaller:
         return MultiCaller([*self._elements, value])
 
 
-class LazyCaller:
-    def __init__(self, m, attr, name="Maps"):
-        self.__m = m
-        self.__attr = attr
-        self.__name = name
-
-    def __dir__(self):
-        # in case attributes ready for lazy-evaluation are explicitly defined,
-        # return them, else return all public attributes
-        return getattr(
-            self.__attr,
-            "_lazy_attrs",
-            [i for i in dir(self.__attr) if not i.startswith("_")],
-        )
-
-    @property
-    def __doc__(self):
-        return f"LazyCaller object for {self._m}"
-
-    def __getattribute__(self, name):
-        if name in ("_LazyCaller__m", "_LazyCaller__attr", "_LazyCaller__name"):
-            return object.__getattribute__(self, name)
-
-        get_attr = object.__getattribute__(self.__attr, name)
-
-        if name.startswith("_") or isinstance(
-            get_attr, (list, set, str, tuple, dict, int, float, np.number, np.ndarray)
-        ):
-            return get_attr
-
-        return LazyCaller(self.__m, get_attr, f"{self.__name}.{name}")
-
-    def __call__(self, *args, persistent=False, **kwargs):
-        if self.__m is self.__attr:
-            lazy_method = args[0]
-
-            @wraps(lazy_method)
-            def _lazy_method(layer):
-                lazy_method(self.__m, *args[1:], **kwargs)
-
-            if _log.getEffectiveLevel() <= logging.DEBUG:
-                _log.debug(
-                    f"lazy method submitted for activation of '{self.__m.layer}'"
-                    f" layer: {lazy_method.__name__}"
-                )
-
-        else:
-
-            @wraps(self.__attr.__call__)
-            def _lazy_method(layer):
-                self.__attr.__call__(*args, **kwargs)
-
-            _lazy_method.__qualname__ = f"{self.__name}(...)"
-
-            if _log.getEffectiveLevel() <= logging.DEBUG:
-                _log.debug(
-                    f"lazy method submitted for activation of '{self.__m.layer}'"
-                    f"layer: {self.__name}(...)"
-                )
-
-        self.__m._bm.on_layer(
-            func=_lazy_method,
-            layer=self.__m.layer,
-            persistent=persistent,
-        )
-
-
 class LayerNamespace:
     """
     Accessor to create, access and populate layers on the map.
@@ -449,17 +382,12 @@ class LayerNamespace:
         if m is None:
             return self._m.new_layer(name)
 
-        if m._bm._layer_visible(m.layer):
-            # if the layer is currently visible, return the Maps-object directly
-            return m
-        else:
-            # return a LazyMaps object used to submit actions that will be
-            # evaluated as soon as the layer becomes visible
-            return LazyMaps(m)
+        return m
 
 
 class MapsLayerBase:
     def __init__(self, layer=None, parent=None, *args, **kwargs):
+
         if parent is None:
             self._parent = self
         else:
@@ -612,10 +540,7 @@ class MapsLayerBase:
         # share the companion-widget with the parent
         m._companion_widget = self._companion_widget
 
-        if self._bm._layer_visible(m.layer):
-            return m
-        else:
-            return LazyMaps(m)
+        return m
 
 
 class MapsBase(metaclass=_MapsMeta):
@@ -2213,50 +2138,3 @@ class MultiMaps(MultiCaller):
 
         return super().__getattribute__(name)
 
-
-class LazyMaps(LazyCaller):
-    """
-    Wrapper around Maps-objects to lazily evaluate methods.
-    """
-
-    def __init__(self, m):
-        super().__init__(m=m, attr=m, name="Maps")
-
-    def __repr__(self):
-        try:
-            return f"<eomaps.LazyMaps object on layer '{self.layer}'>"
-        except Exception:
-            return object.__repr__(self)
-
-    def __mul__(self, value):
-        self._LazyCaller__m._view_transparency = value
-        return self
-
-    def __rmul__(self, value):
-        self._LazyCaller__m._view_transparency = value
-        return self
-
-    def __add__(self, value):
-        return MultiMaps([self, value])
-
-    # to add support for sum()
-    def __radd__(self, value):
-        if value == 0:
-            return MultiMaps([self])
-        else:
-            return self.__add__(value)
-
-    def __getattribute__(self, name):
-        if name in ("_LazyCaller__m", "_LazyCaller__attr", "_LazyCaller__name"):
-            return super().__getattribute__(name)
-
-        if name not in self._LazyCaller__m._lazy_attrs:
-            return object.__getattribute__(self._LazyCaller__m, name)
-        else:
-            return super().__getattribute__(name)
-
-    def __enter__(self):
-        return self._LazyCaller__m.__enter__()
-
-    def __exit__(self, type, value, traceback):
-        return self._LazyCaller__m.__exit__(type, value, traceback)
