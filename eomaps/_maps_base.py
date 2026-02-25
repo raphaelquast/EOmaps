@@ -11,7 +11,6 @@ _log = logging.getLogger(__name__)
 
 from contextlib import contextmanager, ExitStack
 from functools import lru_cache, wraps
-from itertools import chain
 from textwrap import fill
 import importlib.metadata
 import weakref
