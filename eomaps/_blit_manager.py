@@ -663,7 +663,7 @@ class BlitManager(LayerParser, Hooks):
         """
         method_evaluated = False
         # in case the layer is currently visible, directly execute the callback
-        if layer in self._get_active_layers_alphas[0]:
+        if layer == "all" or layer in self._get_active_layers_alphas[0]:
             ret = func(layer, **kwargs)
             method_evaluated = True
             if persistent is False:
