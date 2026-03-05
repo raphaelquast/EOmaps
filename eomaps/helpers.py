@@ -316,6 +316,18 @@ def _submit_on_activation(maps_attr="self", label=""):
     return decorator
 
 
+def _from_parent(f):
+    """
+    Maps-object method decorator to retrieve properties from the parent.
+    """
+
+    @wraps(f)
+    def inner(self, *args, **kwargs):
+        return f(self.parent, *args, **kwargs)
+
+    return inner
+
+
 def _add_to_docstring(prefix=None, suffix=None, insert=None):
     """
     Add text to an existing docstring
