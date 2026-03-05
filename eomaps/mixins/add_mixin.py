@@ -230,6 +230,7 @@ class AddMixin:
         del_s=None,
         mark_points=None,
         layer=None,
+        dynamic=False,
         **kwargs,
     ):
         """
@@ -400,6 +401,7 @@ class AddMixin:
                 xi, yi = self._transf_lonlat_to_plot.transform(lon, lat)
                 xs += xi
                 ys += yi
+
             (art,) = self.ax.plot(xs, ys, **kwargs)
 
         elif connect == "straight":
@@ -434,7 +436,10 @@ class AddMixin:
             raise TypeError(f"EOmaps: '{connect}' is not a valid connection-method!")
 
         art.set_label(f"Line ({connect})")
-        self.l[layer].add_bg_artist(art)
+        if dynamic is True:
+            self.l[layer].add_artist(art)
+        else:
+            self.l[layer].add_bg_artist(art)
 
         if mark_points:
             zorder = kwargs.get("zorder", 10)
@@ -451,7 +456,11 @@ class AddMixin:
                 (art2,) = self.ax.plot(xplot, yplot, mark_points, zorder=zorder, lw=0)
 
             art2.set_label(f"Line Marker ({connect})")
-            self.l[layer].add_bg_artist(art2)
+
+            if dynamic is True:
+                self.l[layer].add_artist(art2)
+            else:
+                self.l[layer].add_bg_artist(art2)
 
         return out_d_int, out_d_tot
 
