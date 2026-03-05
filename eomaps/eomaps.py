@@ -305,6 +305,10 @@ class Maps(
         shape="ellipses",
         indicate_extent=True,
         indicator_line=False,
+        inherit_data=False,
+        inherit_shape=False,
+        inherit_classification=False,
+        **kwargs,
     ):
         """
         Create a new (empty) inset-map that shows a zoomed-in view on a given extent.
@@ -403,6 +407,14 @@ class Maps(
             indicate the inset-shape on arbitrary Maps-objects.
 
             The default is False.
+        inherit_data, inherit_classification, inherit_shape : bool
+            Indicator if the corresponding properties should be inherited from
+            the parent Maps-object.
+
+            By default only the shape is inherited.
+
+            For more details, see :py:meth:`Maps.inherit_data` and
+            :py:meth:`Maps.inherit_classification`
 
         Returns
         -------
@@ -484,7 +496,15 @@ class Maps(
             shape=shape,
             indicate_extent=indicate_extent,
             indicator_line=indicator_line,
+            **kwargs,
         )
+
+        if inherit_data:
+            m2.inherit_data(self)
+        if inherit_classification:
+            m2.inherit_classification(self)
+        if inherit_shape and self._shape_assigned:
+            getattr(m2.set_shape, self.shape.name)(**self.shape._initargs)
 
         return m2
 
