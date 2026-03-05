@@ -390,6 +390,7 @@ class AddMixin:
                     npts=ni,
                     initial_idx=0,
                     terminus_idx=0,
+                    return_back_azimuth=True,
                 )
 
                 out_d_int.append(d_int)
