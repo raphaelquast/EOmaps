@@ -268,10 +268,7 @@ class MultiCaller:
             return object.__getattribute__(self, name)
 
         return MultiCaller(
-            [
-                object.__getattribute__(i, name)
-                for i in object.__getattribute__(self, "_elements")
-            ]
+            [getattr(i, name) for i in object.__getattribute__(self, "_elements")]
         )
 
     def __getitem__(self, name):
