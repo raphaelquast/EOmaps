@@ -422,7 +422,7 @@ class GeopandasMixin:
 
         return clipgdf
 
-    def _set_gdf_path_boundary(self, gdf, set_extent=True):
+    def _get_gdf_path_boundary(self, gdf):
         geom = gdf.to_crs(self.crs_plot).union_all()
         if "Polygon" in geom.geom_type:
             geom = geom.boundary
@@ -445,9 +445,14 @@ class GeopandasMixin:
             vertices.extend([(x[0], y[0]), *zip(x, y), (x[-1], y[-1])])
 
         path = mpath.Path(vertices, codes)
+        return path
+
+    def _set_gdf_path_boundary(self, gdf, set_extent=True):
+        path = self._get_gdf_path_boundary(gdf)
 
         self.ax.set_boundary(path, self.ax.transData)
         if set_extent:
+            vertices = path.vertices
             x0, y0 = np.min(vertices, axis=0)
             x1, y1 = np.max(vertices, axis=0)
 
