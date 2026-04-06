@@ -1,103 +1,190 @@
-# EOmaps example: Data-classification and multiple Maps in one figure
+# EOmaps example: Turn your maps into a powerful widgets
 
 from eomaps import Maps
 import pandas as pd
 import numpy as np
 
-# ----------- create some example-data
-lon, lat = np.meshgrid(np.arange(-20, 40, 0.5), np.arange(30, 60, 0.5))
+# create some data
+lon, lat = np.meshgrid(np.linspace(-20, 40, 50), np.linspace(30, 60, 50))
+
 data = pd.DataFrame(
-    dict(lon=lon.flat, lat=lat.flat, data_variable=np.sqrt(lon**2 + lat**2).flat)
-)
-data = data.sample(4000)  # take 4000 random datapoints from the dataset
-# ------------------------------------
-
-# initialize a grid of Maps objects
-m = Maps(ax=131, crs=4326, figsize=(11, 5))
-m2 = m.new_map(ax=132, crs=Maps.CRS.Stereographic())
-m3 = m.new_map(ax=133, crs=3035)
-
-# --------- set specs for the first map
-m.add_text(0.5, 1.1, "epsg=4326")
-m.set_classify.EqualInterval(k=10)
-
-# --------- set specs for the second map
-m2.add_text(0.5, 1.1, "Stereographic")
-m2.set_shape.rectangles()
-m2.set_classify.Quantiles(k=8)
-
-# --------- set specs for the third map
-m3.add_text(0.5, 1.1, "epsg=3035")
-m3.set_classify_specs(
-    scheme="StdMean",
-    multiples=[-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1],
+    dict(lon=lon.flat, lat=lat.flat, data=np.sqrt(lon**2 + lat**2).flat)
 )
 
-# --------- plot all maps and add colorbars to all maps
-# set the data on ALL maps-objects of the grid
-for m_i in [m, m2, m3]:
-    m_i.set_data(data=data, x="lon", y="lat", crs=4326)
-    m_i.plot_map()
-    m_i.add_colorbar(extend="neither")
+# --------- initialize a Maps object and plot a basic map
+m = Maps(crs=3035, figsize=(10, 8))
+m.set_data(data=data, x="lon", y="lat", crs=4326)
+m.ax.set_title("A clickable widget!")
+m.set_shape.rectangles()
 
-    m_i.add_feature.preset.ocean()
-    m_i.add_feature.preset.land()
-    # add the coastline to all layers of the maps
-    m_i.add_feature.preset.coastline(layer="all")
+m.set_classify_specs(scheme="EqualInterval", k=5)
+m.add_feature.preset.coastline()
+m.add_feature.preset.ocean()
+m.plot_map()
+
+# add some static text
+m.add_text(
+    0.66,
+    0.92,
+    (
+        "Left-click: temporary annotations\n"
+        "Right-click: permanent annotations\n"
+        "Middle-click: clear permanent annotations"
+    ),
+    fontsize=10,
+    horizontalalignment="left",
+    verticalalignment="top",
+    color="k",
+    fontweight="bold",
+    bbox=dict(facecolor="w", alpha=0.75),
+)
 
 
-# --------- add a new layer for the second axis
-# NOTE: this layer is not visible by default but it can be shown by clicking
-# on the layer-switcher utility buttons (bottom center of the figure)
-# or by using `m2.show()`   or via  `m.show_layer("layer 2")`
-m21 = m2.new_layer(layer="layer 2")
-m21.inherit_data(m2)
-m21.set_shape.delaunay_triangulation(mask_radius=0.5)
-m21.set_classify.Quantiles(k=4)
-m21.plot_map(cmap="RdYlBu")
-m21.add_colorbar(extend="neither")
-# add an annotation that is only executed if "layer 2" is active
-m21.cb.click.attach.annotate(text="callbacks are layer-sensitive!")
+# --------- attach pre-defined CALLBACK functions ---------
 
-# --------- add some callbacks to indicate the clicked data-point to all maps
-for m_i in [m, m2, m3]:
-    m_i.cb.pick.attach.mark(fc="r", ec="none", buffer=1, permanent=True)
-    m_i.cb.pick.attach.mark(fc="none", ec="r", lw=1, buffer=5, permanent=True)
-    m_i.cb.move.attach.mark(fc="none", ec="k", lw=2, buffer=10, permanent=False)
+### add a temporary annotation and a marker if you left-click on a pixel
+m.cb.pick.attach.mark(
+    button=1,
+    permanent=False,
+    fc=[0, 0, 0, 0.5],
+    ec="w",
+    ls="--",
+    buffer=2.5,
+    shape="ellipses",
+    zorder=1,
+)
+m.cb.pick.attach.annotate(
+    button=1,
+    permanent=False,
+    bbox=dict(boxstyle="round", fc="w", alpha=0.75),
+    zorder=999,
+)
+### save all picked values to a dict accessible via the global "picked_vals" dict
+picked_vals = {"ID": [], "val": []}
 
-for m_i in [m, m2, m21, m3]:
-    # --------- rotate the ticks of the colorbars
-    m_i.colorbar.ax_cb.tick_params(rotation=90, labelsize=8)
-    # add logos
-    m_i.add_logo(size=0.05)
 
-# add an annotation-callback to the second map
-m2.cb.pick.attach.annotate(text="the closest point is here!", zorder=99)
+def collect_vals(event):
+    picked_vals["ID"].append(event.ID)
+    picked_vals["val"].append(event.val)
 
-# share click & pick-events between all Maps-objects of the MapsGrid
-m.cb.move.share_events(m2, m3)
-m.cb.pick.share_events(m2, m3)
 
-# --------- add a layer-selector widget
-m.util.layer_selector(ncol=2, loc="lower center", draggable=False)
+### add a permanent marker if you right-click on a pixel
+m.cb.pick.attach.mark(
+    button=3,
+    permanent=True,
+    facecolor=[1, 0, 0, 0.5],
+    edgecolor="k",
+    buffer=1,
+    shape="rectangles",
+    zorder=1,
+)
 
+
+### add a customized permanent annotation if you right-click on a pixel
+def text(m, ID, val, pos, ind):
+    return f"ID={ID}"
+
+
+m.cb.pick.attach.annotate(
+    button=3,
+    permanent=True,
+    bbox=dict(boxstyle="round", fc="r"),
+    text=text,
+    xytext=(10, 10),
+    zorder=2,  # use zorder=2 to put the annotations on top of the markers
+)
+
+### remove all permanent markers and annotations if you middle-click anywhere on the map
+m.cb.pick.attach.clear_annotations(button=2)
+m.cb.pick.attach.clear_markers(button=2)
+
+# --------- define a custom callback to update some text to the map
+# (use a high zorder to draw the texts above all other things)
+txt = m.add_text(
+    0.5,
+    0.35,
+    "You clicked on 0 pixels so far",
+    fontsize=15,
+    ha="center",
+    va="top",
+    color="w",
+    fontweight="bold",
+    zorder=99,
+)
+txt2 = m.add_text(
+    0.18,
+    0.9,
+    "   lon    /    lat " + "\n",
+    fontsize=12,
+    ha="right",
+    va="top",
+    fontweight="bold",
+    zorder=99,
+)
+
+
+def cb1(event, m):
+    # update the text that indicates how many pixels we've clicked
+    nvals = len(picked_vals["ID"])
+    if nvals == 0:
+        return
+
+    txt.set_text(
+        f"You clicked on {nvals} pixel"
+        + ("s" if nvals > 1 else "")
+        + f"!\n... the average value is {np.mean(picked_vals['val']):.3f}"
+    )
+
+    # update the list of lon/lat coordinates on the top left of the figure
+    d = m.data_specs.data.loc[event.ID]
+    lonlat_list = txt2.get_text().splitlines()
+    if len(lonlat_list) > 10:
+        lonlat_txt = lonlat_list[0] + "\n" + "\n".join(lonlat_list[-10:]) + "\n"
+    else:
+        lonlat_txt = txt2.get_text()
+    txt2.set_text(lonlat_txt + f"{d['lon']:.2f}  /  {d['lat']:.2f}" + "\n")
+
+
+def cb2(event, m):
+    # plot a marker at the pixel-position
+    (l,) = m.ax.plot(*event.pos, marker="*", animated=True)
+    # add the custom marker to the blit-manager!
+    m.add_artist(l)
+
+    # print the value at the pixel-position
+    # use a low zorder so the text will be drawn below the temporary annotations
+    m.add_text(
+        event.pos[0],
+        event.pos[1] - 150000,
+        f"{event.val:.2f}",
+        ha="center",
+        va="bottom",
+        color=l.get_color(),
+        zorder=1,
+    )
+
+
+m.cb.pick.attach(collect_vals)
+
+m.cb.pick.attach(cb1, button=1, m=m)
+m.cb.pick.attach(cb2, button=3, m=m)
+
+
+# add a "target-indicator" on mouse-movement
+m.cb.move.attach.mark(fc="r", ec="none", radius=10000, shape="geod_circles")
+m.cb.move.attach.mark(fc="none", ec="r", radius=50000, shape="geod_circles")
+
+# add a colorbar
+m.add_colorbar(hist_bins="bins", label="A classified dataset")
+m.add_logo()
 
 m.apply_layout(
     {
-        "figsize": [11.0, 5.0],
-        "0_map": [0.015, 0.44, 0.3125, 0.34375],
-        "1_map": [0.35151, 0.363, 0.32698, 0.50973],
-        "2_map": [0.705, 0.44, 0.2875, 0.37872],
-        "3_cb": [0.05522, 0.0825, 0.2625, 0.2805],
-        "3_cb_histogram_size": 0.8,
-        "4_cb": [0.33625, 0.11, 0.3525, 0.2],
-        "4_cb_histogram_size": 0.8,
-        "5_cb": [0.72022, 0.0825, 0.2625, 0.2805],
-        "5_cb_histogram_size": 0.8,
-        "6_logo": [0.2725, 0.451, 0.05, 0.04538],
-        "7_logo": [0.625, 0.3795, 0.05, 0.04538],
-        "8_logo": [0.625, 0.3795, 0.05, 0.04538],
-        "9_logo": [0.93864, 0.451, 0.05, 0.04538],
+        "figsize": [10.0, 8.0],
+        "0_map": [0.04375, 0.27717, 0.9125, 0.69566],
+        "1_cb": [0.01, 0.0, 0.98, 0.23377],
+        "1_cb_histogram_size": 0.8,
+        "2_logo": [0.825, 0.29688, 0.12, 0.06188],
     }
 )
 m.show()

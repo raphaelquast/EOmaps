@@ -6,7 +6,7 @@
 from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import Qt, Signal, QSize, Slot
 
-from .layer import AutoUpdatePeekLayerDropdown, AutoUpdateLayerMenuButton
+from .layer import AutoUpdatePeekLayerDropdown
 from ..common import iconpath
 
 peek_methods = (
@@ -71,9 +71,9 @@ class PeekMethodButtons(QtWidgets.QWidget):
 
         self._method = "?"
         self.rectangle_size = 1
-        self.how = (self.rectangle_size, self.rectangle_size)
+        self.size = (self.rectangle_size, self.rectangle_size)
         self.alpha = 1
-        self.shape = "rectangular"
+        self.shape = "s"
 
         self.buttons = dict()
         self.rect_button = (
@@ -266,41 +266,26 @@ class PeekMethodButtons(QtWidgets.QWidget):
                 val.setIcon(peek_icons[f"{key}"])
 
         if method == "rectangle":
-            self.shape = "rectangular"
+            self.shape = "s"
             self.rectangle_slider.show()
-            if self.rectangle_size < 0.99:
-                self.how = (self.rectangle_size, self.rectangle_size)
-            else:
-                self.how = "full"
+            self.size = (self.rectangle_size, self.rectangle_size)
         elif method == "square":
-            self.shape = "rectangular"
+            self.shape = "s"
             self.rectangle_slider.show()
-            if self.rectangle_size < 0.99:
-                self.how = self.rectangle_size
-            else:
-                self.how = "full"
-
+            self.size = self.rectangle_size
         elif method == "ellipse":
             self.rectangle_slider.show()
-            if self.rectangle_size < 0.99:
-                self.how = (self.rectangle_size, self.rectangle_size)
-                self.shape = "round"
-            else:
-                self.how = "full"
-                self.shape = "rectangular"
-
+            self.size = (self.rectangle_size, self.rectangle_size)
+            self.shape = "."
         elif method == "circle":
             self.rectangle_slider.show()
-            if self.rectangle_size < 0.99:
-                self.how = self.rectangle_size
-                self.shape = "round"
-            else:
-                self.how = "full"
-                self.shape = "rectangular"
-
-        else:
+            self.size = self.rectangle_size
+            self.shape = "."
+        elif method in ("left", "right", "top", "bottom"):
             self.rectangle_slider.hide()
-            self.how = method
+            self.shape = method
+        else:
+            raise TypeError(f"Handling of peek-method {method} not implemented")
 
 
 class ModifierInput(QtWidgets.QLineEdit):
@@ -404,7 +389,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
 
         self.cid = self.m.all.cb.click.attach.peek_layer(
             layer=l,
-            how=self.buttons.how,
+            size=self.buttons.size,
             alpha=self.buttons.alpha,
             modifier=modifier,
             shape=self.buttons.shape,
@@ -428,7 +413,7 @@ class PeekLayerWidget(QtWidgets.QWidget):
 
         self.cid = self.m.all.cb.click.attach.peek_layer(
             layer=self.current_layer,
-            how=self.buttons.how,
+            size=self.buttons.size,
             alpha=self.buttons.alpha,
             modifier=modifier,
             shape=self.buttons.shape,
@@ -446,8 +431,10 @@ class PeekLayerWidget(QtWidgets.QWidget):
 
     def remove_peek_cb(self):
         if self.cid is not None:
-            if self.cid in self.m.all.cb.click.get.attached_callbacks:
+            if self.cid in self.m.all.cb.click.attached_callbacks:
                 self.m.all.cb.click.remove(self.cid)
+                self.m.all.cb.click._clear_temporary_artists()
+                self.m._bm._clear_temp_artists("click")
             self.cid = None
 
 

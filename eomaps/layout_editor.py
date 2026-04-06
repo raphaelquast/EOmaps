@@ -115,15 +115,22 @@ class LayoutEditor:
     @modifier_pressed.setter
     def modifier_pressed(self, val):
         self._modifier_pressed = val
-        if hasattr(self.m, "cb"):
-            self.m.cb.execute_callbacks(not val)
+        # disable callbacks while the modifier is pressed
+        self.m.execute_callbacks = not val
+
+        h = hash(self)
 
         if self._modifier_pressed:
-            self.m._bm._disable_draw = True
-            self.m._bm._disable_update = True
+            self.m._bm._disable_draw.add(h)
+            self.m._bm._disable_update.add(h)
         else:
-            self.m._bm._disable_draw = False
-            self.m._bm._disable_update = False
+            try:
+                self.m._bm._disable_draw.remove(h)
+                self.m._bm._disable_update.remove(h)
+            except KeyError:
+                _log.debug(
+                    "'layout_editor' hash key not found in disable draw/update sets"
+                )
 
     @property
     def ms(self):

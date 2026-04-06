@@ -660,6 +660,7 @@ class Shapes(object):
                 the latitudes of the geodetic circle points.
 
             """
+            lon, lat = np.atleast_1d(lon), np.atleast_1d(lat)
             size = lon.size
             if isinstance(radius, (int, float, np.number)):
                 radius = np.full((size, n), radius)

@@ -27,7 +27,7 @@ from cartopy import crs as ccrs
 from pyproj import CRS, Transformer
 import numpy as np
 
-from .helpers import _parse_log_level, _proxy
+from .helpers import _parse_log_level, _proxy, WeakOrderedCollection
 from .layout_editor import LayoutEditor
 from ._blit_manager import BlitManager
 from .projections import Equi7Grid_projection  # import also supercharges cartopy.ccrs
@@ -67,12 +67,63 @@ def _handle_backends():
             )
 
 
+
+
+class LazyCx:
+    """
+    A contextmanager to temporarily change if methods are executed lazily.
+    
+    Examples
+    --------
+    
+    Set global behavior
+    
+    >>> Maps.lazy = True # or False
+    
+    
+    Temporarily execute methods lazily:
+    
+    >>> with Maps.lazy:
+    >>>    m["my_layer"].add_feature.preset.coastline()
+    
+    
+    Temporarily execute methods immediately:
+        
+    >>> with Maps.lazy(False):
+    >>>    m["my_layer"].add_feature.preset.coastline()
+
+    """
+    def __init__(self):
+        self._lazy = True
+        
+    def __call__(self, lazy=True):
+        if not isinstance(lazy, bool):
+            raise TypeError("lazy must be either True or False.")
+        self._lazy = lazy
+        return self
+        
+    def __enter__(self):
+        self._init_lazy = MapsBase._lazy
+        MapsBase._lazy = self._lazy
+
+    def __exit__(self, type, value, tb):
+        MapsBase._lazy = self._init_lazy
+        
 class _MapsMeta(type):
     _use_interactive_mode = None
     _always_on_top = False
-
     _backend_warning_shown = False
-
+    
+    # a contextmanager to set the "lazy" attribute on all Maps objects
+    lazy = LazyCx()
+    
+    # allow setting "lazy" without overriding the contextmanager
+    def __setattr__(cls, name, value):
+        if name == "lazy":
+            MapsBase._lazy = value
+        else:
+            super().__setattr__(name, value)
+        
     def config(
         cls,
         snapshot_on_update=None,
@@ -348,7 +399,7 @@ class LayerNamespace:
     def __getitem__(self, name):
         # NOTE: convert args to string since layer-names are always strings
         if isinstance(name, tuple):
-            return MultiMaps([getattr(self, str(name)) for n in name])
+            return MultiMaps([getattr(self, str(n)) for n in name])
         else:
             return getattr(self, str(name))
 
@@ -539,8 +590,9 @@ class MapsLayerBase:
 
         return m
 
-
 class MapsBase(metaclass=_MapsMeta):
+    _lazy = True
+
     def __init__(
         self,
         crs=None,
@@ -548,11 +600,12 @@ class MapsBase(metaclass=_MapsMeta):
         ax=None,
         **kwargs,
     ):
+                
         self._view_transparency = 1
         self._figure_closed = False
 
-        self._artists = weakref.WeakSet()
-        self._bg_artists = weakref.WeakSet()
+        self._artists = WeakOrderedCollection()
+        self._bg_artists = WeakOrderedCollection()
 
         self._layout_editor = None
 
@@ -699,6 +752,17 @@ class MapsBase(metaclass=_MapsMeta):
             return MultiMaps([self])
         else:
             return self.__add__(value)
+
+    def _ipython_key_completions_(self, *args, **kwargs):
+        # to allow auto-completion for __getitem__ in ipython
+        return list(self.l._layers)
+
+    def __getitem__(self, name) -> "Maps":
+        # NOTE: convert args to string since layer-names are always strings
+        if isinstance(name, tuple):
+            return MultiMaps([getattr(self._l, str(n)) for n in name])
+        else:
+            return getattr(self._l, str(name))
 
     def __repr__(self):
         try:
@@ -1218,8 +1282,9 @@ class MapsBase(metaclass=_MapsMeta):
     @wraps(plt.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
         """Save the figure."""
+        redraw = False
 
-        dpi = kwargs.get("dpi", None)
+        dpi = kwargs.get("dpi", self.f.dpi)
 
         # get the currently visible layer (to restore it after saving is done)
         initial_layer = self._bm.bg_layer
@@ -1228,9 +1293,23 @@ class MapsBase(metaclass=_MapsMeta):
             # make sure that a draw-event was triggered when using the agg backend
             # (to avoid export-issues with some shapes)
             # TODO properly assess why this is necessary!
-            self.f.canvas.draw_idle()
+            pass
 
         with ExitStack() as stack:
+            if dpi != self.f.dpi or "bbox_inches" in kwargs:
+                redraw = True
+                from matplotlib import cbook
+
+                # remove manager to avoid updating the gui widget during save
+                stack.enter_context(cbook._setattr_cm(self.f.canvas, manager=None))
+                stack.enter_context(cbook._setattr_cm(self.f, dpi=dpi))
+
+                # clear all cached background layers before saving to make sure they
+                # are re-drawn with the correct dpi-settings
+                # self._bm._refetch_bg = True
+                self._bm._bg_layers.clear()
+                self.f.canvas.draw()
+                self.f.canvas.flush_events()
 
             # don't clear on layer-changes
             stack.enter_context(self._bm._cx_dont_clear_on_layer_change())
@@ -1239,14 +1318,6 @@ class MapsBase(metaclass=_MapsMeta):
             transparent = kwargs.get("transparent", False)
             showlayer_name = self._bm._get_showlayer_name(initial_layer, transparent)
             self.show_layer(showlayer_name)
-
-            redraw = False
-            if dpi is not None and dpi != self.f.dpi or "bbox_inches" in kwargs:
-                redraw = True
-
-                # clear all cached background layers before saving to make sure they
-                # are re-drawn with the correct dpi-settings
-                self._bm._refetch_bg = True
 
             # get all layer names that should be drawn
             savelayers, alphas = self._bm._parse_multi_layer_str(showlayer_name)
@@ -1327,6 +1398,7 @@ class MapsBase(metaclass=_MapsMeta):
             # and ordinary matplotlib axes are properly drawn
             # flush events prior to savefig to avoid issues with pending draw events
             # that cause wrong positioning of grid-labels and missing artists!
+
             self.f.canvas.flush_events()
             self.redraw(*savelayers)
             self.f._mpl_orig_savefig(*args, **kwargs)
@@ -1597,6 +1669,7 @@ class MapsBase(metaclass=_MapsMeta):
             self._new_axis_map = False
 
             # use the namespace from the parent map
+            # TODO find a better way to identify the parent
             self._l = next((m._l for m in self._bm._children if m.ax is ax))
 
     def _get_snapshot(self, layer=None):
@@ -1679,13 +1752,15 @@ class MapsBase(metaclass=_MapsMeta):
     def _transf_plot_to_lonlat(self):
         return self._get_transformer(
             self.crs_plot,
-            self.get_crs(self.crs_plot.as_geodetic()),
+            self.CRS.PlateCarree()
+            # self.get_crs(self.crs_plot.as_geodetic()),
         )
 
     @property
     def _transf_lonlat_to_plot(self):
         return self._get_transformer(
-            self.get_crs(self.crs_plot.as_geodetic()),
+            # self.get_crs(self.crs_plot.as_geodetic()),
+            self.CRS.PlateCarree(),
             self.crs_plot,
         )
 
@@ -1709,6 +1784,8 @@ class MapsBase(metaclass=_MapsMeta):
         if hasattr(self, "_update_shade_axis_size"):
             self._update_shade_axis_size(flush=False)
 
+        self._bm.run_hook("resize")
+
     def _on_close(self, event):
         self._figure_closed = True
 
@@ -1724,9 +1801,11 @@ class MapsBase(metaclass=_MapsMeta):
 
     def _on_xlims_change(self, *args, **kwargs):
         self._bm._refetch_bg = True
+        self._bm.run_hook("extent_changed")
 
     def _on_ylims_change(self, *args, **kwargs):
         self._bm._refetch_bg = True
+        self._bm.run_hook("extent_changed")
 
     def on_layer_activation(self, func, layer=None, persistent=False, **kwargs):
         """
@@ -2097,15 +2176,18 @@ class MapsBase(metaclass=_MapsMeta):
         >>>     m.add_feature.preset.land()
 
         """
+        import uuid
+
+        uuid = str(uuid.uuid4())
         try:
-            self._bm._disable_draw = True
-            self._bm._disable_update = True
+            self._bm._disable_draw.add(uuid)
+            self._bm._disable_update.add(uuid)
 
             yield
         finally:
-            self._bm._disable_draw = False
-            self._bm._disable_update = False
-            if redraw:
+            self._bm._disable_draw.remove(uuid)
+            self._bm._disable_update.remove(uuid)
+            if not (self._bm._disable_draw or self._bm._disable_update):
                 self.redraw()
 
 
@@ -2134,4 +2216,3 @@ class MultiMaps(MultiCaller):
             return object.__getattribute__(self, name)
 
         return super().__getattribute__(name)
-

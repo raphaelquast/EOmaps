@@ -365,9 +365,9 @@ class ClickCallbacks(QtWidgets.QFrame):
 
         for i, m in enumerate(self.identify_pick_map()):
             if m.data_specs.parameter is not None:
-                name = f"{i}: {m.data_specs.parameter}"
+                name = f"{m.name}: {m.data_specs.parameter}"
             else:
-                name = f"{i}"
+                name = f"{m.name}"
 
             # indicate map-layer name if combined layer is visible
             if "|" in m._bm.bg_layer:
@@ -461,10 +461,10 @@ class ClickCallbacks(QtWidgets.QFrame):
                 # explicitly check if the callback is attached to avoid warnings if
                 # the figure is closed while a callback is still attached
                 # (this way cleanup might have already removed the callback)
-                if cid in m.cb.pick.get.attached_callbacks:
+                if cid in m.cb.pick.attached_callbacks:
                     m.cb.pick.remove(cid)
             else:
-                if cid in m.cb.click.get.attached_callbacks:
+                if cid in m.cb.click.attached_callbacks:
                     m.cb.click.remove(cid)
         self.cids[key] = None
 

@@ -880,6 +880,7 @@ class DataManager:
         if layer is None:
             layer = self.layer
         try:
+
             if check_redraw and not self.redraw_required(layer):
                 return
 

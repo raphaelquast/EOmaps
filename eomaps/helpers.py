@@ -287,7 +287,11 @@ def _submit_on_activation(maps_attr="self", label=""):
                 m = self
             else:
                 m = getattr(self, maps_attr)
-
+            
+            # if the Maps object is not lazy, immediately execute the method
+            if not m._lazy:
+                return f(self, *args, **kwargs)
+            
             @wraps(f)
             def lazy_method(m):
                 ret = f(self, *args, **kwargs)
@@ -308,7 +312,13 @@ def _submit_on_activation(maps_attr="self", label=""):
                     label,
                 )
 
-            ret = m.on_layer_activation(lazy_method)
+            # check if layer has been overwritten by a kwarg
+            if (layer := kwargs.get("layer", None)) is None:
+                layer = m.layer
+            
+            if layer is not None:
+                ret = m[layer].on_layer_activation(lazy_method)
+                
             return ret
 
         return inner
@@ -681,3 +691,61 @@ def _get_rect_poly_verts(x0, y0, x1, y1, npts=100):
     x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
     verts = np.column_stack(((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))).T
     return verts
+
+
+# class WeakOrderedCollection:
+#     def __init__(self):
+#         self._d = weakref.WeakValueDictionary()
+
+#     @property
+#     def _next_key(self):
+#         try:
+#             while True:
+#                 return next(reversed(self._d.data.keys())) + 1
+#         except StopIteration:
+#             return 0
+
+#     def __iter__(self):
+#         return self._d.values()
+
+#     def add(self, value):
+#         self._d[self._next_key] = value
+
+#     def remove(self, value):
+#         for key, val in self._d.items():
+#             if val is value:
+#                 del self._d[key]
+#                 break
+#         else:
+#             raise ValueError(f"{value} not found in WeakList")
+
+
+class WeakOrderedCollection:
+    """
+    A class that stores members as weak-references
+    while maintaining insert-order.
+    """
+
+    def __init__(self):
+        self._d = weakref.WeakValueDictionary()
+
+    def __iter__(self):
+        return self._d.values()
+
+    def __len__(self):
+        return len(self._d)
+
+    def clear(self):
+        self._d.clear()
+
+    def add(self, value):
+        self._d[hash(value)] = value
+
+    def remove(self, value):
+        self._d.pop(hash(value))
+
+    def update(self, vals):
+        for v in vals:
+            h = hash(v)
+            if h not in self._d:
+                self._d[h] = v

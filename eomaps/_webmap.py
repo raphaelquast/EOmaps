@@ -1186,7 +1186,6 @@ class _XyzTileService:
                     layer, transparent, alpha, interpolation, zorder, **kwargs
                 )
         else:
-
             kwargs.setdefault("interpolation", interpolation)
             kwargs.setdefault("zorder", zorder)
             kwargs.setdefault("alpha", alpha)
@@ -1328,7 +1327,15 @@ class SlippyImageArtistNew(AxesImage):
 
         # indicator if WebMaps should be re-fetched if the size of the
         # axes (e.g. also the figure size or dpi) changes.
-
+        
+    def contains(self, *args, **kwargs):
+        # to avoid issues for empty-images that are not yet fetched
+        # (because the layer was never visible)
+        if self.get_array() is None:
+            return False, {}
+        else:
+            return super().contains(*args, **kwargs)
+        
     def on_xlim(self, *args, **kwargs):
         self.stale = True
 
@@ -1367,7 +1374,7 @@ class SlippyImageArtistNew(AxesImage):
                 self.cache = located_images
                 self._prev_extent = (x1, x2, y1, y2)
                 self._prev_size = (ax.bbox.width, ax.bbox.height)
-
+            
             for img, extent in self.cache:
                 try:
                     clippath = self.axes.spines["geo"]

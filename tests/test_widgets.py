@@ -115,12 +115,12 @@ def test_callback_widgets(widget):
     elif widget.__name__.startswith("Click"):
         cbs = m.all.cb.click
 
-    assert cbs.get.attached_callbacks == [w._cid], "callback not attached"
+    assert cbs.attached_callbacks == [w._cid], "callback not attached"
 
     state["value"] = False
     w.set_state(state)
 
-    assert cbs.get.attached_callbacks == [], "callback not removed"
+    assert cbs.attached_callbacks == [], "callback not removed"
 
 
 @pytest.mark.parametrize(

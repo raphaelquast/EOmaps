@@ -438,6 +438,19 @@ class DataMixin:
         else:
             self._inherit_classification = None
 
+    @_submit_on_activation(label="Maps.inherit_shape(...)")
+    def inherit_shape(self, m):
+        """
+        Use the same shape to plot the data as assigned to "m".
+
+        Parameters
+        ----------
+        m : eomaps.Maps or None
+            The Maps-object that provides the shape definition.
+        """
+        if m._shape_assigned:
+            getattr(self.set_shape, m.shape.name)(**m.shape._initargs)
+
     @_submit_on_activation(label="Maps.plot_map(...)")
     def plot_map(
         self,
@@ -533,7 +546,7 @@ class DataMixin:
             else:
                 kwargs.setdefault("zorder", 10)
 
-        if getattr(self, "coll", None) is not None and len(self.cb.pick.get.cbs) > 0:
+        if getattr(self, "coll", None) is not None and len(self.cb.pick._cbs) > 0:
             _log.info(
                 "EOmaps: Calling `m.plot_map()` or "
                 "`m.make_dataset_pickable()` more than once on the "
@@ -648,7 +661,7 @@ class DataMixin:
             if (
                 set_extent
                 and self._set_extent_on_plot
-                and self._bm._layer_visible(layer)
+                #and self._bm._layer_visible(layer) # TODO check interference with lazy
             ):
                 # note bg-layers are automatically triggered for re-draw
                 # if the extent changes!
@@ -1004,7 +1017,8 @@ class DataMixin:
             y_range = (np.nanmin(y[yf]), np.nanmax(y[yf]))
         else:
             # update here to ensure bounds are set
-            self._bm.update()
+            # TODO do we really need this?
+            # self._bm.update()
             x0, x1, y0, y1 = self.get_extent(self.crs_plot)
             x_range = (x0, x1)
             y_range = (y0, y1)
@@ -1035,16 +1049,17 @@ class DataMixin:
         coll.set_label(
             f" Dataset ({self.shape.name}  |  {zdata.shape})" f" on layer {self.layer}"
         )
-
+               
         self._coll = coll
 
         if dynamic is True:
             self.l[layer].add_artist(coll)
+            self._coll_dynamic = True
         else:
             self.l[layer].add_bg_artist(coll)
 
-        if dynamic is True:
-            self._bm.update(clear=False)
+        # if dynamic is True:
+        #     self._bm.update(clear=False)
 
     @property
     def _shape_assigned(self):

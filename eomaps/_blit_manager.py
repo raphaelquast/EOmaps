@@ -16,7 +16,7 @@ import numpy as np
 from matplotlib.spines import Spine
 from matplotlib.transforms import Bbox
 
-from .helpers import _proxy
+from .helpers import _proxy, WeakOrderedCollection
 
 _log = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class ArtistAccessor:
 
     def add(self, layer, *artists):
         "Add a 'free' artist to the blit-manager not connected to a Maps-object"
-        self._free_artists.setdefault(layer, weakref.WeakSet()).update(artists)
+        self._free_artists.setdefault(layer, WeakOrderedCollection()).update(artists)
 
     def __getitem__(self, key):
         return [
@@ -215,7 +215,7 @@ class ChildAccessor:
         return iter(chain(*self._children.values()))
 
     def add(self, m):
-        self._children.setdefault(m.layer, weakref.WeakSet()).add(m)
+        self._children.setdefault(m.layer, WeakOrderedCollection()).add(m)
 
     def remove(self, m):
         self._children[m.layer].remove(m)
@@ -296,7 +296,7 @@ class Hooks:
                 action(layer=layer, **kwargs)
             except Exception as ex:
                 _log.error(
-                    f"EOmaps: Issue during single-shot hook '{hook}': {ex}",
+                    f"EOmaps: Issue during single-shot hook {action}: {ex}",
                     exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
@@ -306,7 +306,7 @@ class Hooks:
                 action(layer=layer, **kwargs)
             except Exception as ex:
                 _log.error(
-                    f"EOmaps: Issue during permanent hook '{hook}': {ex}",
+                    f"EOmaps: Issue during permanent hook {action}: {ex}",
                     exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
@@ -399,8 +399,8 @@ class BlitManager(LayerParser, Hooks):
             List of the artists to manage
 
         """
-        self._disable_draw = False
-        self._disable_update = False
+        self._disable_draw = set()
+        self._disable_update = set()
 
         self._f = _proxy(f)
         self._children = ChildAccessor()
@@ -408,7 +408,7 @@ class BlitManager(LayerParser, Hooks):
         self._bg_layer = bg_layer
         self._bg_layers = {}
 
-        self._managed_axes = weakref.WeakSet()
+        self._managed_axes = WeakOrderedCollection()
 
         # the name of the layer at which all "unmanaged" artists are drawn
         self._unmanaged_artists_layer = "base"
@@ -445,7 +445,7 @@ class BlitManager(LayerParser, Hooks):
 
         # a weak set containing artists that should NOT be identified as
         # unmanaged artists
-        self._ignored_unmanaged_artists = weakref.WeakSet()
+        self._ignored_unmanaged_artists = WeakOrderedCollection()
 
         super().__init__()
 
@@ -727,6 +727,10 @@ class BlitManager(LayerParser, Hooks):
             return
 
         with self._disconnect_draw():
+            # execute actions on layer-changes
+            # (to make sure all lazy WMS services are properly added)
+            self._do_on_layer_change(layer=layer, new=False)
+
             self._do_fetch_bg(layer, bbox)
 
     def update(
@@ -789,6 +793,8 @@ class BlitManager(LayerParser, Hooks):
         if show_layer not in self._bg_layers:
             # make sure the background is properly fetched
             self.fetch_bg(show_layer)
+
+        self.run_hook("before_restore")
 
         cv.restore_region(self._get_background(show_layer))
 
@@ -947,6 +953,9 @@ class BlitManager(LayerParser, Hooks):
         return rgba
 
     def _get_background(self, layer, bbox=None, cache=False):
+        # if bbox is not None:
+        #     # TODO define proper way to cache bbox fetches
+        #     layer = f"{layer}_{hash(bbox)}"
         if layer not in self._bg_layers:
             if "|" in layer:
                 bg = self._combine_bgs(layer)
@@ -1023,6 +1032,35 @@ class BlitManager(LayerParser, Hooks):
             gc.restore()
 
         return action
+
+    def _get_restore_bg_img(
+        self,
+        layer,
+        bbox=None,
+    ):
+        """
+        Update a part of the screen with a different background
+        (intended as after-restore action)
+
+        bbox_bounds = (x, y, width, height)
+        """
+
+        if bbox is None:
+            bbox = self.figure.bbox
+
+        if layer in self._bg_layers:
+            buffer = self._bg_layers[layer]
+        else:
+            renderer = self._get_renderer()
+            if renderer is None:
+                raise RuntimeError("No renderer available?")
+
+            # make sure to restore the initial background
+            init_bg = renderer.copy_from_bbox(bbox)
+            buffer = self._get_background(layer, bbox=bbox, cache=True)
+            self.canvas.restore_region(init_bg)
+
+        return buffer
 
     def _get_showlayer_name(self, layer=None, transparent=False):
         # combine all layers that should be shown
@@ -1188,10 +1226,10 @@ class BlitManager(LayerParser, Hooks):
                                 )
 
                 self._bg_layers[layer] = renderer.copy_from_bbox(bbox)
+        self.run_hook("after_fetch_bg", layer=layer, bbox=None)
 
     def _on_draw_cb(self, event):
         """Callback to register with 'draw_event'."""
-
         if self._disable_draw:
             return
 
@@ -1347,7 +1385,7 @@ class BlitManager(LayerParser, Hooks):
             if l not in self._bg_layers:
                 # execute actions on layer-changes
                 # (to make sure all lazy WMS services are properly added)
-                self._do_on_layer_change(layer=l, new=False)
+                # self._do_on_layer_change(layer=l, new=False)
                 self.fetch_bg(l)
 
         renderer = self._get_renderer()
@@ -1409,7 +1447,11 @@ class BlitManager(LayerParser, Hooks):
             artists = []
 
         # always redraw artists from the "all" layer
-        layers.append("all")
+        # (all 'all' layer artists before all other artists to make sure that they
+        # are drawn below explicit layer artists)
+        # This is useful for peek-layer callbacks defined on the all layer that
+        # otherwise interfere with explicit layer callbacks (e.g. annotate)
+        layers.insert(0, "all")
 
         # make the list unique but maintain order (dicts keep order for python>3.7)
         layers = list(dict.fromkeys(layers))
@@ -1436,7 +1478,6 @@ class BlitManager(LayerParser, Hooks):
                 stack.enter_context(
                     ax_i.patch._cm_set(facecolor="none", edgecolor="none")
                 )
-
             for a in chain(*layer_artists, artists):
                 fig.draw_artist(a)
 

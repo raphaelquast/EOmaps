@@ -772,6 +772,7 @@ class Maps(
     )
     @wraps(MapsBase.savefig)
     def savefig(self, *args, refetch_wms=False, rasterize_data=True, **kwargs):
+
         with ExitStack() as stack:
             # re-fetch webmap services if required
             if refetch_wms is False:

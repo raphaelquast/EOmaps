@@ -12,8 +12,11 @@ import numpy as np
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.patches import Polygon
+from matplotlib.patches import Polygon, PathPatch
 from matplotlib.colors import to_rgb
+from matplotlib.transforms import TransformedPath, Affine2D
+import matplotlib.path as mpath
+
 
 from ..ne_features import NaturalEarthFeatures
 from ..grid import GridFactory
@@ -887,3 +890,454 @@ class AddMixin:
 
         self.l[layer].add_bg_artist(art)
         return art
+
+    from functools import lru_cache
+
+    @lru_cache
+    def _get_clip_path(self, shape, loc, size, n=200):
+        from matplotlib.markers import MarkerStyle
+
+        if shape == "s":
+            verts = _get_rect_poly_verts(0, 0, 1, 1, n)
+            clip_path = mpath.Path(verts)
+        elif shape in [".", "o"]:
+            ang = np.linspace(0, 2 * np.pi, n)
+            verts = 2 * np.column_stack((np.sin(ang), np.cos(ang)))
+            clip_path = mpath.Path(verts)
+        else:
+            clip_path = MarkerStyle(shape).get_path()
+
+        clip_bbox = clip_path.get_extents()
+
+        # make sure shape is positioned according to "loc" assignment
+        if loc == "center":
+            xshift, yshift = (
+                -clip_bbox.width / 2 - clip_bbox.x0,
+                -clip_bbox.height / 2 - clip_bbox.y0,
+            )
+        else:
+            if loc.startswith("lower"):
+                yshift = -clip_bbox.y0
+            elif loc.startswith("upper"):
+                yshift = -clip_bbox.y1
+            elif loc.startswith("center"):
+                yshift = -clip_bbox.height / 2 - clip_bbox.y0
+
+            if loc.endswith("left"):
+                xshift = -clip_bbox.x0
+            elif loc.endswith("right"):
+                xshift = -clip_bbox.x1
+            elif loc.endswith("center"):
+                xshift = -clip_bbox.width / 2 - clip_bbox.x0
+
+        clip_path = clip_path.transformed(Affine2D().translate(xshift, yshift))
+
+        # scale to desired size (rel. to max. width/height)
+        maxs = max(clip_bbox.width, clip_bbox.height)
+
+        if isinstance(size, (int, float, np.number)):
+            size = (size, size)
+
+        clip_path = clip_path.transformed(
+            Affine2D().scale(size[0] / maxs, size[1] / maxs)
+        )
+        return clip_path
+
+    def add_peek_layer(
+        self,
+        layer="base",
+        xy=(0.5, 0.5),
+        shape="s",
+        size=(0.4, 0.4),
+        xy_crs="axes",
+        shape_crs="axes",
+        loc="center",
+        boundary=True,
+        n_shape_points=100,
+        dynamic=False,
+        **kwargs,
+    ):
+        """
+        Overlay a part of the map with the content of another layer.
+
+
+        Parameters
+        ----------
+        layer : str or list
+
+            - if str: The name of the layer you want to peek at.
+            - if list: A list of layer-names of the following form:
+
+                - A layer-name (string)
+                - A tuple (< layer-name >, < transparency [0-1] >)
+
+            see `m.show_layer()` for more details on how to provide combined layer-names
+        xy: tuple
+            The position of the peek-shape (provided in the xy_crs coordinate system).
+            (see "loc" argument on the anchor of the position)
+            The default is (0.5, 0.5) in "axes" crs.
+
+        shape : str, optional
+            The shape of the peek-window.
+
+            - "s": peek a rectangle
+            - ".": peek a circle/ellipse
+            - "geod_circles": peek an ellipse with "size" defined in meters
+            - "left", "right", "top", "bottom":
+              Split the map from left (→), right (←), top (↓) or bottom (↑).
+              (size and shape_crs kwargs are ignored)
+            - "*": peek a star
+            - "$x^2$" peek a methematical equation
+            - (5, 0, 20) peek a regular 5-sided polygon at 20° angle
+
+            Since the peek-shape generation uses the same methods as matplotlib
+            markers under the hood, any method explained here is possible:
+            https://matplotlib.org/stable/api/markers_api.html
+
+            The default is "s"
+
+        size: float or (float, float)
+            The size of the shape (provided in the "shape_crs" coordinate
+            system).
+
+            - If shape_crs="axes":
+
+              - a single number represents a fraction of the shorter size of
+                the axes (to get "square" shapes).
+              - tuple (xsize, ysize) represents axes fractions of each side.
+            - If shape="geod_circles":
+              "shape_crs" is ignored and the size is expected to be in meters.
+            - If shape=("left", "right", "top" or "bottom"), "size" is ignored.
+
+            The default is (0.5, 0.5) in "axes" crs.
+        xy_crs: a CRS specifier
+            The coordinate system in which the xy-coordinates are provided.
+
+            - if "axes": relative fraction of axes size
+            - if "plot": the crs of the map
+            - all other provided values are identified as pyproj-crs identifier
+
+            The default is "axes"
+        shape_crs: str or a CRS specifier
+            The coordinate system in which the "size" of the shape is defined.
+
+            - if "axes": size in relative fraction of axes width/heigth
+            - if "plot": size in the plot-crs of the map
+            - all other provided values are identified as pyproj-crs identifier
+
+            If shape == "geod_circles", "left", "right", "top" or "bottom",
+            "shape_crs" is ignored!
+
+            The default is "axes"
+        loc : str
+            The anchor at which the xy-coordinates are defined.
+
+            - "center": The center of the shape
+            - a combination of
+              ("upper", "lower", "center") and ("left", "right", "center")
+              (e.g. "upper left" or "center right") to use the corresponding
+              position of the bounding-box of the shape as xy-anchor.
+
+            If shape == "geod_circles", "left", "right", "top" or "bottom",
+            "shape_crs" is ignored!
+
+            The default is "center"
+        boundary: bool or dict
+            Style settings for the boundary
+
+            - False: don't draw any boundary line
+            - True: draw the default boundary line (1px black)
+            - dict: use the provided kwargs to style the boundary-line
+              (e.g. {"ec":"red", "lw": 4})
+
+            The default is True
+        n_shape_points: int
+            The number of intermediate points to evaluate for the peek-shape.
+            (only relevant for shape=".", "s" or "geod_circles")
+            The default is 100
+        dynamic : bool
+            If True, artists are added as "dynamic" artists, otherwise
+            artists are added as "background_artists".
+
+        Additional Parameters
+        ---------------------
+        alpha : float, optional
+            The transparency of the peeked layer. (between 0 and 1)
+            If you overlay a (possibly transparent) combination of multiple layers,
+            this transparency will be assigned as a global transparency for the
+            obtained "combined layer".
+            The default is 1.
+        **kwargs :
+            additional kwargs passed to plt.imshow()
+            (e.g. "alpha=0.5" for 50% transparency)
+
+
+        Examples
+        --------
+        Overlay a single layer:
+
+        >>> m = Maps()
+        >>> m.add_feature.preset.coastline()
+        >>> m["ocean"].add_feature.preset.ocean()
+        >>> m.cb.click.attach.peek_layer("ocean", size=.3, shape=".")
+
+        Overlay a (transparent) combination of multiple layers:
+
+        >>> m = Maps(Maps.CRS.Stereographic())
+        >>> m.all.add_feature.preset.coastline()
+        >>> m.add_feature.preset.urban_areas()
+        >>> m["ocean"]add_feature.preset.ocean()
+        >>> m["land"].add_feature.physical.land(fc="g")
+        >>> m.cb.click.attach.peek_layer(
+        >>>    ["ocean", ("land", 0.5)], shape=".", shape_crs=4326, size=(15, 15)
+        >>> )
+
+        """
+        if not isinstance(layer, str):
+            layer = self._bm._get_combined_layer_name(*layer)
+
+        if boundary:
+            bnd_kwargs = {
+                "fc": "none",
+                "ec": "k",
+                "lw": 1.1,
+                "zorder": 100,
+                "animated": True,
+            }
+            if isinstance(boundary, dict):
+                bnd_kwargs.update(boundary)
+        elif boundary is False:
+            pass
+        else:
+            raise TypeError(
+                "EOmaps peek-boundary must be either True/False or a dict of style-kwargs"
+            )
+
+        t_ax_data = self.ax.transAxes + self.ax.transData.inverted()
+
+        if shape_crs == "axes":
+            if np.size(size) == 1:
+                # to allow "square" or "circular" peek-shapes, we have to
+                # scale with respect to the axes width/height ratio as well
+                asp = self.ax.bbox.width / self.ax.bbox.height
+                if asp > 1:
+                    tasp = Affine2D().scale(1 / asp, 1)
+                else:
+                    tasp = Affine2D().scale(1, asp)
+
+                t = tasp + t_ax_data
+            else:
+                t = t_ax_data
+
+            t_peek_plot = lambda x, y: t.transform(np.column_stack((x, y))).T
+            t_plot_peek = lambda x, y: t.inverted().transform(np.column_stack((x, y))).T
+            xlim, ylim = (0, 1), (0, 1)
+        else:
+            if (
+                shape_crs == "plot"
+                or (shape_ccrs := self._get_cartopy_crs(shape_crs)) == self.crs_plot
+            ):
+                t_peek_plot = t_plot_peek = lambda x, y: (x, y)
+                xlim, ylim = (
+                    None,
+                    None,
+                )  # self.crs_plot.x_limits, self.crs_plot.y_limits
+            else:
+                # t_peek_plot = self._get_transformer(shape_crs, self.crs_plot).transform
+                # t_plot_peek = self._get_transformer(self.crs_plot, shape_crs).transform
+
+                tpepl = (
+                    shape_ccrs._as_mpl_transform(self.ax) + self.ax.transData.inverted()
+                )
+                t_plot_peek = (
+                    lambda x, y: tpepl.inverted().transform(np.column_stack((x, y))).T
+                )
+                t_peek_plot = lambda x, y: tpepl.transform(np.column_stack((x, y))).T
+
+                limcrs = self._get_cartopy_crs(shape_crs)
+                xlim, ylim = limcrs.x_limits, limcrs.y_limits
+
+        if xy_crs == "axes":
+            t_xy_plot = lambda x, y: t_ax_data.transform(np.column_stack((x, y))).T
+        elif xy_crs == "plot":
+            t_xy_plot = lambda x, y: (x, y)
+        else:
+            t_xy_plot = self._get_transformer(xy_crs, self.crs_plot).transform
+
+        # isinstance call is required to support numpy-arrays of vertices for shape
+        if isinstance(shape, str) and shape in ("left", "right", "top", "bottom"):
+            (x0, x1), (y0, y1) = self.ax.get_xlim(), self.ax.get_ylim()
+            x, y = t_xy_plot(*xy)
+
+            # base transformations on transData to ensure correct treatment
+            # for shared axes
+            if shape == "left":
+                x1 = x
+            elif shape == "right":
+                x0 = x
+            elif shape == "top":
+                y0 = y
+            elif shape == "bottom":
+                y1 = y
+
+            clip_path = mpath.Path(
+                _get_rect_poly_verts(x0, y0, x1, y1, n_shape_points),
+                (
+                    mpath.Path.MOVETO,
+                    *[mpath.Path.LINETO] * (4 * n_shape_points - 2),
+                    mpath.Path.CLOSEPOLY,
+                ),
+            )
+        else:
+            if isinstance(shape, str) and shape == "geod_circle":
+                assert (
+                    np.size(size) == 1
+                ), f"Size must be a number for shape={shape}, not {size}"
+                lon, lat = self.transform_plot_to_lonlat(*t_xy_plot(*xy))
+                shp = self.set_shape._get("geod_circles")
+
+                vx, vy = shp._calc_geod_circle_points(
+                    lon=np.atleast_1d(lon),
+                    lat=np.atleast_1d(lat),
+                    radius=size,
+                    n=n_shape_points,
+                )
+
+                # antimeridean "wrapping"
+                if (abs(np.diff(vx)) > 300).any():
+                    vx[vx < 0] = vx[vx < 0] % 360
+
+                verts = np.column_stack(
+                    self.transform_lonlat_to_plot(vx.squeeze(), vy.squeeze())
+                )[::-1]
+
+            else:
+                t_xy_peek = lambda x, y: t_plot_peek(*t_xy_plot(x, y))
+
+                # translate to desired position (in peek-crs)
+                clip_path = self._get_clip_path(shape, loc, size, n_shape_points)
+                clip_path = clip_path.transformed(Affine2D().translate(*t_xy_peek(*xy)))
+                verts = clip_path.vertices.T
+
+                verts = np.column_stack(t_peek_plot(*verts))
+                x, y = clip_path.vertices.T
+
+            # TODO find a way to replace infinities with appropriate points
+            # on the map boundary
+            mask = np.all(np.isfinite(verts), axis=1)
+            verts = verts[mask]
+            # linear rings require at least 4 coordinates
+            if verts.size <= 4:
+                return None
+
+            if shape_crs == "axes" and shape != "geod_circle":
+                # no need for antimeridean wrapping if "axes" transform is used
+                # clip with respect to peek-crs limits
+                if xlim is not None:
+                    verts[:, 0] = np.clip(verts[:, 0], *xlim)
+                if ylim is not None:
+                    verts[:, 1] = np.clip(verts[:, 1], *ylim)
+
+                # transform back to plot-crs
+                x, y = t_peek_plot(x, y)
+
+                mask = np.logical_and(np.isfinite(x), np.isfinite(y))
+
+                # we need to clip with respect to plot-crs limits to avoid issues
+                xlim, ylim = self.crs_plot.x_limits, self.crs_plot.y_limits
+                if xlim is not None:
+                    x = np.clip(x[mask], *xlim)
+                if ylim is not None:
+                    y = np.clip(y[mask], *ylim)
+
+                if len(x) <= 4:
+                    return
+
+                verts = np.column_stack((x, y))
+                # transform to plot crs
+                clip_path = mpath.Path(
+                    verts, clip_path.codes, clip_path._interpolation_steps
+                )
+            else:
+                clip_path = mpath.Path(
+                    verts,
+                    (
+                        mpath.Path.MOVETO,
+                        *[mpath.Path.LINETO] * (len(verts) - 2),
+                        mpath.Path.CLOSEPOLY,
+                    ),
+                )
+
+                if shape == "geod_circle":
+                    self._gcp = clip_path
+                else:
+
+                    self._cp = clip_path
+
+        argb = self._bm._get_restore_bg_img(layer)
+
+        kwargs.setdefault("interpolation", "nearest")
+        kwargs.setdefault("interpolation_stage", "data")
+        kwargs.setdefault("animated", True)
+        kwargs.setdefault("zorder", 100)
+        kwargs.setdefault("resample", False)
+        
+        xt = argb.get_extents()
+        art = plt.Axes.imshow(
+            self.ax,
+            argb,
+            origin="upper",
+            extent=[xt[0], xt[2], xt[1], xt[3]],
+            transform=None,
+            **kwargs,
+        )
+
+        if clip_path is not None:
+            if boundary:
+                patch = PathPatch(clip_path, **bnd_kwargs)
+                marker = self.ax.add_patch(patch)
+
+                if dynamic is True:
+                    self.add_artist(marker)
+                else:
+                    self.add_bg_artist(marker)
+
+            # create a TransformedPath as needed for clipping
+            clip_path = TransformedPath(
+                clip_path, self.ax.projection._as_mpl_transform(self.ax)
+            )
+
+            art.set_clip_path(clip_path)
+
+        # remember buffer object for comparison
+        art._peek_bufr = argb
+
+        if dynamic is True:
+            self.add_artist(art)
+        else:
+            self.add_bg_artist(art)
+
+        def update_peek_image(*args, **kwargs):
+            argb = self._bm._get_restore_bg_img(layer)
+            # only redraw if a new buffer has been obtained
+            # (use this to avoid costly equality checks and redraws)
+            if art._peek_bufr is argb:
+                return
+
+            art._peek_bufr = argb
+            art.set_data(argb)
+
+        self._bm.add_hook("after_fetch_bg", update_peek_image)
+
+        def remove_method(*args, **kwargs):
+            try:
+                art._orig_remove_method(*args, **kwargs)
+            except ValueError:
+                # ValueError is returned in case the artist has already
+                # been removed when this function triggers
+                pass
+            finally:
+                self._bm.remove_hook("after_fetch_bg", update_peek_image)
+
+        art._orig_remove_method = art._remove_method
+        art._remove_method = remove_method

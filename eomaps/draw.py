@@ -180,7 +180,7 @@ class ShapeDrawer:
         cb : callable, optional
             A callable executed after finishing the draw. The default is None.
         """
-        self._m.cb.execute_callbacks(True)
+        self._m.execute_callbacks = True
 
         if cb is None:
             self._m._emit_signal("drawAborted")
@@ -363,7 +363,7 @@ class ShapeDrawer:
         canvas = self._m._bm.canvas
         # self.fetch_bg()
 
-        self._m.cb.execute_callbacks(False)
+        self._m.execute_callbacks = False
 
         def handler(event):
             self._init_draw_line()
@@ -531,7 +531,7 @@ class ShapeDrawer:
 
         canvas = self._m._bm.canvas
         # self.fetch_bg()
-        self._m.cb.execute_callbacks(False)
+        self._m.execute_callbacks = False
 
         def handler(event):
             self._init_draw_line()

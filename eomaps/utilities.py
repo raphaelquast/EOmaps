@@ -153,7 +153,7 @@ class DraggableLegend_new(DraggableLegend):
 
     def on_pick(self, evt):
         if self._check_still_parented() and evt.artist == self.ref_artist:
-            self._m.cb.execute_callbacks(False)
+            self._m.execute_callbacks = False
             self.mouse_x = evt.mouseevent.x
             self.mouse_y = evt.mouseevent.y
             self.got_artist = True
@@ -162,7 +162,7 @@ class DraggableLegend_new(DraggableLegend):
 
     def on_release(self, event):
         if self._check_still_parented() and self.got_artist:
-            self._m.cb.execute_callbacks(True)
+            self._m.execute_callbacks = True
             self.finalize_offset()
             self.got_artist = False
             self.canvas.mpl_disconnect(self._c1)
