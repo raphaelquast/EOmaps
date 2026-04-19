@@ -12,7 +12,7 @@ dependencies:
   - sphinx-copybutton =0.5.2
   - myst-nb =1.4.0
   - sphinx-design =0.7.0
-  - pydata-sphinx-theme =0.17.0
+  - pydata-sphinx-theme =0.16.1
   - myst-sphinx-gallery = 0.2.2
 
 
