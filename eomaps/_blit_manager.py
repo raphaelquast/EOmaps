@@ -1217,6 +1217,7 @@ class BlitManager(LayerParser, Hooks):
                                 )
 
                 self._bg_layers[layer] = renderer.copy_from_bbox(bbox)
+        self.run_hook("after_fetch_bg", layer=layer, bbox=None)
 
     def _on_draw_cb(self, event):
         """Callback to register with 'draw_event'."""
