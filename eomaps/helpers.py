@@ -257,7 +257,7 @@ def rgetattr(obj, attr, *args):
     return reduce(_getattr, [obj] + attr.split("."))
 
 
-def _submit_on_activation(maps_attr="self", label=""):
+def _submit_on_activation(maps_attr="self", label="", default_lazy=True):
     """
     Decorator that will submit the method when the associated layer
     becomes active.
@@ -277,7 +277,10 @@ def _submit_on_activation(maps_attr="self", label=""):
         NAME can hereby be any property of the class of the decorated method.
         (also nested access, e.g. "{a.b.c} -> self.a.b.c" is supported!)
         The default is "".
-
+    default_lazy : bool, optional
+        If True, the method is lazy by default.
+        If False, the metod is executed immediately by default.
+        The default is True.
     """
 
     def decorator(f):
@@ -287,6 +290,10 @@ def _submit_on_activation(maps_attr="self", label=""):
                 m = self
             else:
                 m = getattr(self, maps_attr)
+
+            # if the Maps object is not lazy, immediately execute the method
+            if m._lazy is False or (m._lazy is None and default_lazy is False):
+                return f(self, *args, **kwargs)
 
             @wraps(f)
             def lazy_method(m):
@@ -308,7 +315,13 @@ def _submit_on_activation(maps_attr="self", label=""):
                     label,
                 )
 
-            ret = m.on_layer_activation(lazy_method)
+            # check if layer has been overwritten by a kwarg
+            if (layer := kwargs.get("layer", None)) is None:
+                layer = m.layer
+
+            if layer is not None:
+                ret = m[layer].on_layer_activation(lazy_method)
+
             return ret
 
         return inner
