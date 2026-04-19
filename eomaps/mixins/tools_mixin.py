@@ -18,12 +18,12 @@ class ToolsMixin:
         self.util = self.parent._ToolsMixin__util
 
         # do this on init to avoid confusing sphinx
-        self.draw = self._draw
+        self.draw = self.__draw
 
         super().__init__(*args, **kwargs)
 
     @property
-    def _draw(self):
+    def __draw(self):
         # avoid initializing draw on init of Maps object
         # to reduce init-time
         if not hasattr(self, "_draw"):
