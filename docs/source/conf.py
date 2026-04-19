@@ -77,7 +77,7 @@ def setup(app):
     Maps.add_feature.cultural.__name__ = "cultural"
     Maps.add_feature.physical.__name__ = "physical"
     Maps.set_shape.__name__ = "set_shape"
-    # Maps.draw.__name__ = "draw"
+    Maps.draw.__name__ = "draw"
     Maps.add_wms.__name__ = "add_wms"
     Maps.util.__name__ = "util"
     Maps.cb.__name__ = "cb"
