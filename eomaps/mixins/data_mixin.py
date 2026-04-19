@@ -1053,6 +1053,7 @@ class DataMixin:
 
         if dynamic is True:
             self.l[layer].add_artist(coll)
+            self._coll_dynamic = True
         else:
             self.l[layer].add_bg_artist(coll)
 
