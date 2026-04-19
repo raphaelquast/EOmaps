@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import matplotlib.path as mpath
 
-from ..cb_container import GeoDataFramePicker
+from ..callback_container import GeoDataFramePicker
 from ..helpers import (
     _get_rect_poly_verts,
     register_modules,
