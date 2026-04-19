@@ -546,7 +546,7 @@ class DataMixin:
             else:
                 kwargs.setdefault("zorder", 10)
 
-        if getattr(self, "coll", None) is not None and len(self.cb.pick.get.cbs) > 0:
+        if getattr(self, "coll", None) is not None and len(self.cb.pick._cbs) > 0:
             _log.info(
                 "EOmaps: Calling `m.plot_map()` or "
                 "`m.make_dataset_pickable()` more than once on the "
