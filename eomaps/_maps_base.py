@@ -399,7 +399,7 @@ class LayerNamespace:
     def __getitem__(self, name):
         # NOTE: convert args to string since layer-names are always strings
         if isinstance(name, tuple):
-            return MultiMaps([getattr(self, str(name)) for n in name])
+            return MultiMaps([getattr(self, str(n)) for n in name])
         else:
             return getattr(self, str(name))
 
