@@ -1329,6 +1329,14 @@ class SlippyImageArtistNew(AxesImage):
         # indicator if WebMaps should be re-fetched if the size of the
         # axes (e.g. also the figure size or dpi) changes.
 
+    def contains(self, *args, **kwargs):
+        # to avoid issues for empty-images that are not yet fetched
+        # (because the layer was never visible)
+        if self.get_array() is None:
+            return False, {}
+        else:
+            return super().contains(*args, **kwargs)
+
     def on_xlim(self, *args, **kwargs):
         self.stale = True
 
