@@ -727,6 +727,10 @@ class BlitManager(LayerParser, Hooks):
             return
 
         with self._disconnect_draw():
+            # execute actions on layer-changes
+            # (to make sure all lazy WMS services are properly added)
+            self._do_on_layer_change(layer=layer, new=False)
+
             self._do_fetch_bg(layer, bbox)
 
     def update(
