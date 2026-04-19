@@ -2242,29 +2242,6 @@ class CallbackContainer:
             method="keypress",
         )
 
-    def get_execute_callbacks(self):
-        """
-        Get if callbacks should be executed or not.
-
-        Returns
-        -------
-        bool
-            If True, callbacks are executed.
-
-        """
-        return self._m.parent._execute_callbacks
-
-    def execute_callbacks(self, val):
-        """
-        Activate / deactivate triggering callbacks.
-
-        Parameters
-        ----------
-        val : bool
-            If True, callbacks will be executed.
-        """
-        self._m.parent._execute_callbacks = val
-
     def add_picker(self, name, artist, picker):
         """
         Attach a custom picker to an artist.

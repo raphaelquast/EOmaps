@@ -115,8 +115,9 @@ class LayoutEditor:
     @modifier_pressed.setter
     def modifier_pressed(self, val):
         self._modifier_pressed = val
-        if hasattr(self.m, "cb"):
-            self.m.cb.execute_callbacks(not val)
+        # disable callbacks while the modifier is pressed
+        self.m.execute_callbacks = not val
+
 
         if self._modifier_pressed:
             self.m._bm._disable_draw = True

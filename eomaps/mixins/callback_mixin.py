@@ -1,4 +1,5 @@
-from ..cb_container import CallbackContainer
+from ..callback_container import CallbackContainer
+from ..helpers import _from_parent
 
 
 class CallbackMixin:
@@ -10,5 +11,23 @@ class CallbackMixin:
         self.cb = CallbackContainer(self)
         self.cb._init_cbs()
 
-        if not hasattr(self.parent, "_execute_callbacks"):
-            self.parent._execute_callbacks = True
+    @property
+    @_from_parent
+    def execute_callbacks(self):
+        """
+        Indicator if callbacks are executed or not.
+
+        If set to False, no callback functions are triggered!
+        (The set value is shared across all Maps-objects of a figure)
+
+        """
+        try:
+            return self.__execute_callbacks
+        except AttributeError:
+            self.__execute_callbacks = True
+            return self.__execute_callbacks
+
+    @execute_callbacks.setter
+    @_from_parent
+    def execute_callbacks(self, value):
+        self.__execute_callbacks = value
