@@ -294,9 +294,9 @@ class TestBasicPlotting(unittest.TestCase):
                 cbID
                 == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}__{modifier}"
             )
-            self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 1)
+            self.assertTrue(len(m.cb.pick.attached_callbacks) == 1)
             m.cb.pick.remove(cbID)
-            self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 0)
+            self.assertTrue(len(m.cb.pick.attached_callbacks) == 0)
 
         # attach all click callbacks
         for n, cb in enumerate(m.cb.click.attach._available_callbacks()):
@@ -321,9 +321,9 @@ class TestBasicPlotting(unittest.TestCase):
                 cbID
                 == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}__{modifier}"
             )
-            self.assertTrue(len(m.cb.click.get.attached_callbacks) == 1)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
             m.cb.click.remove(cbID)
-            self.assertTrue(len(m.cb.click.get.attached_callbacks) == 0)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
 
         # attach all keypress callbacks
         double_click, mouse_button = True, 1
@@ -337,10 +337,10 @@ class TestBasicPlotting(unittest.TestCase):
 
             cbID = m.cb.keypress.attach(cb, key=key)
 
-            self.assertTrue(cbID == f"{cb}_0__{m.layer}__{key}")
-            self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 1)
+            self.assertTrue(cbID == f"{cb}_0__{m.layer}__any__None__{key}")
+            self.assertTrue(len(m.cb.keypress.attached_callbacks) == 1)
             m.cb.keypress.remove(cbID)
-            self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 0)
+            self.assertTrue(len(m.cb.keypress.attached_callbacks) == 0)
 
         plt.close(m.f)
 
@@ -1191,7 +1191,7 @@ class TestBasicPlotting(unittest.TestCase):
                 )
             )
 
-            self.assertTrue(len(m.cb.click.get.cbs) == 1)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
             self.assertTrue(set(m._get_layers()) == {"first"})
 
             with m.new_layer("second") as m2:
@@ -1215,7 +1215,7 @@ class TestBasicPlotting(unittest.TestCase):
                 )
 
                 self.assertFalse(m2.coll is None)
-                self.assertTrue(len(m2.cb.click.get.cbs) == 1)
+                self.assertTrue(len(m2.cb.click.attached_callbacks) == 1)
 
             self.assertTrue(set(m._get_layers()) == {"first"})
 
@@ -1234,14 +1234,14 @@ class TestBasicPlotting(unittest.TestCase):
                     for i in ["xorig", "yorig", "x0", "y0", "z_data"]
                 )
             )
-            self.assertTrue(len(m.cb.click.get.cbs) == 1)
-            self.assertTrue(len(m.cb.click.get.cbs) == 1)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
 
             self.assertTrue(m2.coll is None)
-            self.assertTrue(len(m2.cb.click.get.cbs) == 0)
+            self.assertTrue(len(m2.cb.click.attached_callbacks) == 0)
 
         self.assertTrue(m.coll is None)
-        self.assertTrue(len(m.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
 
         self.assertTrue(len(m._data_manager._all_data) == 0)
         self.assertTrue(len(m._data_manager._current_data) == 0)
@@ -1263,9 +1263,9 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
 
         # test cleaning a new layer
         m2 = m.new_layer("asdf")
@@ -1284,7 +1284,7 @@ class TestBasicPlotting(unittest.TestCase):
             len(m._bm._Hooks__hooks["layer_activation"][True][m2.layer]) == 1
         )
         self.assertTrue(
-            len(m._bm._Hooks__hooks["layer_activation"][False][m2.layer]) == 1
+            len(m._bm._Hooks__hooks["layer_activation"][False][m2.layer]) == 5
         )
 
         m.show_layer(m2.layer)  # show the layer to draw the artists!
@@ -1303,9 +1303,9 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(m2._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m2, "tree"))
-        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 1)
 
         m2.cleanup()
 
@@ -1320,16 +1320,16 @@ class TestBasicPlotting(unittest.TestCase):
         # m should still be OK
         self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
 
         # m2 must already be cleared
         self.assertTrue(m2._data_manager.x0 is None)
         self.assertTrue(not hasattr(m2, "tree"))
-        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
-        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
-        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 0)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 0)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 0)
 
         m.cleanup()
 
@@ -1338,9 +1338,9 @@ class TestBasicPlotting(unittest.TestCase):
 
         self.assertTrue(m._data_manager.x0 is None)
         self.assertTrue(not hasattr(m, "tree"))
-        self.assertTrue(len(m.cb.click.get.cbs) == 0)
-        self.assertTrue(len(m.cb.click.get.cbs) == 0)
-        self.assertTrue(len(m.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
         plt.close("all")
 
     def test_blit_artists(self):
