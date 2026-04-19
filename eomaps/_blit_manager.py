@@ -1024,6 +1024,35 @@ class BlitManager(LayerParser, Hooks):
 
         return action
 
+    def _get_restore_bg_img(
+        self,
+        layer,
+        bbox=None,
+    ):
+        """
+        Update a part of the screen with a different background
+        (intended as after-restore action)
+
+        bbox_bounds = (x, y, width, height)
+        """
+
+        if bbox is None:
+            bbox = self.figure.bbox
+
+        if layer in self._bg_layers:
+            buffer = self._bg_layers[layer]
+        else:
+            renderer = self._get_renderer()
+            if renderer is None:
+                raise RuntimeError("No renderer available?")
+
+            # make sure to restore the initial background
+            init_bg = renderer.copy_from_bbox(bbox)
+            buffer = self._get_background(layer, bbox=bbox, cache=True)
+            self.canvas.restore_region(init_bg)
+
+        return buffer
+
     def _get_showlayer_name(self, layer=None, transparent=False):
         # combine all layers that should be shown
         # (e.g. to add spines, backgrounds and inset-maps)
