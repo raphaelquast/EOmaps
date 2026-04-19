@@ -1409,7 +1409,11 @@ class BlitManager(LayerParser, Hooks):
             artists = []
 
         # always redraw artists from the "all" layer
-        layers.append("all")
+        # (all 'all' layer artists before all other artists to make sure that they
+        # are drawn below explicit layer artists)
+        # This is useful for peek-layer callbacks defined on the all layer that
+        # otherwise interfere with explicit layer callbacks (e.g. annotate)
+        layers.insert(0, "all")
 
         # make the list unique but maintain order (dicts keep order for python>3.7)
         layers = list(dict.fromkeys(layers))
