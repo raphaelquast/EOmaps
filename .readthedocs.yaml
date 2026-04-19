@@ -4,9 +4,9 @@ sphinx:
   configuration: docs/source/conf.py
 
 build:
-  os: "ubuntu-20.04"
+  os: "ubuntu-lts-latest"
   tools:
-    python: "mambaforge-22.9"
+    python: "miniforge3-latest"
 
 conda:
   environment: docs/docs_env.yml
