@@ -111,7 +111,7 @@ class DataMixin:
         if len(self._colorbars) > 0:
             return self._colorbars[-1]
 
-    @_submit_on_activation(label="Maps.set_data(...)")
+    @_submit_on_activation(label="Maps.set_data(...)", default_lazy=False)
     def set_data(
         self,
         data=None,
@@ -388,7 +388,7 @@ class DataMixin:
         self._shade_dpi = dpi
         self._update_shade_axis_size()
 
-    @_submit_on_activation(label="Maps.inherit_data(...)")
+    @_submit_on_activation(label="Maps.inherit_data(...)", default_lazy=False)
     def inherit_data(self, m):
         """
         Use the data of another Maps-object (without copying).
@@ -414,7 +414,7 @@ class DataMixin:
 
             self.set_data = set_data
 
-    @_submit_on_activation(label="Maps.inherit_classification(...)")
+    @_submit_on_activation(label="Maps.inherit_classification(...)", default_lazy=False)
     def inherit_classification(self, m):
         """
         Use the classification of another Maps-object when plotting the data.
@@ -438,7 +438,20 @@ class DataMixin:
         else:
             self._inherit_classification = None
 
-    @_submit_on_activation(label="Maps.plot_map(...)")
+    @_submit_on_activation(label="Maps.inherit_shape(...)", default_lazy=False)
+    def inherit_shape(self, m):
+        """
+        Use the same shape to plot the data as assigned to "m".
+
+        Parameters
+        ----------
+        m : eomaps.Maps or None
+            The Maps-object that provides the shape definition.
+        """
+        if m._shape_assigned:
+            getattr(self.set_shape, m.shape.name)(**m.shape._initargs)
+
+    @_submit_on_activation(label="Maps.plot_map(...)", default_lazy=False)
     def plot_map(
         self,
         layer=None,
@@ -675,7 +688,7 @@ class DataMixin:
 
         self._bm.update()
 
-    @_submit_on_activation(label="Maps.add_colorbar(...)")
+    @_submit_on_activation(label="Maps.add_colorbar(...)", default_lazy=False)
     @wraps(ColorBar._new_colorbar)
     def add_colorbar(self, *args, **kwargs):
         """Add a colorbar to the map."""
@@ -691,7 +704,7 @@ class DataMixin:
 
         return colorbar
 
-    @_submit_on_activation(label="Maps.make_dataset_pickable(...)")
+    @_submit_on_activation(label="Maps.make_dataset_pickable(...)", default_lazy=False)
     def make_dataset_pickable(
         self,
     ):
