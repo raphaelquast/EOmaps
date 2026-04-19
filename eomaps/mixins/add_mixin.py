@@ -1021,7 +1021,7 @@ class AddMixin:
         shape_crs: str or a CRS specifier
             The coordinate system in which the "size" of the shape is defined.
 
-            - if "axes": size in relative fraction of axes width/heigth
+            - if "axes": size in relative fraction of axes width/height
             - if "plot": size in the plot-crs of the map
             - all other provided values are identified as pyproj-crs identifier
 

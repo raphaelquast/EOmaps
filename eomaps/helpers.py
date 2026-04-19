@@ -279,7 +279,7 @@ def _submit_on_activation(maps_attr="self", label="", default_lazy=True):
         The default is "".
     default_lazy : bool, optional
         If True, the method is lazy by default.
-        If False, the metod is executed immediately by default.
+        If False, the method is executed immediately by default.
         The default is True.
     """
 
