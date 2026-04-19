@@ -67,11 +67,62 @@ def _handle_backends():
             )
 
 
+class LazyCx:
+    """
+    A contextmanager to temporarily change if methods are executed lazily.
+
+    Examples
+    --------
+
+    Set global behavior
+
+    >>> Maps.lazy = True # or False
+
+
+    Temporarily execute methods lazily:
+
+    >>> with Maps.lazy:
+    >>>    m["my_layer"].add_feature.preset.coastline()
+
+
+    Temporarily execute methods immediately:
+
+    >>> with Maps.lazy(False):
+    >>>    m["my_layer"].add_feature.preset.coastline()
+
+    """
+
+    def __init__(self):
+        self._lazy = True
+
+    def __call__(self, lazy=True):
+        if not isinstance(lazy, bool):
+            raise TypeError("lazy must be either True or False.")
+        self._lazy = lazy
+        return self
+
+    def __enter__(self):
+        self._init_lazy = MapsBase._lazy
+        MapsBase._lazy = self._lazy
+
+    def __exit__(self, type, value, tb):
+        MapsBase._lazy = self._init_lazy
+
+
 class _MapsMeta(type):
     _use_interactive_mode = None
     _always_on_top = False
-
     _backend_warning_shown = False
+
+    # a contextmanager to set the "lazy" attribute on all Maps objects
+    lazy = LazyCx()
+
+    # allow setting "lazy" without overriding the contextmanager
+    def __setattr__(cls, name, value):
+        if name == "lazy":
+            MapsBase._lazy = value
+        else:
+            super().__setattr__(name, value)
 
     def config(
         cls,
@@ -541,6 +592,8 @@ class MapsLayerBase:
 
 
 class MapsBase(metaclass=_MapsMeta):
+    _lazy = None
+
     def __init__(
         self,
         crs=None,
