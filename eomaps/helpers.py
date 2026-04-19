@@ -694,3 +694,34 @@ def _get_rect_poly_verts(x0, y0, x1, y1, npts=100):
     x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
     verts = np.column_stack(((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))).T
     return verts
+
+
+class WeakOrderedCollection:
+    """
+    A class that stores members as weak-references
+    while maintaining insert-order.
+    """
+
+    def __init__(self):
+        self._d = weakref.WeakValueDictionary()
+
+    def __iter__(self):
+        return self._d.values()
+
+    def __len__(self):
+        return len(self._d)
+
+    def clear(self):
+        self._d.clear()
+
+    def add(self, value):
+        self._d[hash(value)] = value
+
+    def remove(self, value):
+        self._d.pop(hash(value))
+
+    def update(self, vals):
+        for v in vals:
+            h = hash(v)
+            if h not in self._d:
+                self._d[h] = v

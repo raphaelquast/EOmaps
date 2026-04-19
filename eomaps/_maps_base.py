@@ -27,7 +27,7 @@ from cartopy import crs as ccrs
 from pyproj import CRS, Transformer
 import numpy as np
 
-from .helpers import _parse_log_level, _proxy
+from .helpers import _parse_log_level, _proxy, WeakOrderedCollection
 from .layout_editor import LayoutEditor
 from ._blit_manager import BlitManager
 from .projections import Equi7Grid_projection  # import also supercharges cartopy.ccrs
@@ -551,8 +551,8 @@ class MapsBase(metaclass=_MapsMeta):
         self._view_transparency = 1
         self._figure_closed = False
 
-        self._artists = weakref.WeakSet()
-        self._bg_artists = weakref.WeakSet()
+        self._artists = WeakOrderedCollection()
+        self._bg_artists = WeakOrderedCollection()
 
         self._layout_editor = None
 

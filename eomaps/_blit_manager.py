@@ -16,7 +16,7 @@ import numpy as np
 from matplotlib.spines import Spine
 from matplotlib.transforms import Bbox
 
-from .helpers import _proxy
+from .helpers import _proxy, WeakOrderedCollection
 
 _log = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class ArtistAccessor:
 
     def add(self, layer, *artists):
         "Add a 'free' artist to the blit-manager not connected to a Maps-object"
-        self._free_artists.setdefault(layer, weakref.WeakSet()).update(artists)
+        self._free_artists.setdefault(layer, WeakOrderedCollection()).update(artists)
 
     def __getitem__(self, key):
         return [
@@ -215,7 +215,7 @@ class ChildAccessor:
         return iter(chain(*self._children.values()))
 
     def add(self, m):
-        self._children.setdefault(m.layer, weakref.WeakSet()).add(m)
+        self._children.setdefault(m.layer, WeakOrderedCollection()).add(m)
 
     def remove(self, m):
         self._children[m.layer].remove(m)
@@ -408,7 +408,7 @@ class BlitManager(LayerParser, Hooks):
         self._bg_layer = bg_layer
         self._bg_layers = {}
 
-        self._managed_axes = weakref.WeakSet()
+        self._managed_axes = WeakOrderedCollection()
 
         # the name of the layer at which all "unmanaged" artists are drawn
         self._unmanaged_artists_layer = "base"
@@ -445,7 +445,7 @@ class BlitManager(LayerParser, Hooks):
 
         # a weak set containing artists that should NOT be identified as
         # unmanaged artists
-        self._ignored_unmanaged_artists = weakref.WeakSet()
+        self._ignored_unmanaged_artists = WeakOrderedCollection()
 
         super().__init__()
 
