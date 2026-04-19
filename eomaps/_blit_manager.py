@@ -296,7 +296,7 @@ class Hooks:
                 action(layer=layer, **kwargs)
             except Exception as ex:
                 _log.error(
-                    f"EOmaps: Issue during single-shot hook '{hook}': {ex}",
+                    f"EOmaps: Issue during single-shot hook {action}: {ex}",
                     exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
@@ -306,7 +306,7 @@ class Hooks:
                 action(layer=layer, **kwargs)
             except Exception as ex:
                 _log.error(
-                    f"EOmaps: Issue during permanent hook '{hook}': {ex}",
+                    f"EOmaps: Issue during permanent hook {action}: {ex}",
                     exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
                 )
 
