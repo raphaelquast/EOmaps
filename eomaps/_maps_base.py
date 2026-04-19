@@ -700,6 +700,19 @@ class MapsBase(metaclass=_MapsMeta):
         else:
             return self.__add__(value)
 
+    def _ipython_key_completions_(self, *args, **kwargs):
+        # to allow auto-completion for __getitem__ in ipython
+        return list(self.l._layers)
+
+    def __getitem__(self, name) -> "Maps":
+        # NOTE: convert args to string since layer-names are always strings
+        if isinstance(name, tuple):
+            return MultiMaps([getattr(self._l, str(n)) for n in name])
+        elif isinstance(name, slice):
+            return sum([*self.l][name])
+        else:
+            return getattr(self._l, str(name))
+
     def __repr__(self):
         try:
             return f"<eomaps.Maps object on layer '{self.layer}'>"
