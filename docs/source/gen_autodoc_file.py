@@ -91,7 +91,7 @@ def make_feature_toctree_file():
     s += get_autosummary("eomaps.compass", ["Compass"], "custom-class-template")
     s += get_autosummary("eomaps.scalebar", ["ScaleBar"], "custom-class-template")
     s += get_autosummary(
-        "eomaps.callbacks",
+        "eomaps.callback_container",
         ["ClickCallbacks", "PickCallbacks", "KeypressCallbacks"],
         "custom-class-template",
     )
