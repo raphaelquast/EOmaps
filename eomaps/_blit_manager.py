@@ -1379,9 +1379,6 @@ class BlitManager(LayerParser, Hooks):
         # make sure all layers are already fetched
         for l in layers:
             if l not in self._bg_layers:
-                # execute actions on layer-changes
-                # (to make sure all lazy WMS services are properly added)
-                self._do_on_layer_change(layer=l, new=False)
                 self.fetch_bg(l)
 
         renderer = self._get_renderer()
