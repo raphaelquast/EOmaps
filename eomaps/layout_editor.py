@@ -118,7 +118,6 @@ class LayoutEditor:
         # disable callbacks while the modifier is pressed
         self.m.execute_callbacks = not val
 
-
         if self._modifier_pressed:
             self.m._bm._disable_draw = True
             self.m._bm._disable_update = True
