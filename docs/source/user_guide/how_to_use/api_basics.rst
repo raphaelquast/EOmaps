@@ -276,7 +276,7 @@ The visible layer can be a **single layer-name**, or a **combination of multiple
     :icon: info
     :color: info
 
-    .. currentmodule:: eomaps.callback_container.ClickCallbacks
+    .. currentmodule:: eomaps.callback_methods._CallbackMixin
 
     If you want to interactively overlay a part of the screen with a different layer, have a look at :py:meth:`peek_layer` callbacks!
 
