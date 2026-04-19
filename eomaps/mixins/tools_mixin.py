@@ -2,7 +2,7 @@ import weakref
 from functools import wraps
 
 from ..utilities import Utilities
-from ..draw import ShapeDrawer
+from ..drawer import ShapeDrawer
 from ..annotation_editor import AnnotationEditor
 
 
