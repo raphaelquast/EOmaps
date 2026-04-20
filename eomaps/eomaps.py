@@ -747,9 +747,6 @@ class Maps(
 
         return copy_cls
 
-    def redraw(self, *args, **kwargs):
-        super().redraw(*args, **kwargs)
-
     @wraps(MapsBase.snapshot)
     def snapshot(self, *args, **kwargs):
         self._hide_all_companion_widget_indicators()
