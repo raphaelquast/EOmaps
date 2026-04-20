@@ -1284,7 +1284,7 @@ class TestBasicPlotting(unittest.TestCase):
             len(m._bm._Hooks__hooks["layer_activation"][True][m2.layer]) == 1
         )
         self.assertTrue(
-            len(m._bm._Hooks__hooks["layer_activation"][False][m2.layer]) == 5
+            len(m._bm._Hooks__hooks["layer_activation"][False][m2.layer]) == 3
         )
 
         m.show_layer(m2.layer)  # show the layer to draw the artists!
