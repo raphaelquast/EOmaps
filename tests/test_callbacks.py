@@ -79,6 +79,7 @@ class TestCallbacks(unittest.TestCase):
         button_press_event(cv, x + dx, y + dy, 1, False)
         if release:
             button_release_event(cv, x + dx, y + dy, 1, False)
+        m.f.canvas.flush_events()  # only required for python 3.10
 
     def click_ID(self, m, ID, release=True):
         cv = m.f.canvas
@@ -93,6 +94,7 @@ class TestCallbacks(unittest.TestCase):
         button_press_event(cv, x, y, 1, False)
         if release:
             button_release_event(cv, x, y, 1, False)
+        m.f.canvas.flush_events()  # only required for python 3.10
 
     def test_print_to_console(self):
         # ---------- test as CLICK callback
