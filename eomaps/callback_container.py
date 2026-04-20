@@ -689,7 +689,7 @@ class _CallbackContainerBase:
             kcbs = [bcbs.get(key, {})]
             # keypress callbacks attached with key=None are executed on "any key"
             if event._method == "keypress":
-                kcbs.append(bcbs.get(None, {}))
+                kcbs.append(bcbs.get("None", {}))
 
             # execute callbacks
             for kcb in kcbs:
