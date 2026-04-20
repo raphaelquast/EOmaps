@@ -944,6 +944,7 @@ class MapsBase(metaclass=_MapsMeta):
                 + '" do not (yet?) exist!\n'
                 + f"Currently available layers are: \n{lstr}"
             )
+            return
 
         # invoke the bg_layer setter of the blit-manager
         self._bm.bg_layer = name
