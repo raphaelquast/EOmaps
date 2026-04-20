@@ -559,8 +559,8 @@ class TestCallbacks(unittest.TestCase):
             pick_method="centroids",
         )
 
-        def customcb(picked_vals, val, **kwargs):
-            picked_vals.append(val)
+        def customcb(event, picked_vals):
+            picked_vals.append(event.val)
 
         picked_vals_col = []
         picked_vals_nocol = []
