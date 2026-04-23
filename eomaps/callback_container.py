@@ -657,13 +657,12 @@ class _CallbackContainerBase:
         # add the method name that triggered the callback
         # (so we can access the container if necessary)
         event._method = self._method
-
         # remember event
         # TODO this can be removed since event is now passed to the callbacks
         self._event = event
-        double_click = str(getattr(event, "dblclick", None))
-        key = str(getattr(event, "key", None))
-        button = str(getattr(event, "button", None))
+        double_click = format(getattr(event, "dblclick", None))
+        key = format(getattr(event, "key", None))
+        button = format(getattr(event, "button", None))
 
         # get callbacks to execute based on single/double click property
         cb_keys = ["any"]
