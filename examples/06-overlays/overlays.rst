@@ -74,7 +74,7 @@ The data displayed in the above gif is taken from:
     def callback(m, **kwargs):
         # NOTE: Since we change the array of a dynamic collection, the changes will be
         # reverted as soon as the background is re-drawn (e.g. on pan/zoom events)
-        selection = np.random.randint(0, len(m.data), 1000)
+        selection = np.random.randint(0, len(m.data_specs.data), 1000)
         m.coll.set_array(data_OK.param.iloc[selection])
 
 
@@ -103,7 +103,7 @@ The data displayed in the above gif is taken from:
         framealpha=1,
     )
     # add the legend as artist to keep it on top
-    m.BM.add_artist(leg)
+    m.add_artist(leg)
 
     # --------- add some fancy (static) indicators for selected pixels
     mark_id = 6060
@@ -125,7 +125,7 @@ The data displayed in the above gif is taken from:
     )
     m.add_annotation(
         ID=mark_id,
-        text=f"Here's Vienna!\n... the data-value is={m.data.param.loc[mark_id]:.2f}",
+        text=f"Here's Vienna!\n... the data-value is={m.data_specs.data.param.loc[mark_id]:.2f}",
         xytext=(80, 70),
         textcoords="offset points",
         bbox=dict(boxstyle="round", fc="w", ec="r"),

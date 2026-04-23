@@ -671,7 +671,7 @@ def _from_file(
 
         >>> m = Maps(crs=..., layer=...)
         >>> m.set_data(**m.read_GeoTIFF(...))
-        >>> m.set_classify_specs(...)
+        >>> m.set_classify.<SCHEME>(...)
         >>> m.plot_map(**kwargs)
 
     Parameters
@@ -689,7 +689,7 @@ def _from_file(
         A dict of keyword-arguments passed to `xarray.Dataset.isel()`.
         The default is None.
     classify_specs : dict, optional
-        A dict of keyword-arguments passed to `m.set_classify_specs()`.
+        A dict of keyword-arguments passed to `m.set_classify`.
         The default is None.
     val_transform : None or callable
         A function that is used to transform the data-values.
@@ -766,7 +766,9 @@ def _from_file(
 
     m.set_data(**data)
     if classify_specs:
-        m.set_classify_specs(**classify_specs)
+        classify_specs = {**classify_specs}
+        scheme = classify_specs.pop("scheme")
+        getattr(m.set_classify, scheme)(**classify_specs)
 
     if shape is not None:
         # use the provided shape
@@ -845,7 +847,7 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.NetCDF(...))
-        >>> m.set_classify_specs(...)
+        >>> m.set_classify.<scheme>(...)
         >>> m.plot_map(**kwargs)
 
         Parameters
@@ -898,7 +900,7 @@ class from_file:
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
         classify_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_classify_specs()`.
+            A dict of keyword-arguments passed to `m.set_classify`.
             The default is None.
         val_transform : None or callable
             A function that is used to transform the data-values.
@@ -1057,7 +1059,7 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.GeoTIFF(...))
-        >>> m.set_classify_specs(...)
+        >>> m.set_classify.<SCHEME>(...)
         >>> m.plot_map(**kwargs)
 
         Parameters
@@ -1098,7 +1100,7 @@ class from_file:
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
         classify_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_classify_specs()`.
+            A dict of keyword-arguments passed to `m.set_classify`.
             The default is None.
         val_transform : None or callable
             A function that is used to transform the data-values.
@@ -1275,7 +1277,7 @@ class from_file:
 
         >>> m = Maps(crs=...)
         >>> m.set_data(**m.read_file.CSV(...))
-        >>> m.set_classify_specs(...)
+        >>> m.set_classify.<SCHEME>.(...)
         >>> m.plot_map(**kwargs)
 
 
@@ -1305,7 +1307,7 @@ class from_file:
               >>> dict(shape="rectangles", radius=1, radius_crs=.5)
 
         classify_specs : dict, optional
-            A dict of keyword-arguments passed to `m.set_classify_specs()`.
+            A dict of keyword-arguments passed to `m.set_classify`.
             The default is None.
         val_transform : None or callable
             A function that is used to transform the data-values.

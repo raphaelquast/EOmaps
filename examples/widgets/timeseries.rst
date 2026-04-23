@@ -63,8 +63,7 @@ This example shows how to use EOmaps to analyze a database that is associated wi
 
     # -------- assign data to the map and plot it
     m.set_data(data=data, x="lon", y="lat", crs=4326)
-    m.set_classify_specs(
-        scheme=Maps.CLASSIFIERS.UserDefined,
+    m.set_classify.UserDefined(
         bins=[50, 100, 200, 400, 800],
     )
     m.set_shape.ellipses(radius=0.5)

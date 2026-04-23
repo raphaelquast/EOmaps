@@ -30,7 +30,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
     m = Maps(crs=Maps.CRS.InterruptedGoodeHomolosine(), ax=(2, 2, (1, 3)), figsize=(8, 5))
     m.add_feature.preset.coastline()
     m.set_data(data, lon, lat, parameter=name)
-    m.set_classify_specs(Maps.CLASSIFIERS.NaturalBreaks, k=5)
+    m.set_classify.NaturalBreaks(k=5)
     m.plot_map()
 
     # create 2 ordinary matplotlib axes to show the selected data
@@ -62,7 +62,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
     def cb(m, ind, ID, *args, **kwargs):
         # get row and column from the data
         # NOTE: "ind" always represents the index of the flattened array!
-        r, c = np.unravel_index(ind, m.data.shape)
+        r, c = np.unravel_index(ind, m.data_specs.data.shape)
 
         # ---- highlight the picked column
         # use "dynamic=True" to avoid re-drawing the background on each pick
@@ -97,8 +97,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
         )
 
         # make all artists temporary (e.g. remove them on next pick)
-        # "m2.coll" represents the collection created by "m2.plot_map()"
-        for a in [art0, art01, art1, art11, m2.coll, m3.coll]:
+        for a in [art0, art01, art1, art11]:
             m.cb.pick.add_temporary_artist(a)
 
 
@@ -108,7 +107,7 @@ Use custom callback functions to perform arbitrary tasks on the data when clicki
 
     # ---- add a pick-annotation with a custom text
     def text(ind, val, **kwargs):
-        r, c = np.unravel_index(ind, m.data.shape)
+        r, c = np.unravel_index(ind, m.data_specs.data.shape)
         return (
             f"row/col = {r}/{c}\n"
             f"lon/lat = {m.data_specs.x[r, c]:.2f}/{m.data_specs.y[r, c]:.2f}\n"

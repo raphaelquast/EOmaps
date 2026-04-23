@@ -4,14 +4,6 @@ from itertools import chain
 
 from eomaps import Maps, widgets
 
-# TODO there must be a better way than this...
-# BM needs to be a property otherwise there are problems with jupyter notebooks
-# In order to make BM still accessible to sphinx, override it prior to generating
-# the autodoc-files
-from eomaps._blit_manager import BlitManager
-
-Maps.BM = BlitManager
-
 
 def get_autosummary(
     currentmodule="eomaps.eomaps",
@@ -75,9 +67,7 @@ def make_feature_toctree_file():
         "read_file",
         "util",
         "add_wms",
-        "BM",
         "data_specs",
-        "classify_specs",
     ):
         members.extend(get_members(Maps, key, False))
     for key in ("add_feature", "cb"):
@@ -89,8 +79,6 @@ def make_feature_toctree_file():
         "cb.keypress.attach",
     ):
         members.extend(get_members(Maps, key, True))
-    for key in ("cb.click.get", "cb.pick.get", "cb.move.get", "cb.keypress.get"):
-        members.extend(get_members(Maps, key, False))
 
     # create a page that will be used for sphinx-autodoc to create stub-files
     s = ":orphan:\n\n"
@@ -103,9 +91,7 @@ def make_feature_toctree_file():
     s += get_autosummary("eomaps.compass", ["Compass"], "custom-class-template")
     s += get_autosummary("eomaps.scalebar", ["ScaleBar"], "custom-class-template")
     s += get_autosummary(
-        "eomaps.callbacks",
-        ["ClickCallbacks", "PickCallbacks", "KeypressCallbacks"],
-        "custom-class-template",
+        "eomaps.callback_methods", ["_CallbackMixin"], "custom-class-template"
     )
 
     s += get_autosummary(

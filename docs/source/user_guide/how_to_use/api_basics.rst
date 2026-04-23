@@ -175,12 +175,12 @@ You can create as many layers as you need! The following image explains how it w
     If you use methods that are **NOT provided by EOmaps**, the corresponding artists will always appear on the ``"base"`` layer by default!
     (e.g. ``cartopy`` or ``matplotlib`` methods accessible via ``m.ax.`` or ``m.f.`` like ``m.ax.plot(...)``)
 
-    In most cases this behavior is sufficient... for more complicated use-cases, artists must be explicitly added to the **Blit Manager** (``m.BM``) so that ``EOmaps`` can handle drawing accordingly.
+    In most cases this behavior is sufficient... for more complicated use-cases, artists must be explicitly added to the ``Maps`` object so that ``EOmaps`` can handle drawing accordingly.
 
     To put the artists on dedicated layers, use one of the the following options:
 
-    - For artists that are dynamically updated on each event, use ``m.BM.add_artist(artist, layer=...)``
-    - For "background" artists that only require updates on pan/zoom/resize, use ``m.BM.add_bg_artist(artist, layer=...)``
+    - For artists that are dynamically updated on each event, use ``m.add_artist(artist)``
+    - For "background" artists that only require updates on pan/zoom/resize, use ``m.add_bg_artist(artist)``
 
 
     .. code-block:: python
@@ -195,9 +195,9 @@ You can create as many layers as you need! The following image explains how it w
         (l1, ) = m.ax.plot([0, 1], [0, 1], lw=5, c="r", transform=m.ax.transAxes)
         (l2, ) = m.ax.plot([0, 1], [1, 0], lw=5, c="r", transform=m.ax.transAxes)
 
-        m.BM.add_bg_artist(l1, layer="mylayer")
-        m.BM.add_bg_artist(l2, layer="mylayer")
-        m.show_layer("mylayer")
+        m.l.mylayer.add_bg_artist(l1)
+        m.l.mylayer.add_bg_artist(l2)
+        m.l.mylayer.show()
 
 .. _combine_layers:
 
@@ -276,7 +276,7 @@ The visible layer can be a **single layer-name**, or a **combination of multiple
     :icon: info
     :color: info
 
-    .. currentmodule:: eomaps.callbacks.ClickCallbacks
+    .. currentmodule:: eomaps.callback_methods._CallbackMixin
 
     If you want to interactively overlay a part of the screen with a different layer, have a look at :py:meth:`peek_layer` callbacks!
 
@@ -642,21 +642,20 @@ Dynamic updates of figures
 **************************
 
     As soon as a :py:class:`Maps`-object is attached to a figure, EOmaps will handle re-drawing of the figure!
-    Therefore **dynamically updated** artists must be added to the "blit-manager" (``m.BM``) to ensure
+    Therefore **dynamically updated** artists must be added to the ``Maps``-object to ensure
     that they are correctly updated.
 
-    - use ``m.BM.add_artist(artist, layer=...)`` if the artist should be re-drawn on **any event** in the figure
-    - use ``m.BM.add_bg_artist(artist, layer=...)`` if the artist should **only** be re-drawn if the extent of the map changes
+    - use ``m.add_artist(artist, layer=...)`` if the artist should be re-drawn on **any event** in the figure
+    - use ``m.add_bg_artist(artist, layer=...)`` if the artist should **only** be re-drawn if the extent of the map changes
 
 .. note::
 
-    In most cases it is sufficient to simply add the whole axes-object as artist via ``m.BM.add_artist(...)``.
+    In most cases it is sufficient to simply add the whole axes-object as artist via ``m.add_artist(...)``.
 
     This ensures that all artists of the axes are updated as well!
 
 
 Here's an example to show how it works:
-
 
 
 .. grid:: 1 1 1 2
@@ -685,7 +684,7 @@ Here's an example to show how it works:
             # Since we want to dynamically update the data on the axis, it must be
             # added to the BlitManager to ensure that the artists are properly updated.
             # (EOmaps handles interactive re-drawing of the figure)
-            m.BM.add_artist(ax, layer=m.layer)
+            m.add_artist(ax, layer=m.layer)
 
             # plot some static data on the axis
             ax.plot([10, 20, 30, 40, 50], [10, 20, 30, 40, 50])
@@ -710,9 +709,9 @@ MapsGrid objects
 
 .. note::
 
-    While :py:class:`MapsGrid` objects provide some convenience, starting with EOmaps v6.x,
-    the preferred way of combining multiple maps and/or matplotlib axes in a figure
-    is by using one of the options presented in the previous sections!
+    Starting with EOmaps v9.0 MapsGrid objects support the full range of functionalities
+    offered by single Maps objects.
+
 
 A :py:class:`MapsGrid` creates a grid of :py:class:`Maps` objects (and/or ordinary ``matplotlib`` axes),
 and provides convenience-functions to perform actions on all maps of the figure.
@@ -722,102 +721,27 @@ and provides convenience-functions to perform actions on all maps of the figure.
 
     from eomaps import MapsGrid
     mg = MapsGrid(r=2, c=2, crs=4326)
-    # you can then access the individual Maps-objects via:
+    # you can then access the individual Maps-objects via the ``m_<i>_<j>`` properties
+    # (useful for auto-completion)
     mg.m_0_0.add_feature.preset.ocean()
-    mg.m_0_1.add_feature.preset.land()
-    mg.m_1_0.add_feature.preset.urban_areas()
-    mg.m_1_1.add_feature.preset.rivers_lake_centerlines()
 
-    m_0_0_ocean = mg.m_0_0.new_layer("ocean")
-    m_0_0_ocean.add_feature.preset.ocean()
+    # or via 1d or 2d indexing
+    mg[0, 1].add_feature.preset.land()
+    mg[1, 0].add_feature.preset.urban_areas()
+    mg[3].add_feature.preset.rivers_lake_centerlines()
 
     # functions executed on MapsGrid objects will be executed on all Maps-objects:
     mg.add_feature.preset.coastline()
     mg.add_compass()
+    mg.add_gridlines(10, c="lightblue")
 
-    # to perform more complex actions on all Maps-objects, simply loop over the MapsGrid object
-    for m in mg:
-        m.add_gridlines(10, c="lightblue")
+    mg.l.ocean.add_feature.preset.ocean()
 
     # set the margins of the plot-grid
     mg.subplots_adjust(left=0.1, right=0.9, bottom=0.05, top=0.95, hspace=0.1, wspace=0.05)
 
 
 Make sure to checkout the :ref:`layout_editor` which greatly simplifies the arrangement of multiple axes within a figure!
-
-Custom grids and mixed axes
-+++++++++++++++++++++++++++
-
-Fully customized grid-definitions can be specified by providing ``m_inits`` and/or ``ax_inits`` dictionaries
-of the following structure:
-
-- The keys of the dictionary are used to identify the objects
-- The values of the dictionary are used to identify the position of the associated axes
-- The position can be either an integer ``N``, a tuple of integers or slices ``(row, col)``
-- Axes that span over multiple rows or columns, can be specified via ``slice(start, stop)``
-
-.. code-block:: python
-
-    dict(
-        name1 = N  # position the axis at the Nth grid cell (counting first)
-        name2 = (row, col), # position the axis at the (row, col) grid-cell
-        name3 = (row, slice(col_start, col_end)) # span the axis over multiple columns
-        name4 = (slice(row_start, row_end), col) # span the axis over multiple rows
-        )
-
-- ``m_inits`` is used to initialize :py:class:`Maps` objects
-- ``ax_inits`` is used to initialize ordinary ``matplotlib`` axes
-
-The individual :py:class:`Maps` objects and ``matplotlib-Axes`` are then accessible via:
-
-.. code-block:: python
-    :name: test_mapsgrid_custom
-
-    from eomaps import MapsGrid
-    mg = MapsGrid(2, 3,
-                m_inits=dict(ocean=(0, 0), land=(0, 2)),
-                ax_inits=dict(someplot=(1, slice(0, 3)))
-                )
-    # Maps object with the name "left"
-    mg.m_ocean.add_feature.preset.ocean()
-    # the Maps object with the name "right"
-    mg.m_land.add_feature.preset.land()
-
-    # the ordinary matplotlib-axis with the name "someplot"
-    mg.ax_someplot.plot([1,2,3], marker="o")
-    mg.subplots_adjust(left=0.1, right=0.9, bottom=0.2, top=0.9)
-
-❗ NOTE: if ``m_inits`` and/or ``ax_inits`` are provided, ONLY the explicitly defined objects are initialized!
-
-
-- The initialization of the axes is based on matplotlib's `GridSpec <https://matplotlib.org/stable/api/_as_gen/matplotlib.gridspec.GridSpec.html>`_ functionality.
-  All additional keyword-arguments (``width_ratios, height_ratios, etc.``) are passed to the initialization of the ``GridSpec`` object.
-
-- To specify unique ``crs`` for each :py:class:`Maps` object, provide a dictionary of ``crs`` specifications.
-
-.. code-block:: python
-    :name: test_mapsgrid_custom_02
-
-    from eomaps import MapsGrid
-    # initialize a grid with 2 Maps objects and 1 ordinary matplotlib axes
-    mg = MapsGrid(2, 2,
-                m_inits=dict(top_row=(0, slice(0, 2)),
-                            bottom_left=(1, 0)),
-                crs=dict(top_row=4326,
-                        bottom_left=3857),
-                ax_inits=dict(bottom_right=(1, 1)),
-                width_ratios=(1, 2),
-                height_ratios=(2, 1))
-
-    # a map extending over the entire top-row of the grid (in epsg=4326)
-    mg.m_top_row.add_feature.preset.coastline()
-
-    # a map in the bottom left corner of the grid (in epsg=3857)
-    mg.m_bottom_left.add_feature.preset.ocean()
-
-    # an ordinary matplotlib axes in the bottom right corner of the grid
-    mg.ax_bottom_right.plot([1, 2, 3], marker="o")
-    mg.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
 
 
 .. currentmodule:: eomaps.mapsgrid
@@ -826,16 +750,6 @@ The individual :py:class:`Maps` objects and ``matplotlib-Axes`` are then accessi
     :nosignatures:
 
     MapsGrid
-    MapsGrid.join_limits
-    MapsGrid.share_click_events
-    MapsGrid.share_pick_events
-    MapsGrid.set_data
-    MapsGrid.set_classify_specs
-    MapsGrid.add_wms
-    MapsGrid.add_feature
-    MapsGrid.add_annotation
-    MapsGrid.add_marker
-    MapsGrid.add_gdf
 
 
 Syntax and Autocompletion

@@ -125,7 +125,7 @@ class Compass:
         self.layer = layer
 
         self._ignore_invalid_angles = ignore_invalid_angles
-        # self._m.BM.update()
+        # self._m._bm.update()
 
         ax2data = self._m.ax.transAxes + self._m.ax.transData.inverted()
 
@@ -157,7 +157,7 @@ class Compass:
 
         self._artist = self._get_artist(pos)
         self._m.ax.add_artist(self._artist)
-        self._m.BM.add_artist(self._artist, layer=self.layer)
+        self._m.l[self.layer].add_artist(self._artist)
 
         self._set_position(pos)
 
@@ -173,10 +173,9 @@ class Compass:
             self._canvas.mpl_connect("scroll_event", self._on_scroll),
         ]
 
-        if self._update_offset not in self._m.BM._before_fetch_bg_actions:
-            self._m.BM._before_fetch_bg_actions.append(self._update_offset)
+        self._m._bm.add_hook("before_fetch_bg", self._update_offset, True)
 
-        self._m.BM.update()
+        self._m._bm.update()
 
     def _get_artist(self, pos):
         if self._style == "north arrow":
@@ -342,7 +341,7 @@ class Compass:
                 x, y = self._m.ax.transData.inverted().transform((evt.x, evt.y))
 
             self._update_offset(x, y)
-            self._m.BM.update(artists=[self._artist])
+            self._m._bm.update(artists=[self._artist])
 
     def _on_scroll(self, event):
         if not self._layer_visible:
@@ -351,7 +350,7 @@ class Compass:
         if self._check_still_parented() and self._got_artist:
             self.set_scale(max(1, self._scale + event.step))
 
-            self._m.BM.update(artists=[self._artist])
+            self._m._bm.update(artists=[self._artist])
 
     def _on_pick(self, evt):
         if not self._layer_visible:
@@ -407,7 +406,7 @@ class Compass:
                 linewidth=self._last_patch_lw,
             )
 
-            self._m.BM.update()
+            self._m._bm.update()
 
     def _check_still_parented(self):
         if self._artist.figure is None:
@@ -418,15 +417,14 @@ class Compass:
 
     @property
     def _layer_visible(self):
-        return self._m.BM._layer_visible(self.layer)
+        return self._m._bm._layer_visible(self.layer)
 
     def _disconnect(self):
         """Disconnect the callbacks."""
         for cid in self._cids:
             self._canvas.mpl_disconnect(cid)
 
-        if self._update_offset in self._m.BM._before_fetch_bg_actions:
-            self._m.BM._before_fetch_bg_actions.append(self._update_offset)
+        self._m._bm.remove_hook("before_fetch_bg", self._update_offset, True)
 
         try:
             c1 = self._c1
@@ -456,9 +454,8 @@ class Compass:
 
         """
         self._disconnect()
-        self._m.BM.remove_artist(self._artist)
-        self._artist.remove()
-        self._m.BM.update()
+        self._m._bm.remove_artist(self._artist)
+        self._m._bm.update()
 
     def set_patch(self, facecolor=None, edgecolor=None, linewidth=None):
         """
@@ -516,7 +513,7 @@ class Compass:
         self._artist.set_picker(b)
 
     def _set_position(self, pos, coords="data"):
-        # Avoid calling BM.update() in here! It results in infinite
+        # Avoid calling m._bm.update() in here! It results in infinite
         # recursions on zoom events because the position of the scalebar is
         # dynamically updated on each re-fetch of the background!
 
@@ -547,7 +544,7 @@ class Compass:
             The default is "data".
         """
         self._set_position(pos, coords="data")
-        self._m.BM.update(artists=[self._artist])
+        self._m._bm.update(artists=[self._artist])
 
     def get_position(self, coords="data"):
         """

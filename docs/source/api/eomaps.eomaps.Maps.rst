@@ -21,6 +21,8 @@ Properties
 
     Maps.f
     Maps.ax
+    Maps.l
+    Maps.ll
     Maps.layer
     Maps.crs_plot
 
@@ -29,9 +31,7 @@ Properties
     :template: obj_with_attributes_no_toc.rst
     :nosignatures:
 
-    Maps.data
     Maps.data_specs
-    Maps.classify_specs
     Maps.colorbar
 
 
@@ -144,7 +144,6 @@ Data visualization
     Maps.set_data
     Maps.set_shape
     Maps.set_classify
-    Maps.set_classify_specs
 
 .. autosummary::
     :toctree: ../generated
@@ -229,7 +228,6 @@ Miscellaneous
     :nosignatures:
 
     Maps.config
-    Maps.BM
 
 .. autosummary::
     :toctree: ../generated

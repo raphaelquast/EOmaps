@@ -35,7 +35,7 @@ def test_selector_widgets(widget, use_layers):
     if use_layers is None:
         assert layers == m._get_layers(), "layers not correctly identified"
     else:
-        assert layers == [m.BM._get_combined_layer_name(*i[1]) for i in use_layers]
+        assert layers == [m._bm._get_combined_layer_name(*i[1]) for i in use_layers]
 
     state = w.get_state()
 
@@ -59,7 +59,7 @@ def test_selector_widgets(widget, use_layers):
         w.set_state(state)
         m.redraw()
 
-        found_layer = m.BM.bg_layer
+        found_layer = m._bm.bg_layer
 
         if widget in (widgets.LayerSelectMultiple,):
             if layers[i] == found_layer:
@@ -67,9 +67,9 @@ def test_selector_widgets(widget, use_layers):
                 # so the expected layer is NOT an overlay!
                 expected_layer = layers[i]
             else:
-                expected_layer = m.BM._get_combined_layer_name(layers[0], layers[i])
+                expected_layer = m._bm._get_combined_layer_name(layers[0], layers[i])
         elif widget in (widgets.LayerSelectionRangeSlider,):
-            expected_layer = m.BM._get_combined_layer_name(*layers[0 : i + 1])
+            expected_layer = m._bm._get_combined_layer_name(*layers[0 : i + 1])
         else:
             expected_layer = layers[i]
 
@@ -115,12 +115,12 @@ def test_callback_widgets(widget):
     elif widget.__name__.startswith("Click"):
         cbs = m.all.cb.click
 
-    assert cbs.get.attached_callbacks == [w._cid], "callback not attached"
+    assert cbs.attached_callbacks == [w._cid], "callback not attached"
 
     state["value"] = False
     w.set_state(state)
 
-    assert cbs.get.attached_callbacks == [], "callback not removed"
+    assert cbs.attached_callbacks == [], "callback not removed"
 
 
 @pytest.mark.parametrize(
@@ -142,10 +142,10 @@ def test_overlay_widgets(widget):
         state["value"] = val
         w.set_state(state)
         if val > 0:
-            expected = m.BM._get_combined_layer_name("coast", ("ocean", val))
+            expected = m._bm._get_combined_layer_name("coast", ("ocean", val))
         else:
             expected = "coast"
-        found = m.BM.bg_layer
+        found = m._bm.bg_layer
         assert (
             found == expected
         ), f"Overlay not properly assigned, expected {expected}, found {found}"
@@ -164,4 +164,4 @@ def test_layer_button(layer):
     b = widgets.LayerButton(m, layer=layer)
     layername = b._parse_layer(layer)
     b.click()
-    assert m.BM.bg_layer == layername, "layer not correctly switched"
+    assert m._bm.bg_layer == layername, "layer not correctly switched"

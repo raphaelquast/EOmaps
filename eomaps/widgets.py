@@ -14,13 +14,13 @@ except ImportError:
 @contextmanager
 def _force_full(m):
     """A contextmanager to force a full update of the figure (to avoid glitches)"""
-    force_full = getattr(m.BM, "_mpl_backend_force_full", False)
+    force_full = getattr(m._bm, "_mpl_backend_force_full", False)
 
     try:
-        m.BM._mpl_backend_force_full = True
+        m._bm._mpl_backend_force_full = True
         yield
     finally:
-        m.BM._mpl_backend_force_full = force_full
+        m._bm._mpl_backend_force_full = force_full
 
 
 from textwrap import dedent, indent
@@ -100,7 +100,7 @@ class _LayerSelectionWidget:
 
         # add a callback to update the widget values if the map-layer changes
         if hasattr(self, "_cb_on_layer_change"):
-            self._m.BM.on_layer(self._cb_on_layer_change, persistent=True)
+            self._m._bm.on_layer(self._cb_on_layer_change, persistent=True)
 
     def _set_layers_options(self, layers):
         # _layers is a list of the actual layer-names
@@ -151,8 +151,8 @@ class _LayerSelectionWidget:
 class _SingleLayerSelectionWidget(_LayerSelectionWidget):
     def _set_default_kwargs(self, kwargs):
         kwargs.setdefault("description", self._description)
-        if self._m.BM.bg_layer in self._layers:
-            kwargs.setdefault("value", self._m.BM.bg_layer)
+        if self._m._bm.bg_layer in self._layers:
+            kwargs.setdefault("value", self._m._bm.bg_layer)
 
     def change_handler(self, change):
         try:
@@ -166,13 +166,13 @@ class _SingleLayerSelectionWidget(_LayerSelectionWidget):
     def _cb_on_layer_change(self, **kwargs):
         """A callback that is executed on all layer changes to update the widget-value."""
         try:
-            layer = self._m.BM.bg_layer
+            layer = self._m._bm.bg_layer
             if layer in self._layers:
                 with self._unobserve_change_handler():
                     self.value = layer
 
         except Exception:
-            _log.exception(f"Unable to update widget value to {self._m.BM.bg_layer}")
+            _log.exception(f"Unable to update widget value to {self._m._bm.bg_layer}")
 
 
 @_add_docstring(
@@ -219,8 +219,8 @@ class _MultiLayerSelectionWidget(_LayerSelectionWidget):
     def _set_default_kwargs(self, kwargs):
         kwargs.setdefault("description", self._description)
 
-        if self._m.BM.bg_layer in self._layers:
-            kwargs.setdefault("value", (self._m.BM.bg_layer, self._m.BM.bg_layer))
+        if self._m._bm.bg_layer in self._layers:
+            kwargs.setdefault("value", (self._m._bm.bg_layer, self._m._bm.bg_layer))
 
 
 @_add_docstring(
@@ -242,7 +242,7 @@ class LayerSelectMultiple(_MultiLayerSelectionWidget, ipywidgets.SelectMultiple)
         try:
             # Identify all layers that are part of the currently visible layer
             # TODO transparencies are currently ignored (e.g. treated as selected)
-            active_layers = self._m.BM._get_active_layers_alphas[0]
+            active_layers = self._m._bm._get_active_layers_alphas[0]
             found = [l for l in self._layers if l in active_layers]
 
             if len(found) > 0:
@@ -250,7 +250,7 @@ class LayerSelectMultiple(_MultiLayerSelectionWidget, ipywidgets.SelectMultiple)
                     self.value = found
 
         except Exception:
-            _log.exception(f"Unable to update widget value to {self._m.BM.bg_layer}")
+            _log.exception(f"Unable to update widget value to {self._m._bm.bg_layer}")
 
 
 @_add_docstring(
@@ -283,7 +283,7 @@ class LayerSelectionRangeSlider(
             # TODO properly handle case where intermediate layers are not selected
             #      (right now only start- and stop determines the range independent
             #       of the selected layers in between)
-            active_layers = self._m.BM._get_active_layers_alphas[0]
+            active_layers = self._m._bm._get_active_layers_alphas[0]
             found_idx = [
                 self._layers.index(l) for l in self._layers if l in active_layers
             ]
@@ -295,7 +295,7 @@ class LayerSelectionRangeSlider(
                     self.value = (self._layers[mi], self._layers[ma])
 
         except Exception:
-            _log.exception(f"Unable to update widget value to {self._m.BM.bg_layer}")
+            _log.exception(f"Unable to update widget value to {self._m._bm.bg_layer}")
 
 
 # %% Layer Overlay Widgets
@@ -387,7 +387,7 @@ class LayerOverlaySlider(ipywidgets.FloatSlider):
 
     def change_handler(self, change):
         try:
-            layers, alphas = LayerParser._parse_multi_layer_str(self._m.BM.bg_layer)
+            layers, alphas = LayerParser._parse_multi_layer_str(self._m._bm.bg_layer)
 
             # in case the active layer has the overlay on top, strip off the overlay
             # from the active layer!
@@ -396,7 +396,7 @@ class LayerOverlaySlider(ipywidgets.FloatSlider):
                     *zip(layers[:-1], alphas[:-1])
                 )
             else:
-                base = self._m.BM.bg_layer
+                base = self._m._bm.bg_layer
 
             with _force_full(self._m):
                 self._m.show_layer(base, (self._layer, self.value))

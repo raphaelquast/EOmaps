@@ -29,6 +29,8 @@ class DataManager:
 
         self._extent_margin_factor = 0.1
 
+        self._callbacks_attached = False
+
     def set_margin_factors(self, radius_margin_factor, extent_margin_factor):
         """
         Set the margin factors that are applied to the plot extent
@@ -105,6 +107,9 @@ class DataManager:
         dynamic=False,
         only_pick=False,
     ):
+
+        self._dynamic = dynamic
+
         # cleanup existing callbacks before attaching new ones
         self.cleanup_callbacks()
 
@@ -149,21 +154,22 @@ class DataManager:
             # attach a hook that updates the collection whenever a new
             # background is fetched
             # ("shade" shapes take care about updating the data themselves!)
-            self.attach_callbacks(dynamic=dynamic)
+            self.attach_callbacks()
 
-    def attach_callbacks(self, dynamic):
-        if dynamic is True:
-            if self.on_fetch_bg not in self.m.BM._before_update_actions:
-                self.m.BM._before_update_actions.append(self.on_fetch_bg)
+    def attach_callbacks(self):
+        self._callbacks_attached = True
+        if self._dynamic is True:
+            self.m._bm.add_hook("before_update", self.on_fetch_bg, True)
         else:
-            if self.on_fetch_bg not in self.m.BM._before_fetch_bg_actions:
-                self.m.BM._before_fetch_bg_actions.append(self.on_fetch_bg)
+            self.m._bm.add_hook("before_fetch_bg", self.on_fetch_bg, True)
 
     def cleanup_callbacks(self):
-        if self.on_fetch_bg in self.m.BM._before_fetch_bg_actions:
-            self.m.BM._before_fetch_bg_actions.remove(self.on_fetch_bg)
-        if self.on_fetch_bg in self.m.BM._before_update_actions:
-            self.m.BM._before_update_actions.remove(self.on_fetch_bg)
+        if not self._callbacks_attached:
+            return
+        if self._dynamic is True:
+            self.m._bm.remove_hook("before_update", self.on_fetch_bg, True)
+        else:
+            self.m._bm.remove_hook("before_fetch_bg", self.on_fetch_bg, True)
 
     def _identify_pandas(self, data=None, x=None, y=None, parameter=None):
         (pd,) = register_modules("pandas", raise_exception=False)
@@ -626,7 +632,7 @@ class DataManager:
         # remove previous mask artist
         if self._masked_points_artist is not None:
             try:
-                self.m.BM.remove_bg_artist(self._masked_points_artist)
+                self.m.l[self.layer].remove_bg_artist(self._masked_points_artist)
                 self._masked_points_artist.remove()
                 self._masked_points_artist = None
             except Exception:
@@ -658,7 +664,7 @@ class DataManager:
             **kwargs,
         )
 
-        self.m.BM.add_bg_artist(self._masked_points_artist, layer=self.layer)
+        self.m.l[self.layer].add_bg_artist(self._masked_points_artist)
 
     def redraw_required(self, layer):
         """
@@ -669,6 +675,7 @@ class DataManager:
         layer : str
             The layer for which the background is fetched.
         """
+
         if not self.m._data_plotted:
             return
 
@@ -681,11 +688,11 @@ class DataManager:
 
         # don't re-draw if the layer of the dataset is not requested
         # (note multi-layers trigger re-draws of individual layers as well)
-        if not self.m.BM._layer_is_subset(layer, self.layer):
+        if not self.m._bm._layer_is_subset(layer, self.layer):
             return False
 
         # don't re-draw if the collection has been hidden in the companion-widget
-        if self.m.coll in self.m.BM._hidden_artists:
+        if self.m.coll in self.m._bm._hidden_artists:
             return False
 
         # re-draw if the data has never been plotted
@@ -707,13 +714,10 @@ class DataManager:
         if self.m.coll is not None:
             try:
                 if getattr(self.m, "_coll_dynamic", False):
-                    self.m.BM.remove_artist(self.m._coll)
+                    self.m.l[self.layer].remove_artist(self.m._coll)
                 else:
-                    self.m.BM.remove_bg_artist(self.m._coll)
+                    self.m.l[self.layer].remove_bg_artist(self.m._coll)
 
-                # if the collection is still attached to the axes, remove it
-                if self.m.coll.axes is not None:
-                    self.m.coll.remove()
                 self.m._coll = None
             except Exception:
                 _log.exception("EOmaps: Error while trying to remove collection.")
@@ -906,7 +910,11 @@ class DataManager:
             coll = self._get_coll(props, **self.m._coll_kwargs)
             coll.set_clim(self.m._vmin, self.m._vmax)
 
-            coll.set_label("Dataset " f"({self.m.shape.name}  |  {self.z_data.shape})")
+            coll.set_label(
+                "Dataset "
+                f"({self.m.shape.name}  |  {self.z_data.shape})"
+                f" on layer {self.layer}"
+            )
 
             if self.m.shape.name not in ["scatter_points", "contour", "hexbin"]:
                 # avoid use "autolim=True" since it can cause problems in
@@ -916,9 +924,9 @@ class DataManager:
                 self.m.ax.add_collection(coll, autolim=False)
 
             if self.m._coll_dynamic:
-                self.m.BM.add_artist(coll, layer=self.layer)
+                self.m.l[self.layer].add_artist(coll)
             else:
-                self.m.BM.add_bg_artist(coll, layer=self.layer)
+                self.m.l[self.layer].add_bg_artist(coll)
 
             self.m._coll = coll
 

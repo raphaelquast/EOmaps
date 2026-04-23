@@ -101,6 +101,9 @@ def test_contour(data):
     m3_1.set_shape.contour(filled=False)
     m3_1.plot_map(linestyles=["--", "-", ":", "-."])
 
+    # show layers before indicating contours to trigger lazy plotting
+    m.show_layer("base", "contours")
+
     cb3.indicate_contours(
         contour_map=m3_1,
         add_labels="top",
@@ -125,9 +128,7 @@ def test_contour(data):
 
     # arts = m3_1.ax.clabel(m3_1.coll.contour_set)
     # for a in arts:
-    #     m3_1.BM.add_bg_artist(a, layer=m3_1.layer)
-
-    m.show_layer("base", "contours")
+    #     m3_1._bm.add_bg_artist(a, layer=m3_1.layer)
 
     return m
 

@@ -235,5 +235,5 @@ def cli(crs=None, file=None, ne=None, wms=None, location=None, loglevel=None):
         else:
             os._exit(0)
 
-    m.BM.canvas.mpl_connect("close_event", on_close)
+    m._bm.canvas.mpl_connect("close_event", on_close)
     m.show()

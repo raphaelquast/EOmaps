@@ -111,7 +111,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
 
         self.addTab(newtabwidget, "+")
         # don't show the close button for this tab
-        self.tabBar().setTabButton(self.count() - 1, self.tabBar().RightSide, None)
+        self.tabBar().setTabButton(self.count() - 1, QtWidgets.QTabBar.RightSide, None)
 
         self.tabBarClicked.connect(self.tabbar_clicked)
         self.setCurrentIndex(0)
@@ -183,7 +183,7 @@ class DrawerTabs(QtWidgets.QTabWidget):
                 exc_info=_log.getEffectiveLevel() <= logging.DEBUG,
             )
 
-        self.m.BM.update()
+        self.m._bm.update()
 
         self.removeTab(index)
         if index == curridx:
@@ -422,7 +422,7 @@ class DrawerWidget(QtWidgets.QWidget):
         try:
             self.drawer.remove_last_shape()
             # update to make sure the changes are reflected on the map immediately
-            self.m.BM.update()
+            self.m._bm.update()
         except Exception:
             _log.error(
                 "EOmaps: Encountered a problem while trying to remove "

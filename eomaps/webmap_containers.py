@@ -23,12 +23,16 @@ def _register_imports():
     global RestApiServices
     global _XyzTileService
     global _XyzTileServiceNonEarth
+    global refetch_wms_on_size_change
+    global _cx_refetch_wms_on_size_change
 
     from ._webmap import (
         _WebServiceCollection,
         RestApiServices,
         _XyzTileService,
         _XyzTileServiceNonEarth,
+        refetch_wms_on_size_change,
+        _cx_refetch_wms_on_size_change,
     )
 
 
@@ -62,6 +66,8 @@ class WebMapContainer(object):
         _register_imports()
 
         self._m = m
+        self.refetch_wms_on_size_change = refetch_wms_on_size_change
+        self._cx_refetch_wms_on_size_change = _cx_refetch_wms_on_size_change
 
     class _ISRIC:
         """
@@ -208,7 +214,7 @@ class WebMapContainer(object):
 
         WMS._EOmaps_info = type(self).ESA_WorldCover.__doc__
         WMS._EOmaps_source_code = (
-            "m.add_wms.ESA_WorldCover.add_layer." f"<layer>(transparent=True)"
+            "Maps.add_wms.ESA_WorldCover.add_layer." "<layer>(...)"
         )
 
         WMS.__doc__ = type(self).ESA_WorldCover.__doc__
@@ -258,7 +264,7 @@ class WebMapContainer(object):
         )
 
         WMS._EOmaps_info = type(self).GEBCO.__doc__
-        WMS._EOmaps_source_code = "m.add_wms.GEBCO.add_layer.<layer>(transparent=True)"
+        WMS._EOmaps_source_code = "Maps.add_wms.GEBCO.add_layer.<layer>(...)"
         WMS.__doc__ = type(self).GEBCO.__doc__
         return WMS
 
@@ -300,9 +306,7 @@ class WebMapContainer(object):
             url="https://www.gmrt.org/services/mapserver/wms_merc?request=GetCapabilities&service=WMS&version=1.3.0",
         )
         WMS._EOmaps_info = type(self).GMRT.__doc__
-        WMS._EOmaps_source_code = (
-            "m.add_wms.GMRT.add_layer." f"<layer>(transparent=True)"
-        )
+        WMS._EOmaps_source_code = "Maps.add_wms.GMRT.add_layer." "<layer>(...)"
         WMS.__doc__ = type(self).GMRT.__doc__
         return WMS
 
@@ -328,9 +332,7 @@ class WebMapContainer(object):
             url="https://glad.umd.edu/mapcache/?SERVICE=WMS",
         )
         WMS._EOmaps_info = type(self).GLAD.__doc__
-        WMS._EOmaps_source_code = (
-            "m.add_wms.GLAD.add_layer." f"<layer>(transparent=True)"
-        )
+        WMS._EOmaps_source_code = "Maps.add_wms.GLAD.add_layer." "<layer>(...)"
         WMS.__doc__ = type(self).GLAD.__doc__
         return WMS
 
@@ -372,9 +374,7 @@ class WebMapContainer(object):
                 url="https://gibs.earthdata.nasa.gov/wmts/epsg4326/all/1.0.0/WMTSCapabilities.xml",
             )
             WMS._EOmaps_info = type(self).NASA_GIBS.__doc__
-            WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.add_layer." f"<layer>(transparent=True)"
-            )
+            WMS._EOmaps_source_code = "Maps.add_wms.NASA_GIBS.add_layer." "<layer>(...)"
 
         WMS.__doc__ = type(self).NASA_GIBS.__doc__
         return WMS
@@ -394,7 +394,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.EPSG_4326.add_layer." f"<layer>(transparent=True)"
+                "Maps.add_wms.NASA_GIBS.EPSG_4326.add_layer." "<layer>(...)"
             )
             WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
@@ -409,7 +409,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.EPSG_3857.add_layer." f"<layer>(transparent=True)"
+                "Maps.add_wms.NASA_GIBS.EPSG_3857.add_layer." "<layer>(...)"
             )
             WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
@@ -424,7 +424,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.EPSG_3413.add_layer." f"<layer>(transparent=True)"
+                "Maps.add_wms.NASA_GIBS.EPSG_3413.add_layer." "<layer>(...)"
             )
             WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
@@ -439,7 +439,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = WebMapContainer.NASA_GIBS.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.NASA_GIBS.EPSG_3031.add_layer." f"<layer>(transparent=True)"
+                "Maps.add_wms.NASA_GIBS.EPSG_3031.add_layer." "<layer>(...)"
             )
             WMS.__doc__ = WebMapContainer.NASA_GIBS.__doc__
             return WMS
@@ -863,7 +863,7 @@ class WebMapContainer(object):
                     )
 
                     obj._EOmaps_source_code = (
-                        f"m.add_wms.OpenStreetMap.add_layer.{wmsname}()"
+                        f"Maps.add_wms.OpenStreetMap.add_layer.{wmsname}()"
                     )
 
         class _OSM_waymarkedtrails:
@@ -920,8 +920,8 @@ class WebMapContainer(object):
                             check: https://{v}.waymarkedtrails.org/#help-legal
                             """
                         srv._EOmaps_source_code = (
-                            "m.add_wms.OpenStreetMap.OSM_waymarkedtrails.add_layer."
-                            f"{v}(transparent=True)"
+                            "Maps.add_wms.OpenStreetMap.OSM_waymarkedtrails.add_layer."
+                            f"{v}(...)"
                         )
 
                         getattr(self, v).__doc__ = _combdoc(
@@ -981,8 +981,8 @@ class WebMapContainer(object):
                             check: https://wiki.openstreetmap.org/wiki/OpenRailwayMap/API
                             """
                         srv._EOmaps_source_code = (
-                            "m.add_wms.OpenStreetMap.OSM_openrailwaymap.add_layer."
-                            f"{v}(transparent=True)"
+                            "Maps.add_wms.OpenStreetMap.OSM_openrailwaymap.add_layer."
+                            f"{v}(...)"
                         )
 
                         getattr(self, v).__doc__ = _combdoc(
@@ -1055,8 +1055,8 @@ class WebMapContainer(object):
 
                             """
                         srv._EOmaps_source_code = (
-                            "m.add_wms.OpenStreetMap.OSM_cartodb.add_layer."
-                            f"{v}(transparent=True)"
+                            "Maps.add_wms.OpenStreetMap.OSM_cartodb.add_layer."
+                            f"{v}(...)"
                         )
 
                         getattr(self, name).__doc__ = _combdoc(
@@ -1085,8 +1085,7 @@ class WebMapContainer(object):
                 - https://www.terrestris.de/en/openstreetmap-wms/
                 """
             WMS._EOmaps_source_code = (
-                "m.add_wms.OpenStreetMap.OSM_terrestis.add_layer."
-                "<layer>(transparent=True)"
+                "Maps.add_wms.OpenStreetMap.OSM_terrestis.add_layer." "<layer>(...)"
             )
 
             WMS.__doc__ = _combdoc(
@@ -1116,8 +1115,7 @@ class WebMapContainer(object):
                 - https://www.mundialis.de/en/ows-mundialis/
                 """
             WMS._EOmaps_source_code = (
-                "m.add_wms.OpenStreetMap.OSM_mundialis.add_layer."
-                "<layer>(transparent=True)"
+                "Maps.add_wms.OpenStreetMap.OSM_mundialis.add_layer." "<layer>(...)"
             )
 
             WMS.__doc__ = _combdoc(
@@ -1150,8 +1148,7 @@ class WebMapContainer(object):
 
                 """
             WMS._EOmaps_source_code = (
-                "m.add_wms.OpenStreetMap.OSM_wheregroup.add_layer."
-                "<layer>(transparent=True)"
+                "Maps.add_wms.OpenStreetMap.OSM_wheregroup.add_layer." "<layer>(...)"
             )
 
             WMS.__doc__ = _combdoc(
@@ -1210,7 +1207,7 @@ class WebMapContainer(object):
                 https://osm-wms.de
                 """
             WMS._EOmaps_source_code = (
-                "m.add_wms.OpenStreetMap.OSM_wms.add_layer." "<layer>(transparent=True)"
+                "Maps.add_wms.OpenStreetMap.OSM_wms.add_layer." "<layer>(...)"
             )
 
             WMS.__doc__ = _combdoc(
@@ -1262,8 +1259,7 @@ class WebMapContainer(object):
                 https://osmlanduse.org
                 """
             WMS._EOmaps_source_code = (
-                "m.add_wms.OpenStreetMap.OSM_wheregroup.add_layer."
-                "<layer>(transparent=True)"
+                "Maps.add_wms.OpenStreetMap.OSM_wheregroup.add_layer." "<layer>(...)"
             )
 
             WMS.__doc__ = _combdoc(
@@ -1667,7 +1663,7 @@ class WebMapContainer(object):
             )
             WMS.__doc__ = _combdoc("Polarization: VV", WebMapContainer.S1GBM.__doc__)
             WMS._EOmaps_info = WMS.__doc__
-            WMS._EOmaps_source_code = "m.add_wms.S1GBM.add_layer.vv(transparent=True)"
+            WMS._EOmaps_source_code = "Maps.add_wms.S1GBM.add_layer.vv(...)"
 
             return WMS
 
@@ -1681,7 +1677,7 @@ class WebMapContainer(object):
             )
             WMS.__doc__ = _combdoc("Polarization: VH", WebMapContainer.S1GBM.__doc__)
             WMS._EOmaps_info = WMS.__doc__
-            WMS._EOmaps_source_code = "m.add_wms.S1GBM.add_layer.vh(transparent=True)"
+            WMS._EOmaps_source_code = "Maps.add_wms.S1GBM.add_layer.vh(...)"
 
             return WMS
 
@@ -1759,8 +1755,7 @@ class WebMapContainer(object):
 
                     srv._EOmaps_info = docstring
                     srv._EOmaps_source_code = (
-                        "m.add_wms.OpenPlanetary.Moon.add_layer."
-                        f"{name}(transparent=True)"
+                        "Maps.add_wms.OpenPlanetary.Moon.add_layer." f"{name}(...)"
                     )
 
                     getattr(self, name).__doc__ = _combdoc(
@@ -1956,8 +1951,7 @@ class WebMapContainer(object):
                     setattr(self, name, srv)
                     srv._EOmaps_info = docstring
                     srv._EOmaps_source_code = (
-                        "m.add_wms.OpenPlanetary.Mars.add_layer."
-                        f"{name}(transparent=True)"
+                        "Maps.add_wms.OpenPlanetary.Mars.add_layer." f"{name}(...)"
                     )
 
                     getattr(self, name).__doc__ = _combdoc(
@@ -2022,9 +2016,7 @@ class WebMapContainer(object):
 
                 setattr(self, name, srv)
                 srv._EOmaps_info = docstring
-                srv._EOmaps_source_code = (
-                    f"m.add_wms.GOOGLE.add_layer.{name}(transparent=True)"
-                )
+                srv._EOmaps_source_code = f"Maps.add_wms.GOOGLE.add_layer.{name}(...)"
 
                 getattr(self, name).__doc__ = _combdoc(
                     docstring,
@@ -2075,9 +2067,7 @@ class WebMapContainer(object):
         )
 
         WMS._EOmaps_info = WebMapContainer.S2_cloudless.__doc__
-        WMS._EOmaps_source_code = (
-            f"m.add_wms.S2_cloudless.add_layer.<layer>(transparent=True)"
-        )
+        WMS._EOmaps_source_code = "Maps.add_wms.S2_cloudless.add_layer.<layer>(...)"
 
         WMS.__doc__ = WebMapContainer.S2_cloudless.__doc__
         return WMS
@@ -2118,7 +2108,7 @@ class WebMapContainer(object):
             url="https://eccharts.ecmwf.int/wms/?token=public",
         )
         WMS._EOmaps_info = WebMapContainer.CAMS.__doc__
-        WMS._EOmaps_source_code = f"m.add_wms.CAMS.add_layer.<layer>(transparent=True)"
+        WMS._EOmaps_source_code = "Maps.add_wms.CAMS.add_layer.<layer>(...)"
         WMS.__doc__ = WebMapContainer.CAMS.__doc__
         return WMS
 
@@ -2179,9 +2169,7 @@ class WebMapContainer(object):
                 WebMapContainer._DLR.__doc__,
             )
 
-            WMS._EOmaps_source_code = (
-                "m.add_wms.DLR.basemap.add_layer.<layer>(transparent=True)"
-            )
+            WMS._EOmaps_source_code = "Maps.add_wms.DLR.basemap.add_layer.<layer>(...)"
 
             WMS.__doc__ = WMS._EOmaps_info
             return WMS
@@ -2205,9 +2193,7 @@ class WebMapContainer(object):
                 """,
                 WebMapContainer._DLR.__doc__,
             )
-            WMS._EOmaps_source_code = (
-                "m.add_wms.DLR.land.add_layer.<layer>(transparent=True)"
-            )
+            WMS._EOmaps_source_code = "Maps.add_wms.DLR.land.add_layer.<layer>(...)"
             WMS.__doc__ = WMS._EOmaps_info
 
             return WMS
@@ -2230,9 +2216,7 @@ class WebMapContainer(object):
                 """,
                 WebMapContainer._DLR.__doc__,
             )
-            WMS._EOmaps_source_code = (
-                "m.add_wms.DLR.imagery.add_layer.<layer>(transparent=True)"
-            )
+            WMS._EOmaps_source_code = "Maps.add_wms.DLR.imagery.add_layer.<layer>(...)"
             WMS.__doc__ = WMS._EOmaps_info
 
             return WMS
@@ -2256,7 +2240,7 @@ class WebMapContainer(object):
                 WebMapContainer._DLR.__doc__,
             )
             WMS._EOmaps_source_code = (
-                "m.add_wms.DLR.elevation.add_layer.<layer>(transparent=True)"
+                "Maps.add_wms.DLR.elevation.add_layer.<layer>(...)"
             )
             WMS.__doc__ = WMS._EOmaps_info
 
@@ -2281,7 +2265,7 @@ class WebMapContainer(object):
                 WebMapContainer._DLR.__doc__,
             )
             WMS._EOmaps_source_code = (
-                "m.add_wms.DLR.atmosphere.add_layer.<layer>(transparent=True)"
+                "Maps.add_wms.DLR.atmosphere.add_layer.<layer>(...)"
             )
             WMS.__doc__ = WMS._EOmaps_info
 
@@ -2361,7 +2345,7 @@ class WebMapContainer(object):
             )
             WMTS._EOmaps_info = type(self).AT_basemap.__doc__
             WMTS._EOmaps_source_code = (
-                "m.add_wms.Austria.AT_basemap.add_layer.<layer>(transparent=True)"
+                "Maps.add_wms.Austria.AT_basemap.add_layer.<layer>(...)"
             )
             WMTS.__doc__ = WMTS._EOmaps_info
             return WMTS
@@ -2388,7 +2372,7 @@ class WebMapContainer(object):
             )
             WMTS._EOmaps_info = type(self).Wien_basemap.__doc__
             WMTS._EOmaps_source_code = (
-                "m.add_wms.Austria.Wien_basemap.add_layer.<layer>(transparent=True)"
+                "Maps.add_wms.Austria.Wien_basemap.add_layer.<layer>(...)"
             )
             WMTS.__doc__ = WMTS._EOmaps_info
             return WMTS
@@ -2415,7 +2399,7 @@ class WebMapContainer(object):
             )
             WMS._EOmaps_info = type(self).Wien_data.__doc__
             WMS._EOmaps_source_code = (
-                "m.add_wms.Austria.Wien_data.add_layer.<layer>(transparent=True)"
+                "Maps.add_wms.Austria.Wien_data.add_layer.<layer>(...)"
             )
             WMS.__doc__ = WMS._EOmaps_info
             return WMS

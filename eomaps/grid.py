@@ -13,6 +13,8 @@ import numpy as np
 
 from matplotlib.collections import LineCollection
 
+from .helpers import _proxy
+
 _log = logging.getLogger(__name__)
 
 
@@ -63,7 +65,7 @@ class GridLines:
     def __init__(
         self, m, d=None, auto_n=10, layer=None, bounds=None, n=100, dynamic=False
     ):
-        self.m = m._proxy(m)
+        self.m = _proxy(m)
 
         self._d = d
         self._auto_n = auto_n
@@ -366,15 +368,19 @@ class GridLines:
             # don't trigger draw since this would result in a recursion!
             # (_redraw is called on each fetch-bg event)
             if self._dynamic:
-                self.m.BM.add_artist(self._coll, layer=self.layer)
+                self.m.l[self.layer].add_artist(self._coll)
             else:
-                self.m.BM.add_bg_artist(self._coll, layer=self.layer, draw=False)
+                self.m.l[self.layer].add_bg_artist(self._coll, draw=False)
 
     def _redraw(self):
         self._get_lines.cache_clear()
         try:
             self._remove()
         except Exception as ex:
+            _log.debug(
+                f"Encountered exception {ex} while trying to remove gridlines",
+                exc_info=True,
+            )
             # catch exceptions to avoid issues with dynamic re-drawing of
             # invisible grids
             pass
@@ -391,14 +397,9 @@ class GridLines:
         # don't trigger draw since this would result in a recursion!
         # (_redraw is called on each fetch-bg event)
         if self._dynamic:
-            self.m.BM.remove_artist(self._coll, layer=self.layer)
+            self.m.l[self.layer].remove_artist(self._coll)
         else:
-            self.m.BM.remove_bg_artist(self._coll, layer=self.layer, draw=False)
-
-        try:
-            self._coll.remove()
-        except ValueError:
-            pass
+            self.m.l[self.layer].remove_bg_artist(self._coll, draw=False)
 
         self._coll = None
 
@@ -575,7 +576,7 @@ class GridLabels:
             self._kwargs.setdefault("clip_box", self._g.m.ax.bbox)
 
         if not self._g._dynamic:
-            self._g.m.BM._before_fetch_bg_actions.append(self._redraw)
+            self._g.m._bm.add_hook("before_fetch_bg", self._redraw, True)
 
     def _set_exclude(self, exclude):
         # a list of tick values to exclude
@@ -619,23 +620,18 @@ class GridLabels:
         while len(self._texts) > 0:
             try:
                 t = self._texts.pop(-1)
-                try:
-                    t.remove()
-                except ValueError:
-                    pass
 
                 if self._g._dynamic:
-                    self._g.m.BM.remove_artist(t)
+                    self._g.m._bm.remove_artist(t)
                 else:
-                    self._g.m.BM.remove_bg_artist(t, draw=False)
+                    self._g.m.l[self._g.layer].remove_bg_artist(t, draw=False)
             except Exception:
                 _log.exception("EOmaps: Problem while trying to remove a grid-label:")
                 pass
 
     def remove(self):
         """Remove the grid-labels from the map."""
-        if self._redraw in self._g.m.BM._before_fetch_bg_actions:
-            self._g.m.BM._before_fetch_bg_actions.remove(self._redraw)
+        self._g.m._bm.remove_hook("before_fetch_bg", self._redraw, True)
 
         self._remove()
 
@@ -728,7 +724,6 @@ class GridLabels:
             lines_fig[:, 0, 0 if axis == 1 else 1] -= 0.01
             lines_fig[:, -1, 0 if axis == 1 else 1] += 0.01
 
-        tr = m.ax.transData.inverted()
         tr_ax = m.ax.transAxes.inverted()
 
         # TODO would be nice to vectorize over gridlines as well
@@ -914,18 +909,16 @@ class GridLabels:
                     t.set_label("__EOmaps_exclude")
 
                     if self._g._dynamic:
-                        m.BM.add_artist(t, layer=self._g.layer)
+                        m.l[self._g.layer].add_artist(t)
                     else:
-                        m.BM.add_bg_artist(t, layer=self._g.layer, draw=False)
+                        m.l[self._g.layer].add_bg_artist(t, draw=False)
                     self._texts.append(t)
 
     def add_labels(self):
         """
         Add labels to the grid.
         """
-        m = self._g.m
         lines = self._g._get_lines()
-        aspect = m.ax.bbox.height / m.ax.bbox.width
 
         if self._where == "all":
             use_axes = (0, 1)
@@ -946,7 +939,7 @@ class GridFactory:
     def __init__(self, m):
         self.m = m
         self._gridlines = []
-        self.m.BM._before_fetch_bg_actions.append(self._update_autogrid)
+        self.m._bm.add_hook("before_fetch_bg", self._update_autogrid, True)
 
     def add_grid(
         self,
@@ -1075,7 +1068,7 @@ class GridFactory:
             else:
                 raise TypeError(f"{labels} is not a valid input for labels")
 
-        self.m.f.canvas.draw_idle()
+        self.m.redraw(self.m.layer if layer is None else layer)
         return g
 
     def _update_autogrid(self, *args, **kwargs):
@@ -1083,7 +1076,7 @@ class GridFactory:
             if g.d is None:
                 try:
                     g._redraw()
-                except Exception as ex:
+                except Exception:
                     # catch exceptions to avoid issues with dynamic re-drawing of
                     # invisible grids
                     continue

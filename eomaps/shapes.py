@@ -16,7 +16,7 @@ from matplotlib.collections import Collection
 from pyproj import CRS
 import numpy as np
 
-from .helpers import register_modules, version, mpl_version
+from .helpers import register_modules, version, mpl_version, _submit_on_activation
 
 
 _log = logging.getLogger(__name__)
@@ -270,7 +270,7 @@ class _CollectionAccessor:
     >>>
     >>> labels = m3_1.ax.clabel(m.coll.contour_set)
     >>> for i in labels:
-    >>>     m.BM.add_bg_artist(i, layer=m.layer)
+    >>>     m.add_bg_artist(i)
 
     """
 
@@ -429,8 +429,10 @@ class Shapes(object):
 
                 # check if the first element of x0 is nonzero...
                 # (to avoid slow performance of np.any for large arrays)
-                if not np.any(m._data_manager.x0.take(0)):
-                    return None
+                # TODO... why do we need this?
+                # it results in no proper radius estimation for x0[0] = 0
+                # if not np.any(m._data_manager.x0.take(0)):
+                #     return None
 
                 _log.info("EOmaps: Estimating shape radius...")
                 radiusx, radiusy = Shapes._estimate_radius(m, radius_crs)
@@ -607,6 +609,9 @@ class Shapes(object):
         def __init__(self, m):
             super().__init__(m=m)
 
+        @_submit_on_activation(
+            maps_attr="_m", label="Maps.set_shape.{name}(...)", default_lazy=False
+        )
         def __call__(self, radius=None, n=None):
             """
             Draw geodesic circles with a radius defined in meters.
@@ -657,9 +662,9 @@ class Shapes(object):
                 the latitudes of the geodetic circle points.
 
             """
+            lon, lat = np.atleast_1d(lon), np.atleast_1d(lat)
             size = lon.size
-
-            if isinstance(radius, (int, float)):
+            if isinstance(radius, (int, float, np.number)):
                 radius = np.full((size, n), radius)
             else:
                 if radius.size != lon.size:
@@ -672,7 +677,11 @@ class Shapes(object):
                 lons=np.broadcast_to(lon[:, None], (size, n)),
                 lats=np.broadcast_to(lat[:, None], (size, n)),
                 az=np.linspace(
-                    [start_angle] * size, [360 - start_angle] * size, n, axis=1
+                    [start_angle] * size,
+                    [360 - start_angle] * size,
+                    n,
+                    axis=1,
+                    endpoint=False,
                 ),
                 dist=radius,
                 radians=False,
@@ -792,7 +801,7 @@ class Shapes(object):
             # transform from crs to the radius_crs
             t_radius_plot = self._m._get_transformer(radius_crs, self._m.crs_plot)
 
-            if isinstance(radius, (int, float, np.number)):
+            if isinstance(radius, (int, float, np.number, list, np.ndarray)):
                 rx, ry = radius, radius
             else:
                 rx, ry = radius
@@ -2204,7 +2213,7 @@ class Shapes(object):
             # if manual levels were specified, use them, otherwise check for
             # classification values
             if "levels" not in kwargs:
-                bins = getattr(self._m.classify_specs, "_bins", None)
+                bins = getattr(self._m._classify_specs, "_bins", None)
                 if bins is not None:
                     # in order to ensure that values above or below vmin/vmax are
                     # colored with the appropriate "under" and "over" colors,
@@ -2287,7 +2296,7 @@ class Shapes(object):
             # TODO remove this once mpl >= 3.10 is required
             if isinstance(coll, _CollectionAccessor):
                 for c in coll.collections:
-                    self._m.BM._ignored_unmanaged_artists.add(c)
+                    self._m._bm._ignored_unmanaged_artists.add(c)
 
             return coll
 

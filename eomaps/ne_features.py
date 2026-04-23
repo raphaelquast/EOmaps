@@ -12,7 +12,7 @@ import json
 
 from cartopy import crs as ccrs
 
-from .helpers import register_modules
+from .helpers import register_modules, _submit_on_activation
 
 _log = logging.getLogger(__name__)
 
@@ -94,6 +94,19 @@ class _Category:
 
     _category = "???"
 
+    def __init__(self, m):
+        self._m = m
+
+    def __getattribute__(self, key):
+        if key.startswith("_"):
+            return object.__getattribute__(self, key)
+        elif key in _NE_features_all.get(self._category, []):
+            feature = _Feature(self._category, key)
+            feature._set_map(self._m)
+            return feature
+        else:
+            return object.__getattribute__(self, key)
+
     def __repr__(self):
         return f"EOmaps interface for {self._category} " + "NaturalEarth features"
 
@@ -109,15 +122,6 @@ class _Category:
             f"NaturalEarth feature interface for: **{category}**.\n",
             _Category.__doc__,
         )
-
-    def _set_map(self, m):
-        for feature_name in filter(lambda x: not x.startswith("_"), dir(self)):
-            try:
-                feature = _Feature(self._category, feature_name)
-                feature._set_map(m)
-                setattr(self, feature_name, feature)
-            except Exception:
-                _log.error(f"EOmaps: unable to set map for feature {feature}")
 
 
 class _Feature:
@@ -208,6 +212,7 @@ class _Feature:
     def _set_map(self, m):
         self._m = m
 
+    @_submit_on_activation("_m", "Maps.add_feature.{_category}.{_name}(...)")
     def __call__(self, layer=None, scale="auto", **kwargs):
         assert hasattr(
             self, "_m"
@@ -219,6 +224,7 @@ class _Feature:
         from . import MapsGrid  # do this here to avoid circular imports!
 
         for m in self._m if isinstance(self._m, MapsGrid) else [self._m]:
+
             if layer is None:
                 uselayer = m.layer
             else:
@@ -261,7 +267,7 @@ class _Feature:
                 """
             art._EOmaps_source_code = source_code
 
-            m.BM.add_bg_artist(art, layer=uselayer)
+            m.l[uselayer].add_bg_artist(art)
 
     def _set_scale(self, scale):
         if scale == "auto":
@@ -457,12 +463,145 @@ class _PresetFeature:
 class _Physical(_Category):
     _category = "physical"
 
+    antarctic_ice_shelves_lines: _Feature
+    antarctic_ice_shelves_polys: _Feature
+    bathymetry_A_10000: _Feature
+    bathymetry_B_9000: _Feature
+    bathymetry_C_8000: _Feature
+    bathymetry_D_7000: _Feature
+    bathymetry_E_6000: _Feature
+    bathymetry_F_5000: _Feature
+    bathymetry_G_4000: _Feature
+    bathymetry_H_3000: _Feature
+    bathymetry_I_2000: _Feature
+    bathymetry_J_1000: _Feature
+    bathymetry_K_200: _Feature
+    bathymetry_L_0: _Feature
+    coastline: _Feature
+    geographic_lines: _Feature
+    geography_marine_polys: _Feature
+    geography_regions_elevation_points: _Feature
+    geography_regions_points: _Feature
+    geography_regions_polys: _Feature
+    glaciated_areas: _Feature
+    graticules_1: _Feature
+    graticules_10: _Feature
+    graticules_15: _Feature
+    graticules_20: _Feature
+    graticules_30: _Feature
+    graticules_5: _Feature
+    lakes: _Feature
+    lakes_australia: _Feature
+    lakes_europe: _Feature
+    lakes_historic: _Feature
+    lakes_north_america: _Feature
+    lakes_pluvial: _Feature
+    land: _Feature
+    land_ocean_label_points: _Feature
+    land_ocean_seams: _Feature
+    land_scale_rank: _Feature
+    minor_islands: _Feature
+    minor_islands_coastline: _Feature
+    minor_islands_label_points: _Feature
+    ocean: _Feature
+    ocean_scale_rank: _Feature
+    playas: _Feature
+    reefs: _Feature
+    rivers_australia: _Feature
+    rivers_europe: _Feature
+    rivers_lake_centerlines: _Feature
+    rivers_lake_centerlines_scale_rank: _Feature
+    rivers_north_america: _Feature
+    wgs84_bounding_box: _Feature
+
 
 _Physical._setup("physical")
 
 
 class _Cultural(_Category):
     _category = "cultural"
+
+    admin_0_antarctic_claim_limit_lines: _Feature
+    admin_0_antarctic_claims: _Feature
+    admin_0_boundary_lines_disputed_areas: _Feature
+    admin_0_boundary_lines_land: _Feature
+    admin_0_boundary_lines_map_units: _Feature
+    admin_0_boundary_lines_maritime_indicator: _Feature
+    admin_0_boundary_lines_maritime_indicator_chn: _Feature
+    admin_0_boundary_map_units: _Feature
+    admin_0_breakaway_disputed_areas: _Feature
+    admin_0_countries: _Feature
+    admin_0_countries_arg: _Feature
+    admin_0_countries_bdg: _Feature
+    admin_0_countries_bra: _Feature
+    admin_0_countries_chn: _Feature
+    admin_0_countries_deu: _Feature
+    admin_0_countries_egy: _Feature
+    admin_0_countries_esp: _Feature
+    admin_0_countries_fra: _Feature
+    admin_0_countries_gbr: _Feature
+    admin_0_countries_grc: _Feature
+    admin_0_countries_idn: _Feature
+    admin_0_countries_ind: _Feature
+    admin_0_countries_iso: _Feature
+    admin_0_countries_isr: _Feature
+    admin_0_countries_ita: _Feature
+    admin_0_countries_jpn: _Feature
+    admin_0_countries_kor: _Feature
+    admin_0_countries_lakes: _Feature
+    admin_0_countries_mar: _Feature
+    admin_0_countries_nep: _Feature
+    admin_0_countries_nld: _Feature
+    admin_0_countries_pak: _Feature
+    admin_0_countries_pol: _Feature
+    admin_0_countries_prt: _Feature
+    admin_0_countries_pse: _Feature
+    admin_0_countries_rus: _Feature
+    admin_0_countries_sau: _Feature
+    admin_0_countries_swe: _Feature
+    admin_0_countries_tlc: _Feature
+    admin_0_countries_tur: _Feature
+    admin_0_countries_twn: _Feature
+    admin_0_countries_ukr: _Feature
+    admin_0_countries_usa: _Feature
+    admin_0_countries_vnm: _Feature
+    admin_0_disputed_areas: _Feature
+    admin_0_disputed_areas_scale_rank_minor_islands: _Feature
+    admin_0_label_points: _Feature
+    admin_0_map_subunits: _Feature
+    admin_0_map_units: _Feature
+    admin_0_pacific_groupings: _Feature
+    admin_0_scale_rank: _Feature
+    admin_0_scale_rank_minor_islands: _Feature
+    admin_0_seams: _Feature
+    admin_0_sovereignty: _Feature
+    admin_0_tiny_countries: _Feature
+    admin_0_tiny_countries_scale_rank: _Feature
+    admin_1_label_points: _Feature
+    admin_1_label_points_details: _Feature
+    admin_1_seams: _Feature
+    admin_1_states_provinces: _Feature
+    admin_1_states_provinces_lakes: _Feature
+    admin_1_states_provinces_lines: _Feature
+    admin_1_states_provinces_scale_rank: _Feature
+    admin_2_counties: _Feature
+    admin_2_counties_lakes: _Feature
+    admin_2_counties_scale_rank: _Feature
+    admin_2_counties_scale_rank_minor_islands: _Feature
+    admin_2_label_points: _Feature
+    admin_2_label_points_details: _Feature
+    airports: _Feature
+    parks_and_protected_lands: _Feature
+    populated_places: _Feature
+    populated_places_simple: _Feature
+    ports: _Feature
+    railroads: _Feature
+    railroads_north_america: _Feature
+    roads: _Feature
+    roads_north_america: _Feature
+    time_zones: _Feature
+    urban_areas: _Feature
+    urban_areas_landscan: _Feature
 
 
 _Cultural._setup("cultural")
@@ -523,7 +662,7 @@ class NaturalEarthPresets:
         return [i for i in self.__dir__() if not i.startswith("_")]
 
     @property
-    def coastline(self):
+    def coastline(self) -> _Feature:
         """
         Add a coastline to the map.
 
@@ -544,7 +683,7 @@ class NaturalEarthPresets:
         )
 
     @property
-    def ocean(self):
+    def ocean(self) -> _Feature:
         """
         Add ocean-coloring to the map.
 
@@ -562,7 +701,7 @@ class NaturalEarthPresets:
         )
 
     @property
-    def land(self):
+    def land(self) -> _Feature:
         """
         Add a land-coloring to the map.
 
@@ -581,7 +720,7 @@ class NaturalEarthPresets:
         )
 
     @property
-    def countries(self):
+    def countries(self) -> _Feature:
         """
         Add country-boundaries to the map.
 
@@ -603,7 +742,7 @@ class NaturalEarthPresets:
         )
 
     @property
-    def urban_areas(self):
+    def urban_areas(self) -> _Feature:
         """
         Add urban-areas to the map.
 
@@ -624,7 +763,7 @@ class NaturalEarthPresets:
         )
 
     @property
-    def lakes(self):
+    def lakes(self) -> _Feature:
         """
         Add lakes to the map.
 
@@ -645,7 +784,7 @@ class NaturalEarthPresets:
         )
 
     @property
-    def rivers_lake_centerlines(self):
+    def rivers_lake_centerlines(self) -> _Feature:
         """
         Add rivers_lake_centerlines to the map.
 
@@ -714,19 +853,16 @@ class NaturalEarthFeatures:
 
     """
 
-    preset = NaturalEarthPresets
-    cultural = _Cultural
-    physical = _Physical
+    preset: NaturalEarthPresets = NaturalEarthPresets
+    cultural: _Cultural = _Cultural
+    physical: _Physical = _Physical
 
     def __init__(self, m):
         self._m = m
 
-        self.preset = self.preset(self._m)
-        self.cultural = _Cultural()
-        self.cultural._set_map(m)
-
-        self.physical = _Physical()
-        self.physical._set_map(m)
+        self.preset = NaturalEarthPresets(self._m)
+        self.cultural = _Cultural(self._m)
+        self.physical = _Physical(self._m)
 
     def __call__(self, category, name, **kwargs):
         feature = self._get_feature(category, name)

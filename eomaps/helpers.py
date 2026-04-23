@@ -11,8 +11,10 @@ import re
 import sys
 from importlib import import_module
 from textwrap import indent, dedent
-from functools import wraps, lru_cache
+from functools import wraps, lru_cache, reduce
 import warnings
+import weakref
+from string import Formatter
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,6 +28,18 @@ from packaging import version
 mpl_version = version.parse(importlib.metadata.version("matplotlib"))
 
 _log = logging.getLogger(__name__)
+
+
+def _proxy(obj):
+    # None cannot be weak-referenced!
+    if obj is None:
+        return None
+
+    # create a proxy if the object is not yet a proxy
+    if type(obj) is not weakref.ProxyType:
+        return weakref.proxy(obj)
+    else:
+        return obj
 
 
 def _parse_log_level(level):
@@ -232,6 +246,99 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
         show(i + 1)
     file.write("\n")
     file.flush()
+
+
+# a recursive getattr method
+# see https://stackoverflow.com/a/31174427/9703451
+def rgetattr(obj, attr, *args):
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+
+    return reduce(_getattr, [obj] + attr.split("."))
+
+
+def _submit_on_activation(maps_attr="self", label="", default_lazy=True):
+    """
+    Decorator that will submit the method when the associated layer
+    becomes active.
+
+    Parameters
+    ----------
+    maps_attr : str, optional
+        The name of the attribute of the class that holds the reference to the
+        Maps-object to use.
+        If "self" is passed, the class is expected to be a Maps-subclass!
+        Otherwise `self.<maps_attr>` is used.
+        The default is "self".
+    label : str, optional
+        A string that is used to indicate the pending method in the
+        companion widget.
+        Variable substitution is used via the '{NAME}` syntax.
+        NAME can hereby be any property of the class of the decorated method.
+        (also nested access, e.g. "{a.b.c} -> self.a.b.c" is supported!)
+        The default is "".
+    default_lazy : bool, optional
+        If True, the method is lazy by default.
+        If False, the method is executed immediately by default.
+        The default is True.
+    """
+
+    def decorator(f):
+        @wraps(f)
+        def inner(self, *args, **kwargs):
+            if maps_attr == "self":
+                m = self
+            else:
+                m = getattr(self, maps_attr)
+
+            # if the Maps object is not lazy, immediately execute the method
+            if m._lazy is False or (m._lazy is None and default_lazy is False):
+                return f(self, *args, **kwargs)
+
+            @wraps(f)
+            def lazy_method(m):
+                ret = f(self, *args, **kwargs)
+                return ret
+
+            if label:
+                # to get a proper label in the CompanionWidget
+                substitutions = {}
+                for (_, key, _, _) in Formatter().parse(label):
+                    if key:
+                        substitutions[key] = rgetattr(self, key, "?")
+
+                # use reduce to allow for substitutions containing "."
+                # (e.g. recursive attribute access)
+                lazy_method.__qualname__ = reduce(
+                    lambda s, key: s.replace(f"{{{key}}}", substitutions[key]),
+                    substitutions,
+                    label,
+                )
+
+            # check if layer has been overwritten by a kwarg
+            if (layer := kwargs.get("layer", None)) is None:
+                layer = m.layer
+
+            if layer is not None:
+                ret = m[layer].on_layer_activation(lazy_method)
+
+            return ret
+
+        return inner
+
+    return decorator
+
+
+def _from_parent(f):
+    """
+    Maps-object method decorator to retrieve properties from the parent.
+    """
+
+    @wraps(f)
+    def inner(self, *args, **kwargs):
+        return f(self.parent, *args, **kwargs)
+
+    return inner
 
 
 def _add_to_docstring(prefix=None, suffix=None, insert=None):
@@ -564,3 +671,57 @@ class SearchTree:
             i = None
 
         return i
+
+
+def _get_rect_poly_verts(x0, y0, x1, y1, npts=100):
+    """
+    Return vertices of a rectangle with npts number of points.
+
+    Parameters
+    ----------
+    x0, y0, y1, y1 : float
+        the boundaries of the shape
+    npts : int, optional
+        The number of points used to draw the polygon-lines. The default is 100.
+
+    Returns
+    -------
+    gdf : geopandas.GeoDataFrame
+        the geodataframe with the shape and crs defined
+
+    """
+    xs, ys = np.linspace([x0, y0], [x1, y1], npts).T
+    x0, y0, x1, y1, xs, ys = np.broadcast_arrays(x0, y0, x1, y1, xs, ys)
+    verts = np.column_stack(((x0, ys), (xs, y1), (x1, ys[::-1]), (xs[::-1], y0))).T
+    return verts
+
+
+class WeakOrderedCollection:
+    """
+    A class that stores members as weak-references
+    while maintaining insert-order.
+    """
+
+    def __init__(self):
+        self._d = weakref.WeakValueDictionary()
+
+    def __iter__(self):
+        return self._d.values()
+
+    def __len__(self):
+        return len(self._d)
+
+    def clear(self):
+        self._d.clear()
+
+    def add(self, value):
+        self._d[hash(value)] = value
+
+    def remove(self, value):
+        self._d.pop(hash(value))
+
+    def update(self, vals):
+        for v in vals:
+            h = hash(v)
+            if h not in self._d:
+                self._d[h] = v

@@ -20,11 +20,11 @@ from .widgets.click_callbacks import ClickCallbacks
 from .widgets.editor import LayerTabBar
 from .widgets.layer import AutoUpdateLayerMenuButton
 
-# TODO make sure a QApplication has been instantiated
-app = QtWidgets.QApplication.instance()
-if app is None:
-    # if it does not exist then a QApplication is created
-    app = QtWidgets.QApplication([])
+# # TODO make sure a QApplication has been instantiated
+# app = QtWidgets.QApplication.instance()
+# if app is None:
+#     # if it does not exist then a QApplication is created
+#     app = QtWidgets.QApplication([])
 
 
 class CompareTab(QtWidgets.QWidget):
@@ -196,7 +196,9 @@ class MenuWindow(AlwaysOnTopWindow):
         # make sure show/hide shortcut also works if the widget is active
         # we need to re-assign this on show to make sure it is always assigned
         # when the window is shown
-        self.shortcut = QtWidgets.QShortcut(QKeySequence("w"), self)
+        self.shortcut = QtWidgets.QShortcut(
+            QKeySequence(self.m._CompanionMixin__companion_widget_key), self
+        )
         self.shortcut.setContext(Qt.WindowShortcut)
         self.shortcut.activated.connect(self.toggle_show)
         self.shortcut.activatedAmbiguously.connect(self.toggle_show)

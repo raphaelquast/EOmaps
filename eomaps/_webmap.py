@@ -7,7 +7,7 @@ import logging
 
 import requests
 from functools import lru_cache, partial
-from warnings import warn, filterwarnings, catch_warnings
+from warnings import filterwarnings, catch_warnings
 from types import SimpleNamespace
 from contextlib import contextmanager
 from urllib3.exceptions import InsecureRequestWarning
@@ -26,14 +26,9 @@ from cartopy import crs as ccrs
 from cartopy.io.img_tiles import GoogleWTS
 from cartopy.io import RasterSource
 
-from .helpers import _sanitize
+from .helpers import _sanitize, _submit_on_activation
 
 _log = logging.getLogger(__name__)
-
-
-def _add_pending_webmap(m, layer, name):
-    # indicate that there is a pending webmap in the companion-widget editor
-    m.BM._pending_webmaps.setdefault(layer, []).append(name)
 
 
 class _WebMapLayer:
@@ -155,7 +150,7 @@ class _WebMapLayer:
                 _log.warning(
                     "EOmaps: The WebMap for the legend is not yet added to the map!"
                 )
-                self._layer = self._m.BM._bg_layer
+                self._layer = self._m._bm._bg_layer
 
             axpos = self._m.ax.get_position()
             legax = self._m.f.add_axes((axpos.x0, axpos.y0, 0.25, 0.5))
@@ -169,10 +164,10 @@ class _WebMapLayer:
             legax.imshow(legend)
 
             # hide the legend if the corresponding layer is not active at the moment
-            if not self._m.BM._layer_visible(self._layer):
+            if not self._m._bm._layer_visible(self._layer):
                 legax.set_visible(False)
 
-            self._m.BM.add_artist(legax, layer=self._layer)
+            self._m.l[self._layer].add_artist(legax)
 
             def cb_move(event):
                 if not self._legend_picked:
@@ -200,7 +195,7 @@ class _WebMapLayer:
                 bbox = bbox.transformed(self._m.f.transFigure.inverted())
                 legax.set_position(bbox)
 
-                self._m.BM.blit_artists([legax])
+                self._m._bm.blit_artists([legax])
 
             def cb_release(event):
                 self._legend_picked = False
@@ -219,10 +214,9 @@ class _WebMapLayer:
                     return
 
                 if event.key in ["delete", "backspace"]:
-                    self._m.BM.remove_artist(legax, self._layer)
-                    legax.remove()
+                    self._m._bm.remove_artist(legax, self._layer)
 
-                self._m.BM.update()
+                self._m._bm.update()
 
             def cb_scroll(event):
                 if not self._legend_picked:
@@ -240,7 +234,7 @@ class _WebMapLayer:
                     )
                 )
 
-                self._m.BM.blit_artists([legax])
+                self._m._bm.blit_artists([legax])
 
             self._m.f.canvas.mpl_connect("scroll_event", cb_scroll)
             self._m.f.canvas.mpl_connect("button_press_event", cb_pick)
@@ -250,7 +244,7 @@ class _WebMapLayer:
 
             self._m.parent._wms_legend.setdefault(self._layer, list()).append(legax)
 
-            self._m.BM.update()
+            self._m._bm.update()
 
             return legax
 
@@ -353,6 +347,7 @@ class _WMTSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @_submit_on_activation(maps_attr="_m", label="{_EOmaps_source_code}")
     def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMTS layer to the map
@@ -397,29 +392,13 @@ class _WMTSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if self._layer == "all" or m.BM._layer_visible(self._layer):
-                # add the layer immediately if the layer is already active
-                self._do_add_layer(
-                    self._m,
-                    layer=self._layer,
-                    wms_kwargs=kwargs,
-                    zorder=zorder,
-                    alpha=alpha,
-                )
-            else:
-                # delay adding the layer until it is effectively activated
-                _add_pending_webmap(self._m, self._layer, self.name)
-                self._m.BM.on_layer(
-                    func=partial(
-                        self._do_add_layer,
-                        wms_kwargs=kwargs,
-                        zorder=zorder,
-                        alpha=alpha,
-                    ),
-                    layer=self._layer,
-                    persistent=False,
-                    m=m,
-                )
+            self._do_add_layer(
+                m=self._m,
+                layer=self._layer,
+                wms_kwargs=kwargs,
+                zorder=zorder,
+                alpha=alpha,
+            )
 
     # ------------------------
     # The following is very much a copy of "cartopy.mpl.geoaxes.GeoAxes.add_raster"
@@ -439,7 +418,7 @@ class _WMTSLayer(_WebMapLayer):
             ax.add_image(img)
         return img
 
-    def _do_add_layer(self, m, layer, **kwargs):
+    def _do_add_layer(self, layer, m, **kwargs):
         # actually add the layer to the map.
         _log.info(f"EOmaps: Adding wmts-layer: {self.name}")
 
@@ -456,13 +435,14 @@ class _WMTSLayer(_WebMapLayer):
         if hasattr(self, "_EOmaps_source_code"):
             art._EOmaps_source_code = self._EOmaps_source_code
 
-        m.BM.add_bg_artist(art, layer=layer)
+        m.l[layer].add_bg_artist(art)
 
 
 class _WMSLayer(_WebMapLayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @_submit_on_activation(maps_attr="_m", label="{_EOmaps_source_code}")
     def __call__(self, layer=None, zorder=0, alpha=1, **kwargs):
         """
         Add the WMS layer to the map
@@ -508,29 +488,13 @@ class _WMSLayer(_WebMapLayer):
             else:
                 self._layer = layer
 
-            if m.BM._layer_visible(self._layer):
-                # add the layer immediately if the layer is already active
-                self._do_add_layer(
-                    m=m,
-                    layer=self._layer,
-                    wms_kwargs=kwargs,
-                    zorder=zorder,
-                    alpha=alpha,
-                )
-            else:
-                # delay adding the layer until it is effectively activated
-                _add_pending_webmap(self._m, self._layer, self.name)
-                m.BM.on_layer(
-                    func=partial(
-                        self._do_add_layer,
-                        wms_kwargs=kwargs,
-                        zorder=zorder,
-                        alpha=alpha,
-                    ),
-                    layer=self._layer,
-                    persistent=False,
-                    m=m,
-                )
+            self._do_add_layer(
+                m=m,
+                layer=self._layer,
+                wms_kwargs=kwargs,
+                zorder=zorder,
+                alpha=alpha,
+            )
 
     # ------------------------
     # The following is very much a copy of "cartopy.mpl.geoaxes.GeoAxes.add_raster"
@@ -585,7 +549,7 @@ class _WMSLayer(_WebMapLayer):
 
         return img
 
-    def _do_add_layer(self, m, layer, **kwargs):
+    def _do_add_layer(self, layer, m, **kwargs):
         # actually add the layer to the map.
         _log.info(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -600,7 +564,7 @@ class _WMSLayer(_WebMapLayer):
         if hasattr(self, "_EOmaps_source_code"):
             art._EOmaps_source_code = self._EOmaps_source_code
 
-        m.BM.add_bg_artist(art, layer=layer)
+        m.l[layer].add_bg_artist(art)
 
 
 class _WebServiceCollection:
@@ -1165,6 +1129,7 @@ class _XyzTileService:
     def _reinit(self, m):
         return _XyzTileService(m, url=self.url, maxzoom=self._maxzoom, name=self.name)
 
+    @_submit_on_activation(maps_attr="_m", label="{_EOmaps_source_code}")
     def __call__(
         self,
         layer=None,
@@ -1227,20 +1192,10 @@ class _XyzTileService:
             kwargs.setdefault("alpha", alpha)
             kwargs.setdefault("origin", "lower")
 
-            if self._layer in ["all", self._m.BM.bg_layer]:
-                # add the layer immediately if the layer is already active
-                self._do_add_layer(self._m, layer=self._layer, **kwargs)
-            else:
-                # delay adding the layer until it is effectively activated
-                _add_pending_webmap(self._m, self._layer, self.name)
-                self._m.BM.on_layer(
-                    func=partial(self._do_add_layer, **kwargs),
-                    layer=self._layer,
-                    persistent=False,
-                    m=self._m,
-                )
+            # add the layer immediately if the layer is already active
+            self._do_add_layer(layer=self._layer, m=self._m, **kwargs)
 
-    def _do_add_layer(self, m, layer, **kwargs):
+    def _do_add_layer(self, layer, m, **kwargs):
         # actually add the layer to the map.
         _log.info(f"EOmaps: ... adding wms-layer {self.name}")
 
@@ -1271,7 +1226,7 @@ class _XyzTileService:
         if hasattr(self, "_EOmaps_source_code"):
             self._artist._EOmaps_source_code = self._EOmaps_source_code
 
-        m.BM.add_bg_artist(self._artist, layer=layer)
+        m.l[layer].add_bg_artist(self._artist)
 
 
 class _XyzTileServiceNonEarth(_XyzTileService):
@@ -1373,6 +1328,14 @@ class SlippyImageArtistNew(AxesImage):
 
         # indicator if WebMaps should be re-fetched if the size of the
         # axes (e.g. also the figure size or dpi) changes.
+
+    def contains(self, *args, **kwargs):
+        # to avoid issues for empty-images that are not yet fetched
+        # (because the layer was never visible)
+        if self.get_array() is None:
+            return False, {}
+        else:
+            return super().contains(*args, **kwargs)
 
     def on_xlim(self, *args, **kwargs):
         self.stale = True

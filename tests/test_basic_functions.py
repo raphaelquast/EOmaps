@@ -66,8 +66,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_simple_map(self):
         m = Maps(4326)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.plot_map()
         plt.close(m.f)
 
@@ -78,7 +77,7 @@ class TestBasicPlotting(unittest.TestCase):
         m.add_feature.preset.coastline()
         m.set_data(data=self.data, x="x", y="y", crs=3857, cpos="ur", cpos_radius=1)
         m.plot_map()
-        m.indicate_extent(20, 10, 60, 76, crs=4326, fc="r", ec="k", alpha=0.5)
+        m.add_extent_indicator(20, 10, 60, 76, crs=4326, fc="r", ec="k", alpha=0.5)
         plt.close(m.f)
 
     def test_simple_plot_shapes(self):
@@ -247,10 +246,9 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_alpha_and_splitbins(self):
         m = Maps(4326)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.set_shape.rectangles()
-        m.set_classify_specs(scheme="Percentiles", pct=[0.1, 0.2])
+        m.set_classify.Percentiles(pct=[0.1, 0.2])
 
         m.plot_map(alpha=0.4)
 
@@ -258,11 +256,10 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_classification(self):
         m = Maps(4326)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.set_shape.rectangles(radius=1, radius_crs="out")
 
-        m.set_classify_specs(scheme="Quantiles", k=5)
+        m.set_classify.Quantiles(k=5)
 
         m.plot_map()
 
@@ -270,8 +267,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_add_callbacks(self):
         m = Maps(3857, layer="layername")
-        m.data = self.data.sample(10)
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data.sample(10), x="x", y="y", crs=3857)
         m.set_shape.ellipses(radius=200000)
 
         m.plot_map()
@@ -298,9 +294,9 @@ class TestBasicPlotting(unittest.TestCase):
                 cbID
                 == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}__{modifier}"
             )
-            self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 1)
+            self.assertTrue(len(m.cb.pick.attached_callbacks) == 1)
             m.cb.pick.remove(cbID)
-            self.assertTrue(len(m.cb.pick.get.attached_callbacks) == 0)
+            self.assertTrue(len(m.cb.pick.attached_callbacks) == 0)
 
         # attach all click callbacks
         for n, cb in enumerate(m.cb.click.attach._available_callbacks()):
@@ -325,9 +321,9 @@ class TestBasicPlotting(unittest.TestCase):
                 cbID
                 == f"{cb}_0__{m.layer}__{'double' if double_click else 'single'}__{mouse_button}__{modifier}"
             )
-            self.assertTrue(len(m.cb.click.get.attached_callbacks) == 1)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
             m.cb.click.remove(cbID)
-            self.assertTrue(len(m.cb.click.get.attached_callbacks) == 0)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
 
         # attach all keypress callbacks
         double_click, mouse_button = True, 1
@@ -341,29 +337,28 @@ class TestBasicPlotting(unittest.TestCase):
 
             cbID = m.cb.keypress.attach(cb, key=key)
 
-            self.assertTrue(cbID == f"{cb}_0__{m.layer}__{key}")
-            self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 1)
+            self.assertTrue(cbID == f"{cb}_0__{m.layer}__any__None__{key}")
+            self.assertTrue(len(m.cb.keypress.attached_callbacks) == 1)
             m.cb.keypress.remove(cbID)
-            self.assertTrue(len(m.cb.keypress.get.attached_callbacks) == 0)
+            self.assertTrue(len(m.cb.keypress.attached_callbacks) == 0)
 
         plt.close(m.f)
 
     def test_add_annotate(self):
         m = Maps()
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
 
         m.plot_map()
 
-        m.add_annotation(ID=m.data["value"].idxmax(), fontsize=15, text="adsf")
+        m.add_annotation(ID=self.data["value"].idxmax(), fontsize=15, text="adsf")
 
         def customtext(m, ID, val, pos, ind):
             return f"{m.data_specs}\n {val}\n {pos}\n {ID} \n {ind}"
 
-        m.add_annotation(ID=m.data["value"].idxmin(), text=customtext)
+        m.add_annotation(ID=self.data["value"].idxmin(), text=customtext)
 
         m.add_annotation(
-            xy=(m.data.x[0], m.data.y[0]), xy_crs=3857, fontsize=15, text="adsf"
+            xy=(self.data.x[0], self.data.y[0]), xy_crs=3857, fontsize=15, text="adsf"
         )
 
         plt.close(m.f)
@@ -371,8 +366,7 @@ class TestBasicPlotting(unittest.TestCase):
     def test_add_marker(self):
         crs = Maps.CRS.Orthographic(central_latitude=45, central_longitude=45)
         m = Maps(crs)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.plot_map(set_extent=True)
 
         m.add_marker(
@@ -449,7 +443,7 @@ class TestBasicPlotting(unittest.TestCase):
         )
 
         m.add_marker(
-            xy=(m.data.x[10], m.data.y[10]),
+            xy=(self.data.x[10], self.data.y[10]),
             xy_crs=3857,
             facecolor="none",
             edgecolor="r",
@@ -466,10 +460,9 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_copy(self):
         m = Maps(3857)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
 
-        m.set_classify_specs(scheme="Quantiles", k=5)
+        m.set_classify.Quantiles(k=5)
 
         m2 = m.copy()
 
@@ -477,8 +470,8 @@ class TestBasicPlotting(unittest.TestCase):
             m2.data_specs[["x", "y", "parameter", "crs"]]
             == {"x": None, "y": None, "parameter": None, "crs": 4326}
         )
-        self.assertTrue([*m.classify_specs] == [*m2.classify_specs])
-        self.assertTrue(m2.data == None)
+        self.assertTrue([*m._classify_specs] == [*m2._classify_specs])
+        self.assertTrue(m2.data_specs.data == None)
 
         m3 = m.copy(data_specs=True)
 
@@ -486,19 +479,18 @@ class TestBasicPlotting(unittest.TestCase):
             m.data_specs[["x", "y", "parameter", "crs"]]
             == m3.data_specs[["x", "y", "parameter", "crs"]]
         )
-        self.assertTrue([*m.classify_specs] == [*m3.classify_specs])
-        self.assertFalse(m3.data is m.data)
-        self.assertTrue(m3.data.equals(m.data))
+        self.assertTrue([*m._classify_specs] == [*m3._classify_specs])
+        self.assertFalse(m3.data_specs.data is m.data_specs.data)
+        self.assertTrue(m3.data_specs.data.equals(m.data_specs.data))
 
         m3.plot_map()
         plt.close(m3.f)
 
     def test_copy_connect(self):
         m = Maps(3857)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.set_shape.rectangles()
-        m.set_classify_specs(scheme="Quantiles", k=5)
+        m.set_classify.Quantiles(k=5)
         m.plot_map()
 
         # plot on the same axes
@@ -536,8 +528,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_prepare_data(self):
         m = Maps()
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857, parameter="value")
+        m.set_data(self.data, x="x", y="y", crs=3857, parameter="value")
         data = m._data_manager._prepare_data()
 
         # TODO add proper checks here!
@@ -630,12 +621,12 @@ class TestBasicPlotting(unittest.TestCase):
         m.redraw()
 
         m.show_layer("asdf")
-        self.assertTrue(len(m.BM._hidden_artists) == 5)
+        self.assertTrue(len(m._bm._hidden_artists) == 5)
         for cb in m._colorbars:
-            self.assertTrue(cb in m.BM._hidden_artists)
+            self.assertTrue(cb in m._bm._hidden_artists)
         m.show_layer("base")
         for cb in m2._colorbars:
-            self.assertTrue(cb in m.BM._hidden_artists)
+            self.assertTrue(cb in m._bm._hidden_artists)
 
         self.assertTrue(len(m2._colorbars) == 1)
         self.assertTrue(m2.colorbar is cb5)
@@ -681,59 +672,20 @@ class TestBasicPlotting(unittest.TestCase):
         mg.set_data(
             data=self.data, x="x", y="y", crs=3857, encoding=dict(scale_factor=1e-7)
         )
-        mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
+        mg.set_classify.EqualInterval(k=4)
         mg.set_shape.rectangles()
         mg.plot_map()
 
         mg.add_annotation(ID=520)
         mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
         mg.add_colorbar()
+        mg.cb.click.attach.annotate()
+
         self.assertTrue(mg.m_0_0 is mg[0, 0])
         self.assertTrue(mg.m_0_1 is mg[0, 1])
         self.assertTrue(mg.m_1_0 is mg[1, 0])
         self.assertTrue(mg.m_1_1 is mg[1, 1])
 
-        plt.close("all")
-
-    def test_MapsGrid2(self):
-        mg = MapsGrid(
-            2,
-            2,
-            m_inits={"a": (0, slice(0, 2)), 2: (1, 0)},
-            crs={"a": 4326, 2: 3857},
-            ax_inits=dict(c=(1, 1)),
-        )
-
-        mg.set_data(data=self.data, x="x", y="y", crs=3857)
-        mg.set_classify_specs(scheme=Maps.CLASSIFIERS.EqualInterval, k=4)
-
-        for m in mg:
-            m.plot_map()
-
-        mg.add_annotation(ID=520)
-        mg.add_marker(ID=5, fc="r", radius=10, radius_crs=4326)
-
-        self.assertTrue(mg.m_a is mg["a"])
-        self.assertTrue(mg.m_2 is mg[2])
-        self.assertTrue(mg.ax_c is mg["c"])
-
-        plt.close(mg.f)
-
-        with self.assertRaises(AssertionError):
-            MapsGrid(
-                2,
-                2,
-                m_inits={"2": (0, slice(0, 2)), 2: (1, 0)},
-                ax_inits=dict(c=(1, 1)),
-            )
-
-        with self.assertRaises(AssertionError):
-            MapsGrid(
-                2,
-                2,
-                m_inits={1: (0, slice(0, 2)), 2: (1, 0)},
-                ax_inits={"2": (1, 1), 2: 2},
-            )
         plt.close("all")
 
     def test_compass(self):
@@ -1006,8 +958,7 @@ class TestBasicPlotting(unittest.TestCase):
 
     def test_combine_layers(self):
         m = Maps(4326)
-        m.data = self.data
-        m.set_data(x="x", y="y", crs=3857)
+        m.set_data(self.data, x="x", y="y", crs=3857)
         m.plot_map()
 
         m2 = m.new_layer("ocean")
@@ -1136,7 +1087,7 @@ class TestBasicPlotting(unittest.TestCase):
             m.add_feature.preset.coastline(lw=0.5)
             m.add_colorbar()
 
-        mgrid.share_click_events()
+        mgrid.cb.click.share_events(*mgrid)
 
         m.subplots_adjust(left=0.05, top=0.95, bottom=0.05, right=0.95)
         plt.close("all")
@@ -1240,7 +1191,7 @@ class TestBasicPlotting(unittest.TestCase):
                 )
             )
 
-            self.assertTrue(len(m.cb.click.get.cbs) == 1)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
             self.assertTrue(set(m._get_layers()) == {"first"})
 
             with m.new_layer("second") as m2:
@@ -1264,7 +1215,7 @@ class TestBasicPlotting(unittest.TestCase):
                 )
 
                 self.assertFalse(m2.coll is None)
-                self.assertTrue(len(m2.cb.click.get.cbs) == 1)
+                self.assertTrue(len(m2.cb.click.attached_callbacks) == 1)
 
             self.assertTrue(set(m._get_layers()) == {"first"})
 
@@ -1283,14 +1234,14 @@ class TestBasicPlotting(unittest.TestCase):
                     for i in ["xorig", "yorig", "x0", "y0", "z_data"]
                 )
             )
-            self.assertTrue(len(m.cb.click.get.cbs) == 1)
-            self.assertTrue(len(m.cb.click.get.cbs) == 1)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+            self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
 
             self.assertTrue(m2.coll is None)
-            self.assertTrue(len(m2.cb.click.get.cbs) == 0)
+            self.assertTrue(len(m2.cb.click.attached_callbacks) == 0)
 
         self.assertTrue(m.coll is None)
-        self.assertTrue(len(m.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
 
         self.assertTrue(len(m._data_manager._all_data) == 0)
         self.assertTrue(len(m._data_manager._current_data) == 0)
@@ -1307,14 +1258,14 @@ class TestBasicPlotting(unittest.TestCase):
         m.cb.pick.attach.annotate()
         m.cb.keypress.attach.fetch_layers()
         m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
-        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
+        self.assertTrue(len(m._bm._artists[m.layer]) == 1)
+        self.assertTrue(len(m._bm._bg_artists[m.layer]) == 2)
 
         self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
 
         # test cleaning a new layer
         m2 = m.new_layer("asdf")
@@ -1329,58 +1280,67 @@ class TestBasicPlotting(unittest.TestCase):
         m2.on_layer_activation(lambda m: print("temporary", m.layer))
         m2.on_layer_activation(lambda m: print("permanent", m.layer), persistent=True)
 
-        self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
-        self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 1)
+        self.assertTrue(
+            len(m._bm._Hooks__hooks["layer_activation"][True][m2.layer]) == 1
+        )
+        self.assertTrue(
+            len(m._bm._Hooks__hooks["layer_activation"][False][m2.layer]) == 3
+        )
 
         m.show_layer(m2.layer)  # show the layer to draw the artists!
         m.f.canvas.draw()  # redraw since otherwise the map might not yet be created!
-        self.assertTrue(len(m.BM._on_layer_activation[True][m2.layer]) == 1)
-        self.assertTrue(len(m.BM._on_layer_activation[False][m2.layer]) == 0)
+        self.assertTrue(
+            len(m._bm._Hooks__hooks["layer_activation"][True][m2.layer]) == 1
+        )
+        self.assertTrue(
+            len(m._bm._Hooks__hooks["layer_activation"][False][m2.layer]) == 0
+        )
 
-        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
-        self.assertTrue(len(m.BM._artists[m2.layer]) == 1)
-        self.assertTrue(len(m.BM._bg_artists[m2.layer]) == 2)
+        self.assertTrue(len(m._bm._artists[m.layer]) == 1)
+        self.assertTrue(len(m._bm._bg_artists[m.layer]) == 2)
+        self.assertTrue(len(m._bm._artists[m2.layer]) == 1)
+        self.assertTrue(len(m._bm._bg_artists[m2.layer]) == 2)
 
         self.assertTrue(m2._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m2, "tree"))
-        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m2.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 1)
 
         m2.cleanup()
 
-        self.assertTrue(m2.layer not in m.BM._on_layer_activation)
+        self.assertTrue(m2.layer not in m._bm._Hooks__hooks["layer_activation"][True])
+        self.assertTrue(m2.layer not in m._bm._Hooks__hooks["layer_activation"][False])
 
-        self.assertTrue(len(m.BM._artists[m.layer]) == 1)
-        self.assertTrue(len(m.BM._bg_artists[m.layer]) == 2)
-        self.assertTrue(m2.layer not in m.BM._artists)
-        self.assertTrue(m2.layer not in m.BM._bg_artists)
+        self.assertTrue(len(m._bm._artists[m.layer]) == 1)
+        self.assertTrue(len(m._bm._bg_artists[m.layer]) == 2)
+        self.assertTrue(m2.layer not in m._bm._artists)
+        self.assertTrue(m2.layer not in m._bm._bg_artists)
 
         # m should still be OK
         self.assertTrue(m._data_manager.x0.size == 3)
         self.assertTrue(hasattr(m, "tree"))
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
-        self.assertTrue(len(m.cb.click.get.cbs) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 1)
 
         # m2 must already be cleared
         self.assertTrue(m2._data_manager.x0 is None)
         self.assertTrue(not hasattr(m2, "tree"))
-        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
-        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
-        self.assertTrue(len(m2.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 0)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 0)
+        self.assertTrue(len(m2.cb.click.attached_callbacks) == 0)
 
         m.cleanup()
 
-        self.assertTrue(m.layer not in m.BM._artists)
-        self.assertTrue(m.layer not in m.BM._bg_artists)
+        self.assertTrue(m.layer not in m._bm._artists)
+        self.assertTrue(m.layer not in m._bm._bg_artists)
 
         self.assertTrue(m._data_manager.x0 is None)
         self.assertTrue(not hasattr(m, "tree"))
-        self.assertTrue(len(m.cb.click.get.cbs) == 0)
-        self.assertTrue(len(m.cb.click.get.cbs) == 0)
-        self.assertTrue(len(m.cb.click.get.cbs) == 0)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
+        self.assertTrue(len(m.cb.click.attached_callbacks) == 0)
         plt.close("all")
 
     def test_blit_artists(self):
@@ -1389,7 +1349,7 @@ class TestBasicPlotting(unittest.TestCase):
         line = plt.Line2D(
             [0, 0.25, 1], [0, 0.63, 1], c="k", lw=3, transform=m.ax.transAxes
         )
-        m.BM.blit_artists([line])
+        m._bm.blit_artists([line])
         plt.close("all")
 
     def test_set_frame(self):

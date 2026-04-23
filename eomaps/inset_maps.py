@@ -11,6 +11,7 @@ from matplotlib.path import Path
 
 from . import Maps
 from .grid import _intersect, _get_intersect
+from .helpers import _proxy
 
 
 class InsetMaps(Maps):
@@ -28,7 +29,7 @@ class InsetMaps(Maps):
 
     def __init__(
         self,
-        parent,
+        parent_m,
         crs=4326,
         layer=None,
         xy=(45, 45),
@@ -45,7 +46,7 @@ class InsetMaps(Maps):
         **kwargs,
     ):
 
-        self._parent_m = self._proxy(parent)
+        self._parent_m = _proxy(parent_m)
         self._indicators = []
         # inherit the layer from the parent Maps-object if not explicitly
         # provided
@@ -54,9 +55,9 @@ class InsetMaps(Maps):
 
         # put all inset-map artists on dedicated layers
         # NOTE: all artists of inset-map axes are put on a dedicated layer
-        # with a "__inset_" prefix to ensure they appear on top of other artists
+        # with a "**inset_" prefix to ensure they appear on top of other artists
         # (AND on top of spines of normal maps)!
-        # layer = "__inset_" + str(layer)
+        # layer = "**inset_" + str(layer)
 
         possible_shapes = ["ellipses", "rectangles", "geod_circles"]
         assert (
@@ -159,7 +160,7 @@ class InsetMaps(Maps):
             self._bg_patch = None
 
         # attach callback to update indicator patches
-        self.BM._before_fetch_bg_actions.append(self._update_indicator)
+        self._bm.add_hook("before_fetch_bg", self._update_indicator, True)
 
     def _get_spine_verts(self):
         s = self.ax.spines["geo"]
@@ -179,7 +180,7 @@ class InsetMaps(Maps):
 
         while len(self._patches) > 0:
             patch = self._patches.pop()
-            self.BM.remove_bg_artist(patch, draw=False)
+            self.all.remove_bg_artist(patch, draw=False)
             try:
                 patch.remove()
             except ValueError:
@@ -197,13 +198,13 @@ class InsetMaps(Maps):
             # all buttons since they will not work on dynamically re-created artists...
             p.set_label("__EOmaps_deactivated InsetMap indicator")
             art = m.ax.add_patch(p)
-            self.BM.add_bg_artist(art, layer=m.layer, draw=False)
+            self.all.add_bg_artist(art, draw=False)
             self._patches.add(art)
 
     def _handle_spines(self):
         spine = self.ax.spines["geo"]
-        if spine not in self.BM._bg_artists.get("__inset___SPINES__", []):
-            self.BM.add_bg_artist(spine, layer="__inset___SPINES__")
+        if spine not in self._bm._bg_artists["**inset_**SPINES**"]:
+            self._bm._bg_artists.add("**inset_**SPINES**", spine)
 
     def _get_ax_label(self):
         return "inset_map"
@@ -289,7 +290,7 @@ class InsetMaps(Maps):
         l = self._parent.ax.add_artist(l)
         l.set_clip_on(False)
 
-        self.BM.add_bg_artist(l, layer=self.layer, draw=False)
+        self.all.add_bg_artist(l, draw=False)
         self._indicator_lines.append((l, m))
 
         if isinstance(m, InsetMaps):
@@ -311,11 +312,11 @@ class InsetMaps(Maps):
             l2.set_clip_on(True)
 
             l2 = m.ax.add_artist(l2)
-            self.BM.add_bg_artist(l2, layer=self.layer)
+            self.add_bg_artist(l2, draw=False)
             self._indicator_lines.append((l2, m))
 
         self._update_indicator_lines()
-        self.BM._before_fetch_bg_actions.append(self._update_indicator_lines)
+        self._bm.add_hook("before_fetch_bg", self._update_indicator_lines, True)
 
     def _update_indicator_lines(self, *args, **kwargs):
         spine_verts = self._get_spine_verts()
@@ -384,7 +385,7 @@ class InsetMaps(Maps):
             y = (y0 + y1) / 2
 
         self.ax.set_position((x - size / 2, y - size / 2, size, size))
-        self.redraw("__inset_" + self.layer, "__inset___SPINES__")
+        self.redraw("**inset_" + self.layer, "**inset_**SPINES**")
 
     # a convenience-method to get the position based on the center of the axis
     def get_inset_position(self, precision=3):

@@ -7,9 +7,9 @@ m.add_feature.preset.ocean()
 gl = m.add_gridlines(d=5, lw=0.25, ls=":")
 
 
-def cb_location_indicator_grid(pos, **kwargs):
+def cb_location_indicator_grid(event, **kwargs):
     """A (move) callback to add a dynamic location-indicator to the map."""
-    lon, lat = map(round, m.transform_plot_to_lonlat(*pos))
+    lon, lat = map(round, m.transform_plot_to_lonlat(event.xdata, event.ydata))
     # get grid-values for +- 5°
     bounds = (lon - 5, lon + 5, lat - 5, lat + 5)
     lon_g, lat_g = np.linspace(*bounds[:2], 11), np.linspace(*bounds[2:], 11)

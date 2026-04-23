@@ -74,16 +74,15 @@ mi2.add_indicator_line(mi1, marker="o")
 
 # add some additional text to the inset-maps
 for m_i, txt, color in zip([mi1, mi2], ["epsg: 4326", "epsg: 3035"], ["r", "g"]):
-    txt = m_i.ax.text(
+    txt = m_i.add_text(
         0.5,
         0,
         txt,
-        transform=m_i.ax.transAxes,
         horizontalalignment="center",
         bbox=dict(facecolor=color),
     )
-    # add the text-objects as artists to the blit-manager
-    m_i.BM.add_artist(txt)
+    # add the text-objects as artists
+    m_i.add_artist(txt)
 
 mi2.add_colorbar(hist_bins=20, margin=dict(bottom=-0.2), label="some parameter")
 # move the inset map (and the colorbar) to a different location
